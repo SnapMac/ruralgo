@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>RuralGo - Livraison en milieu rural</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
+body{background:#f5f1e8}
+header{background:#0a1929;color:white;padding:0.8rem 2rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.25)}
+.nav{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+.logo{display:flex;align-items:center;gap:0.7rem;cursor:pointer}
+.logo-icon{width:50px;height:50px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);flex-shrink:0}
+.logo-icon svg{width:34px;height:34px}
+.logo-text{display:flex;flex-direction:column;line-height:1}
+.logo-name{font-size:1.6rem;font-weight:900;letter-spacing:1px;color:white}
+.logo-name span{color:#f5a623}
+.logo-tagline{font-size:0.7rem;color:rgba(255,255,255,0.8);margin-top:2px}
+nav ul{display:flex;list-style:none;gap:1rem;flex-wrap:wrap}
+nav a{color:white;text-decoration:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer}
+nav a:hover{background:rgba(255,255,255,0.15)}
+.user-info{display:flex;align-items:center;gap:0.8rem;background:rgba(255,255,255,0.15);padding:0.5rem 1rem;border-radius:8px}
+.user-avatar{width:38px;height:38px;background:#f5a623;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.user-details{display:flex;flex-direction:column;line-height:1.2}
+.user-name{font-size:0.9rem;font-weight:bold}
+.user-role{font-size:0.7rem;background:#f5a623;padding:0.1rem 0.5rem;border-radius:10px;margin-top:2px;width:fit-content}
+.logout-btn{background:rgba(255,255,255,0.2);color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:bold}
+.auth-btn{background:#f5a623;color:white;border:2px solid white;padding:0.6rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:bold;transition:all 0.3s}
+.auth-btn:hover{background:#e6951a}
+.auth-btn.secondary{background:rgba(255,255,255,0.2);margin-left:0.3rem;border:2px solid white}
+.auth-buttons{display:flex;gap:0.3rem}
+.view{display:none}.view.active{display:block}
+.mini-car{display:inline-block;vertical-align:middle;line-height:0}
+.mini-car svg{display:block}
+.notif-bell{position:relative;cursor:pointer;font-size:1.3rem;padding:0.3rem 0.6rem}
+.notif-badge{position:absolute;top:-5px;right:-5px;background:#dc2626;color:white;font-size:0.7rem;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.notif-panel{position:absolute;top:60px;right:20px;background:white;color:#333;width:350px;max-height:400px;overflow-y:auto;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,0.2);z-index:200;display:none}
+.notif-panel.show{display:block}
+.notif-panel-header{background:#0a1929;color:white;padding:1rem;font-weight:bold;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center}
+.notif-item{padding:0.8rem 1rem;border-bottom:1px solid #eee;cursor:pointer;transition:background 0.2s}
+.notif-item:hover{background:#f5f1e8}
+.notif-item.unread{background:#fff3cd}
+.notif-item-title{font-weight:bold;color:#0a1929;font-size:0.9rem}
+.notif-item-msg{font-size:0.85rem;color:#666;margin-top:0.2rem}
+.notif-item-time{font-size:0.75rem;color:#999;margin-top:0.2rem}
+.autocomplete-wrapper{position:relative}
+.autocomplete-input{width:100%;padding:0.7rem;border:2px solid #eee;border-radius:6px;font-size:1rem;transition:border 0.3s}
+.autocomplete-input:focus{outline:none;border-color:#0a1929}
+.autocomplete-suggestions{position:absolute;top:100%;left:0;right:0;background:white;border:2px solid #0a1929;border-top:none;border-radius:0 0 6px 6px;max-height:300px;overflow-y:auto;z-index:1001;display:none;box-shadow:0 4px 15px rgba(0,0,0,0.15)}
+.autocomplete-suggestions.show{display:block}
+.autocomplete-item{padding:0.8rem 1rem;cursor:pointer;border-bottom:1px solid #eee;display:flex;align-items:start;gap:0.8rem}
+.autocomplete-item:hover{background:#f5f1e8}
+.autocomplete-item-icon{font-size:1.5rem;flex-shrink:0}
+.autocomplete-item-content{flex:1}
+.autocomplete-item-main{font-weight:bold;color:#0a1929;font-size:0.95rem}
+.autocomplete-item-sub{font-size:0.85rem;color:#666}
+.autocomplete-loading{padding:1rem;text-align:center;color:#666}
+.autocomplete-empty{padding:1rem;text-align:center;color:#999;font-style:italic}
+.autocomplete-gps-btn{background:#0a1929;color:white;border:none;padding:0.6rem 1rem;border-radius:6px;cursor:pointer;font-weight:bold;margin-top:0.5rem;display:inline-flex;align-items:center;gap:0.5rem}
+.autocomplete-gps-btn:hover{background:#1a2d4a}
+.hero-commercial{min-height:600px;background:linear-gradient(135deg,#0a1929 0%,#1a3a5c 50%,#2d5016 100%);padding:3rem 2rem 5rem;color:white}
+.hero-content{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center}
+.hero-text h1{font-size:3.5rem;font-weight:900;line-height:1.1;margin-bottom:1.5rem}
+.hero-text h1 .highlight{color:#f5a623}
+.hero-text .tagline{font-size:1.3rem;margin-bottom:1rem;font-style:italic}
+.hero-text .subtitle{font-size:1.1rem;margin-bottom:2rem;line-height:1.6}
+.hero-buttons{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem}
+.btn-primary{background:#f5a623;color:white;padding:1rem 2rem;border:none;border-radius:50px;font-size:1.1rem;font-weight:bold;cursor:pointer}
+.btn-primary:hover{background:#e6951a}
+.btn-outline{background:transparent;color:white;border:2px solid white;padding:1rem 2rem;border-radius:50px;font-size:1.1rem;font-weight:bold;cursor:pointer}
+.btn-outline:hover{background:white;color:#0a1929}
+.hero-trust{display:flex;gap:2rem;flex-wrap:wrap;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,0.3)}
+.hero-trust div{display:flex;align-items:center;gap:0.5rem}
+.hero-illustration{position:relative;width:100%;max-width:550px;margin:0 auto}
+.hero-illustration svg{width:100%;height:auto}
+.floating-badge{position:absolute;background:white;color:#0a1929;padding:0.8rem 1.2rem;border-radius:50px;box-shadow:0 8px 25px rgba(0,0,0,0.15);font-weight:bold;display:flex;align-items:center;gap:0.5rem;animation:float 3s ease-in-out infinite}
+.floating-badge .badge-icon{font-size:1.5rem;display:flex;align-items:center}
+.badge-1{top:10%;left:-5%}
+.badge-2{top:45%;right:-8%;animation-delay:1s}
+.badge-3{bottom:5%;left:10%;animation-delay:2s}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
+.stats-banner{background:white;margin:-3rem 2rem 0;padding:2rem;border-radius:15px;box-shadow:0 10px 40px rgba(0,0,0,0.1);max-width:1100px;margin-left:auto;margin-right:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:2rem}
+.stat-item{text-align:center}
+.stat-number{font-size:2.5rem;font-weight:900;color:#0a1929}
+.stat-number .accent{color:#f5a623}
+.stat-label{color:#666;font-size:0.9rem}
+.map-zone-section{padding:4rem 2rem;background:white}
+.map-zone-container{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:stretch}
+.map-zone-info{padding:2rem;background:linear-gradient(135deg,#0a1929,#1a3a5c);color:white;border-radius:15px;display:flex;flex-direction:column;justify-content:center}
+.map-zone-info h2{font-size:2rem;margin-bottom:1rem}
+.map-zone-info p{margin-bottom:1rem;line-height:1.6}
+.zone-features{list-style:none;margin-top:1rem}
+.zone-features li{padding:0.5rem 0;display:flex;align-items:center;gap:0.5rem}
+.zone-features li::before{content:'✓';background:#f5a623;color:white;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;flex-shrink:0}
+.google-map-container{width:100%;height:400px;border-radius:15px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.15);background:#e5e7eb}
+.google-map-container iframe{width:100%;height:100%;border:0}
+.map-container{width:100%;height:400px;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);margin:1rem 0;background:#e5e7eb}
+.map-wrapper{background:white;padding:1.5rem;border-radius:12px;margin-bottom:2rem;box-shadow:0 2px 10px rgba(0,0,0,0.05)}
+.map-wrapper h3{color:#0a1929;margin-bottom:0.5rem}
+.map-wrapper p{color:#666;font-size:0.9rem;margin-bottom:1rem}
+.why-section{padding:5rem 2rem;background:#f5f1e8}
+.section-header{text-align:center;max-width:700px;margin:0 auto 3rem}
+.section-tag{display:inline-block;background:#0a1929;color:white;padding:0.3rem 1rem;border-radius:20px;font-size:0.85rem;font-weight:bold;margin-bottom:1rem}
+.section-title{font-size:2.5rem;color:#0a1929;margin-bottom:1rem}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:2rem;max-width:1200px;margin:0 auto}
+.feature-card{background:white;padding:2rem;border-radius:15px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.05)}
+.feature-icon{width:80px;height:80px;background:linear-gradient(135deg,#0a1929,#1a3a5c);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.5rem;margin:0 auto 1.5rem}
+.feature-card h3{color:#0a1929;margin-bottom:0.8rem}
+.feature-card p{color:#666}
+.how-section{padding:5rem 2rem;background:white}
+.steps-visual{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2rem;max-width:1200px;margin:0 auto}
+.step-card{background:#f5f1e8;padding:2rem 1.5rem;border-radius:15px;text-align:center;position:relative}
+.step-number{position:absolute;top:-20px;left:50%;transform:translateX(-50%);width:50px;height:50px;background:#f5a623;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;border:4px solid white}
+.step-icon{font-size:3rem;margin:1rem 0}
+.step-card h3{color:#0a1929;margin-bottom:0.5rem}
+.testimonials-section{padding:5rem 2rem;background:linear-gradient(135deg,#0a1929,#1a3a5c);color:white}
+.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2rem;max-width:1200px;margin:0 auto}
+.testimonial-card{background:rgba(255,255,255,0.1);padding:2rem;border-radius:15px;border:1px solid rgba(255,255,255,0.2)}
+.stars{color:#f5a623;font-size:1.2rem;margin-bottom:1rem}
+.testimonial-text{margin-bottom:1.5rem;font-style:italic}
+.testimonial-author{display:flex;align-items:center;gap:1rem}
+.author-avatar{width:50px;height:50px;background:#f5a623;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.stores-preview{padding:5rem 2rem;background:#f5f1e8}
+.cta-section{padding:5rem 2rem;background:linear-gradient(135deg,#0a1929,#1a3a5c);color:white;text-align:center}
+.cta-content h2{font-size:2.5rem;margin-bottom:1rem}
+.cta-content p{font-size:1.2rem;margin-bottom:2rem}
+.stores-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1.5rem;max-width:1200px;margin:0 auto}
+.store{background:white;border-radius:10px;overflow:hidden;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.08);transition:transform 0.3s}
+.store:hover{transform:translateY(-5px)}
+.store-img{height:120px;background:linear-gradient(135deg,#1a3a5c,#0a1929);display:flex;align-items:center;justify-content:center;font-size:3rem}
+.store-info{padding:1rem}
+.store-info h3{color:#0a1929}
+.cart-box{background:white;border-radius:10px;padding:2rem;max-width:700px;margin:0 auto}
+.cart-item{display:flex;align-items:center;gap:1rem;padding:1rem;border-bottom:1px solid #eee}
+.cart-item-info{flex:1}
+.qty-controls{display:flex;align-items:center;gap:0.5rem}
+.qty-btn{width:30px;height:30px;border-radius:50%;border:1px solid #0a1929;background:white;color:#0a1929;cursor:pointer;font-weight:bold}
+.hero{background:linear-gradient(135deg,#0a1929,#1a3a5c);color:white;padding:4rem 2rem;text-align:center}
+.hero h1{font-size:2.5rem;margin-bottom:1rem}
+.hero p{font-size:1.2rem;margin-bottom:2rem}
+.btn{background:#c17817;color:white;padding:1rem 2rem;border:none;border-radius:50px;font-size:1.1rem;font-weight:bold;cursor:pointer}
+section{padding:3rem 2rem}
+.container{max-width:1200px;margin:0 auto}
+.title{text-align:center;color:#0a1929;font-size:2rem;margin-bottom:2rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem}
+.stat{background:white;padding:1.5rem;border-radius:10px;text-align:center}
+.stat-val{font-size:2rem;font-weight:bold;color:#0a1929}
+.stat-lbl{color:#666;font-size:0.9rem}
+.tracking-steps{background:white;border-radius:12px;padding:2rem;box-shadow:0 2px 10px rgba(0,0,0,0.05);margin-bottom:2rem}
+.tracking-step{display:flex;align-items:center;gap:1rem;padding:1rem;border-left:3px solid #ddd;margin-left:20px;position:relative;margin-bottom:1rem}
+.tracking-step::before{content:'';position:absolute;left:-13px;top:40px;width:2px;height:calc(100% + 10px);background:#ddd}
+.tracking-step:last-child::before{display:none}
+.tracking-step.done{border-left-color:#0a1929}
+.tracking-step.done::before{background:#0a1929}
+.tracking-step.active{border-left-color:#f5a623}
+.tracking-step.active::before{background:#f5a623}
+.step-icon{width:40px;height:40px;border-radius:50%;background:#ddd;display:flex;align-items:center;justify-content:center;font-size:1.2rem;z-index:1;flex-shrink:0}
+.tracking-step.done .step-icon{background:#0a1929;color:white}
+.tracking-step.active .step-icon{background:#f5a623;color:white;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,0.4)}50%{box-shadow:0 0 0 15px rgba(245,166,35,0)}}
+.order-card{background:white;border-radius:10px;padding:1.5rem;margin-bottom:1rem;box-shadow:0 2px 10px rgba(0,0,0,0.05);cursor:pointer;transition:all 0.3s}
+.order-card:hover{transform:translateY(-3px);box-shadow:0 5px 20px rgba(0,0,0,0.1)}
+.order-card-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem}
+.order-card h4{color:#0a1929}
+.order-card-details{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.9rem;color:#666}
+.driver-order{background:white;border:2px solid #eee;border-radius:10px;padding:1.5rem;margin-bottom:1rem}
+.driver-order h4{color:#0a1929;margin-bottom:0.5rem}
+.driver-actions{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1rem}
+.btn-sm{padding:0.6rem 1.2rem;border:none;border-radius:6px;cursor:pointer;font-weight:bold}
+.btn-green{background:#0a1929;color:white}
+.btn-gray{background:#eee;color:#333}
+.btn-orange{background:#c17817;color:white}
+.btn-blue{background:#2563eb;color:white}
+.btn-red{background:#dc2626;color:white}
+.admin-layout{display:grid;grid-template-columns:220px 1fr;gap:1.5rem}
+.admin-side{background:white;border-radius:10px;padding:1rem;height:fit-content}
+.admin-side ul{list-style:none}
+.admin-side li{padding:0.8rem;border-radius:6px;cursor:pointer;margin-bottom:0.3rem}
+.admin-side li:hover{background:#f5f1e8}
+.admin-side li.active{background:#0a1929;color:white}
+.admin-main{background:white;border-radius:10px;padding:1.5rem}
+.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem}
+.admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
+.admin-header h3{color:#0a1929}
+.btn-add{background:#0a1929;color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;cursor:pointer;font-weight:bold}
+.admin-table{width:100%;border-collapse:collapse}
+.admin-table th{background:#f5f1e8;padding:0.8rem;text-align:left;color:#0a1929;font-weight:bold;border-bottom:2px solid #0a1929}
+.admin-table td{padding:0.8rem;border-bottom:1px solid #eee}
+.action-btns{display:flex;gap:0.3rem;flex-wrap:wrap}
+.action-btn{padding:0.4rem 0.8rem;border:none;border-radius:5px;cursor:pointer;font-size:0.85rem;font-weight:bold}
+.badge{padding:0.2rem 0.6rem;border-radius:20px;font-size:0.8rem;font-weight:bold}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-yellow{background:#fef3c7;color:#92400e}
+.badge-blue{background:#dbeafe;color:#1e40af}
+.profile-section{background:white;border-radius:12px;padding:2rem;margin-bottom:2rem;box-shadow:0 2px 10px rgba(0,0,0,0.05)}
+.profile-header{display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:2px solid #f5f1e8}
+.profile-avatar{width:80px;height:80px;background:#f5a623;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:2rem;color:white}
+.profile-info h2{color:#0a1929;margin-bottom:0.3rem}
+.profile-info p{color:#666}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.profile-field{background:#f5f1e8;padding:1rem;border-radius:8px}
+.profile-field label{display:block;color:#666;font-size:0.85rem;margin-bottom:0.3rem}
+.profile-field .value{color:#0a1929;font-weight:bold}
+.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:1000;padding:1rem}
+.modal-bg.show{display:flex}
+.modal{background:white;border-radius:12px;padding:2rem;max-width:550px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h2{color:#0a1929;margin-bottom:1.5rem}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;color:#0a1929;font-weight:bold;margin-bottom:0.4rem;font-size:0.9rem}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:0.7rem;border:2px solid #eee;border-radius:6px;font-size:1rem}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#0a1929}
+.form-group textarea{resize:vertical;min-height:80px}
+.account-types{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem}
+.account-type{border:2px solid #eee;border-radius:10px;padding:1.5rem 1rem;text-align:center;cursor:pointer}
+.account-type:hover{border-color:#0a1929}
+.account-type.selected{border-color:#0a1929;background:#f5f1e8}
+.account-type-icon{font-size:2.5rem;margin-bottom:0.5rem}
+.account-type-name{font-weight:bold;color:#0a1929}
+.account-type-desc{font-size:0.8rem;color:#666}
+.icon-picker{display:grid;grid-template-columns:repeat(8,1fr);gap:0.4rem;margin-top:0.4rem}
+.icon-option{width:40px;height:40px;border:2px solid #eee;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer}
+.icon-option:hover{border-color:#0a1929;transform:scale(1.1)}
+.icon-option.selected{border-color:#0a1929;background:#f5f1e8}
+.modal-actions{display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1.5rem}
+.delivery-address-box{background:#f5f1e8;border:2px solid #0a1929;border-radius:8px;padding:1rem;margin:1rem 0}
+.delivery-address-box h4{color:#0a1929;margin-bottom:0.5rem}
+.info-box{background:#e0f2fe;border-left:4px solid #0284c7;padding:0.8rem 1rem;border-radius:6px;margin-bottom:1rem;font-size:0.9rem;color:#0c4a6e}
+.store-detail-header{background:linear-gradient(135deg,#0a1929,#1a3a5c);color:white;padding:2rem;border-radius:12px;margin-bottom:2rem;display:flex;align-items:center;gap:1.5rem}
+.store-detail-icon{font-size:4rem;background:rgba(255,255,255,0.2);width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.back-btn{background:rgba(255,255,255,0.2);color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:bold;margin-bottom:1rem}
+.categories-bar{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:2rem;padding:1rem;background:white;border-radius:10px}
+.cat-btn{padding:0.5rem 1rem;border:2px solid #eee;border-radius:20px;background:white;cursor:pointer;font-weight:bold}
+.cat-btn.active{background:#0a1929;color:white;border-color:#0a1929}
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.5rem}
+.product-card{background:white;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.05)}
+.product-card-img{height:120px;background:#f5f1e8;display:flex;align-items:center;justify-content:center;font-size:3.5rem}
+.product-card-info{padding:1rem}
+.product-card-info h4{color:#333;margin-bottom:0.3rem}
+.product-card-info .product-price{color:#0a1929;font-weight:bold;font-size:1.3rem;margin-bottom:0.5rem}
+.add-cart-btn{width:100%;background:#0a1929;color:white;border:none;padding:0.6rem;border-radius:6px;cursor:pointer;font-weight:bold}
+.add-cart-btn:hover{background:#1a2d4a}
+.no-products{text-align:center;padding:3rem;color:#666;grid-column:1/-1}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
+.cat-card{background:white;border:2px solid #eee;border-radius:10px;padding:1rem;text-align:center}
+.cat-card-icon{font-size:2.5rem;margin-bottom:0.5rem}
+.cat-card-name{font-weight:bold;color:#0a1929;margin-bottom:0.5rem}
+.cat-card-actions{display:flex;gap:0.3rem;justify-content:center}
+
+/* NOUVEAU : Détails des frais de livraison */
+.delivery-fee-breakdown{background:#fff3cd;border:2px solid #f5a623;border-radius:8px;padding:1rem;margin:1rem 0;font-size:0.9rem}
+.delivery-fee-breakdown h4{color:#0a1929;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem}
+.delivery-fee-line{display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px dashed #f5a623}
+.delivery-fee-line:last-child{border-bottom:none}
+.delivery-fee-total{display:flex;justify-content:space-between;padding:0.5rem 0;margin-top:0.5rem;border-top:2px solid #f5a623;font-weight:bold;color:#0a1929;font-size:1.05rem}
+
+footer{background:#0a1929;color:white;padding:2rem;text-align:center}
+.toast{position:fixed;bottom:2rem;right:2rem;background:#0a1929;color:white;padding:1rem 1.5rem;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.2);display:none;z-index:1100;max-width:300px}
+.toast.show{display:block;animation:slideIn 0.3s}
+@keyframes slideIn{from{transform:translateX(400px)}to{transform:translateX(0)}}
+.empty-state{text-align:center;padding:3rem;color:#666}
+.empty-state-icon{font-size:4rem;margin-bottom:1rem}
+.status-badge{display:inline-block;padding:0.4rem 1rem;border-radius:20px;font-weight:bold;font-size:0.85rem}
+.status-pending{background:#fef3c7;color:#92400e}
+.status-confirmed{background:#dbeafe;color:#1e40af}
+.status-searching{background:#e0e7ff;color:#3730a3}
+.status-assigned{background:#fef3c7;color:#92400e}
+.status-pickup{background:#fed7aa;color:#9a3412}
+.status-delivering{background:#bfdbfe;color:#1e40af}
+.status-delivered{background:#d1fae5;color:#065f46}
+.status-cancelled{background:#fee2e2;color:#991b1b}
+@media(max-width:900px){
+    .hero-content{grid-template-columns:1fr;text-align:center}
+    .hero-text h1{font-size:2.5rem}
+    .hero-illustration{max-width:400px;margin-top:2rem}
+    .stats-banner{grid-template-columns:repeat(2,1fr);margin:-3rem 1rem 0}
+    .floating-badge{display:none}
+    .map-zone-container{grid-template-columns:1fr}
+    .profile-grid{grid-template-columns:1fr}
+    .order-card-details{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+    .admin-layout{grid-template-columns:1fr}
+    .icon-picker{grid-template-columns:repeat(6,1fr)}
+    .account-types{grid-template-columns:1fr}
+    .store-detail-header{flex-direction:column;text-align:center}
+    .notif-panel{width:90%;right:5%}
+}
+</style>
+</head>
+<body>
+
+<header>
+    <div class="nav">
+        <div class="logo" onclick="goHome()">
+            <div class="logo-icon">
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M 8 38 L 8 28 L 22 28 L 26 22 L 40 22 L 44 28 L 56 28 L 56 38 Z" fill="#0a1929" stroke="#000" stroke-width="1.5"/>
+                    <path d="M 24 28 L 27 24 L 38 24 L 38 28 Z" fill="#87ceeb" stroke="#000" stroke-width="1"/>
+                    <line x1="40" y1="22" x2="40" y2="38" stroke="#000" stroke-width="1.5"/>
+                    <circle cx="18" cy="40" r="5" fill="#2a2a2a"/><circle cx="18" cy="40" r="2" fill="#888"/>
+                    <circle cx="48" cy="40" r="5" fill="#2a2a2a"/><circle cx="48" cy="40" r="2" fill="#888"/>
+                    <rect x="54" y="30" width="3" height="3" fill="#f5a623" rx="0.5"/>
+                </svg>
+            </div>
+            <div class="logo-text">
+                <div class="logo-name">Rural<span>Go</span></div>
+                <div class="logo-tagline">Livraison en milieu rural</div>
+            </div>
+        </div>
+        <nav id="nav-client" style="display:none"><ul>
+            <li><a onclick="showClientStores()">Magasins</a></li>
+            <li><a onclick="showClientOrders()">Mes commandes</a></li>
+            <li><a onclick="scrollToCart()">🛒 (<span id="cart-count">0</span>)</a></li>
+        </ul></nav>
+        <nav id="nav-driver" style="display:none"><ul>
+            <li><a onclick="showDriverDashboard()">Tableau de bord</a></li>
+            <li><a onclick="showDriverHistory()">Historique</a></li>
+        </ul></nav>
+        <nav id="nav-admin" style="display:none"><ul>
+            <li><a onclick="adminTab('dashboard',document.querySelector('.admin-side li'))">Dashboard</a></li>
+        </ul></nav>
+        <div id="notif-bell-container" style="display:none;position:relative">
+            <div class="notif-bell" onclick="toggleNotifPanel()">🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span></div>
+            <div class="notif-panel" id="notif-panel">
+                <div class="notif-panel-header">
+                    <span>🔔 Notifications</span>
+                    <span style="cursor:pointer;font-size:0.85rem" onclick="markAllRead()">Tout marquer lu</span>
+                </div>
+                <div id="notif-list"></div>
+            </div>
+        </div>
+        <div id="auth-section" class="auth-buttons">
+            <button class="auth-btn" onclick="openChooseTypeModal()">📝 S'inscrire</button>
+            <button class="auth-btn secondary" onclick="openLoginModal()">🔑 Connexion</button>
+        </div>
+        <div id="user-section" style="display:none">
+            <div class="user-info" style="cursor:pointer" onclick="showProfile()">
+                <div class="user-avatar" id="user-avatar">👤</div>
+                <div class="user-details">
+                    <div class="user-name" id="user-name">User</div>
+                    <div class="user-role" id="user-role">Client</div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">Déconnexion</button>
+        </div>
+    </div>
+</header>
+
+<div id="view-landing" class="view active">
+    <section class="hero-commercial">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>Vos essentiels <span class="highlight">livrés</span> directement chez vous</h1>
+                <p class="tagline">✨ Votre communauté, livrée.</p>
+                <p class="subtitle">Le premier service de cueillette et livraison conçu spécialement pour les régions rurales du Québec.</p>
+                <div class="hero-buttons">
+                    <button class="btn-primary" onclick="openChooseTypeModal()">🚀 Commencer maintenant</button>
+                    <button class="btn-outline" onclick="scrollToSection('how-section')">Comment ça marche ?</button>
+                </div>
+                <div class="hero-trust">
+                    <div>✅ Paiement sécurisé</div>
+                    <div><span class="mini-car"><svg width="26" height="26" viewBox="0 0 64 64"><path d="M 8 38 L 8 28 L 22 28 L 26 22 L 40 22 L 44 28 L 56 28 L 56 38 Z" fill="#2a2a2a" stroke="#000" stroke-width="1.5"/><path d="M 24 28 L 27 24 L 38 24 L 38 28 Z" fill="#87ceeb"/><circle cx="18" cy="40" r="5" fill="#1a1a1a"/><circle cx="48" cy="40" r="5" fill="#1a1a1a"/></svg></span> 7$ + 1$/km</div>
+                    <div>🗺️ Suivi GPS en direct</div>
+                </div>
+            </div>
+            <div class="hero-illustration">
+                <svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg">
+                    <defs><linearGradient id="hills" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#6b9e3f"/><stop offset="100%" style="stop-color:#0a1929"/></linearGradient></defs>
+                    <circle cx="380" cy="80" r="40" fill="#fff4d6" opacity="0.9"/>
+                    <circle cx="380" cy="80" r="30" fill="#ffd89b"/>
+                    <path d="M 0 280 Q 80 240 180 270 T 380 260 T 500 280 L 500 400 L 0 400 Z" fill="url(#hills)"/>
+                    <g transform="translate(200,310)">
+                        <path d="M 0 20 L 0 10 L 20 10 L 25 0 L 50 0 L 55 10 L 80 10 L 80 20 Z" fill="#2a2a2a"/>
+                        <rect x="52" y="2" width="25" height="15" fill="#0a1929"/>
+                        <text x="64" y="12" font-size="6" fill="white" text-anchor="middle" font-weight="bold">RG</text>
+                        <circle cx="15" cy="22" r="6" fill="#1a1a1a"/>
+                        <circle cx="65" cy="22" r="6" fill="#1a1a1a"/>
+                    </g>
+                </svg>
+                <div class="floating-badge badge-1"><span class="badge-icon">🗺️</span><div><div style="font-size:0.75rem;color:#666">GPS</div><div>Suivi live</div></div></div>
+                <div class="floating-badge badge-2"><span class="badge-icon">⭐</span><div><div style="font-size:0.75rem;color:#666">Satisfaction</div><div>4.9/5</div></div></div>
+                <div class="floating-badge badge-3"><span class="badge-icon">💰</span><div><div style="font-size:0.75rem;color:#666">Tarif</div><div>7$ + 1$/km</div></div></div>
+            </div>
+        </div>
+    </section>
+    
+    <div class="stats-banner">
+        <div class="stat-item"><div class="stat-number">161<span class="accent">+</span></div><div class="stat-label">Clients satisfaits</div></div>
+        <div class="stat-item"><div class="stat-number">2</div><div class="stat-label">Livreurs actifs</div></div>
+        <div class="stat-item"><div class="stat-number">10<span class="accent">+</span></div><div class="stat-label">Commerces</div></div>
+        <div class="stat-item"><div class="stat-number">40<span class="accent">km</span></div><div class="stat-label">Rayon de livraison</div></div>
+    </div>
+    
+    <section class="map-zone-section">
+        <div class="section-header">
+            <span class="section-tag">🗺️ ZONE DESSERVIE</span>
+            <h2 class="section-title">Nous livrons à Maniwaki et environs</h2>
+        </div>
+        <div class="map-zone-container">
+            <div class="map-zone-info">
+                <h2>📍 Région de Maniwaki, Québec</h2>
+                <p>Nos livreurs parcourent quotidiennement les routes de l'Outaouais.</p>
+                <ul class="zone-features">
+                    <li>Maniwaki et environs</li>
+                    <li>Rayon de 40 km</li>
+                    <li>Tarif : 7$ + 1$/km</li>
+                    <li>Suivi GPS en temps réel</li>
+                </ul>
+            </div>
+            <div class="google-map-container">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d44500!2d-75.9653!3d46.3767!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sfr!2sca!4v1" allowfullscreen="" loading="lazy"></iframe>
+            </div>
+        </div>
+    </section>
+    
+    <section class="why-section">
+        <div class="section-header">
+            <span class="section-tag">NOS AVANTAGES</span>
+            <h2 class="section-title">Pourquoi choisir RuralGo ?</h2>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card"><div class="feature-icon">🗺️</div><h3>Suivi GPS en direct</h3><p>Suivez votre livreur en temps réel</p></div>
+            <div class="feature-card"><div class="feature-icon">💰</div><h3>Tarif transparent</h3><p>7$ de base + 1$ par km, pas de surprise</p></div>
+            <div class="feature-card"><div class="feature-icon">🏪</div><h3>Commerces locaux</h3><p>Soutenez les entreprises de votre région</p></div>
+            <div class="feature-card"><div class="feature-icon">💳</div><h3>Paiement sécurisé</h3><p>Transactions 100% sécurisées</p></div>
+            <div class="feature-card"><div class="feature-icon">📱</div><h3>Itinéraire optimisé</h3><p>Calcul automatique du chemin</p></div>
+            <div class="feature-card"><div class="feature-icon">🤝</div><h3>Service communautaire</h3><p>Des livreurs qui connaissent votre région</p></div>
+        </div>
+    </section>
+    
+    <section class="how-section" id="how-section">
+        <div class="section-header">
+            <span class="section-tag">COMMENT ÇA MARCHE</span>
+            <h2 class="section-title">Simple comme 1, 2, 3, 4</h2>
+        </div>
+        <div class="steps-visual">
+            <div class="step-card"><div class="step-number">1</div><div class="step-icon">📝</div><h3>Créez votre compte</h3><p>Inscription gratuite</p></div>
+            <div class="step-card"><div class="step-number">2</div><div class="step-icon">🏪</div><h3>Choisissez votre magasin</h3><p>Visualisez-les sur la carte</p></div>
+            <div class="step-card"><div class="step-number">3</div><div class="step-icon">🛒</div><h3>Ajoutez au panier</h3><p>Sélectionnez vos produits</p></div>
+            <div class="step-card"><div class="step-number">4</div><div class="step-icon">💰</div><h3>Payez selon la distance</h3><p>7$ + 1$/km calculé automatiquement</p></div>
+        </div>
+    </section>
+    
+    <section class="testimonials-section">
+        <div class="section-header" style="color:white">
+            <span class="section-tag" style="background:#f5a623">TÉMOIGNAGES</span>
+            <h2 class="section-title" style="color:white">Ce que disent nos clients</h2>
+        </div>
+        <div class="testimonials-grid">
+            <div class="testimonial-card"><div class="stars">★★★★★</div><p class="testimonial-text">"Je peux suivre mon livreur en direct sur la carte. Super pratique !"</p><div class="testimonial-author"><div class="author-avatar">MT</div><div><div style="font-weight:bold">Marie Tremblay</div><div style="font-size:0.85rem;opacity:0.8">Cliente</div></div></div></div>
+            <div class="testimonial-card"><div class="stars">★★★★★</div><p class="testimonial-text">"Le tarif est clair : 7$ + 1$ par km. Pas de mauvaise surprise !"</p><div class="testimonial-author"><div class="author-avatar">PL</div><div><div style="font-weight:bold">Pierre Lavoie</div><div style="font-size:0.85rem;opacity:0.8">Client</div></div></div></div>
+            <div class="testimonial-card"><div class="stars">★★★★★</div><p class="testimonial-text">"La livraison rapide partout, c'est génial pour nous en région !"</p><div class="testimonial-author"><div class="author-avatar">JT</div><div><div style="font-weight:bold">Jean Tremblay</div><div style="font-size:0.85rem;opacity:0.8">Livreur</div></div></div></div>
+        </div>
+    </section>
+    
+    <section class="stores-preview">
+        <div class="section-header">
+            <span class="section-tag">NOS PARTENAIRES</span>
+            <h2 class="section-title">Magasins à Maniwaki</h2>
+        </div>
+        <div class="stores-grid" id="landing-stores-grid"></div>
+        <div style="text-align:center;margin-top:2rem"><button class="btn-primary" onclick="openChooseTypeModal()">🛍️ Commencer mes achats</button></div>
+    </section>
+    
+    <section class="cta-section">
+        <div class="cta-content">
+            <h2>Prêt à simplifier vos courses ?</h2>
+            <p>Rejoignez des centaines de clients satisfaits dans la région de Maniwaki !</p>
+            <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+                <button class="btn-primary" onclick="openChooseTypeModal()">🚀 Créer mon compte</button>
+                <button class="btn-outline" onclick="openLoginModal()">🔑 J'ai déjà un compte</button>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div id="view-client" class="view">
+    <section class="hero">
+        <h1>Bonjour <span id="client-firstname">!</span> 👋</h1>
+        <p>Vos essentiels livrés directement chez vous</p>
+        <button class="btn" onclick="showClientStores()">🛍️ Voir les magasins</button>
+    </section>
+    <section id="stores-section" style="background:white">
+        <div class="container">
+            <h2 class="title">🏪 Nos Magasins</h2>
+            <div class="map-wrapper">
+                <h3>🗺️ Carte des magasins à Maniwaki</h3>
+                <div class="map-container">
+                    <iframe id="client-stores-map" src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d22000!2d-75.9653!3d46.3767!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sfr!2sca!4v1" allowfullscreen="" loading="lazy"></iframe>
+                </div>
+            </div>
+            <div class="stores-grid" id="stores-grid"></div>
+        </div>
+    </section>
+    <section id="store-detail-section" style="background:#f5f1e8;display:none">
+        <div class="container" id="store-detail-content"></div>
+    </section>
+    <section id="client-orders-section" style="background:#f5f1e8;display:none">
+        <div class="container">
+            <h2 class="title">📦 Mes Commandes</h2>
+            <div id="client-orders-list"></div>
+        </div>
+    </section>
+    <section id="client-order-detail-section" style="background:#f5f1e8;display:none">
+        <div class="container" id="client-order-detail-content"></div>
+    </section>
+    <section id="cart-section" style="background:#f5f1e8">
+        <div class="container">
+            <h2 class="title">🛒 Votre Panier</h2>
+            <div class="cart-box">
+                <div id="delivery-address-display"></div>
+                <div id="delivery-fee-details"></div>
+                <div id="cart-items"><p style="text-align:center;color:#666;padding:2rem">Votre panier est vide</p></div>
+                <div style="margin-top:1.5rem;padding-top:1rem;border-top:2px solid #0a1929">
+                    <div style="display:flex;justify-content:space-between;padding:0.4rem 0"><span>Sous-total</span><span id="subtotal">0.00 $</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:0.4rem 0;font-size:0.9rem;color:#666"><span>↳ Frais de base</span><span id="fee-base">7.00 $</span></div>
+                    <div id="fee-distance-line" style="display:flex;justify-content:space-between;padding:0.4rem 0;font-size:0.9rem;color:#666"><span id="fee-distance-label">↳ Distance</span><span id="fee-distance">0.00 $</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:0.4rem 0;font-weight:bold;color:#0a1929;border-top:1px dashed #0a1929;margin-top:0.3rem;padding-top:0.6rem"><span>🚗 Livraison totale</span><span id="delivery-fee">7.00 $</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:0.4rem 0"><span>Taxes (TPS+TVQ)</span><span id="taxes">0.00 $</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:0.8rem 0;font-size:1.3rem;font-weight:bold;color:#0a1929;border-top:1px solid #eee;margin-top:0.5rem"><span>Total</span><span id="total">0.00 $</span></div>
+                    <button class="btn" style="width:100%;margin-top:1rem" onclick="placeOrder()">💳 Commander</button>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="client-profile-section" style="background:#f5f1e8;display:none">
+        <div class="container">
+            <h2 class="title">👤 Mon Profil</h2>
+            <div id="client-profile-content"></div>
+        </div>
+    </section>
+</div>
+
+<div id="view-driver" class="view">
+    <section class="hero">
+        <h1>Bonjour <span id="driver-firstname">Livreur</span> 👋</h1>
+        <p>Tableau de bord livreur</p>
+    </section>
+    <section id="driver-dashboard-section" style="background:#f5f1e8">
+        <div class="container">
+            <div class="stats">
+                <div class="stat"><div class="stat-val" id="d-deliveries">0</div><div class="stat-lbl">Livraisons aujourd'hui</div></div>
+                <div class="stat"><div class="stat-val" id="d-earnings">0.00 $</div><div class="stat-lbl">Revenus du jour</div></div>
+                <div class="stat"><div class="stat-val" id="d-total">0</div><div class="stat-lbl">Total livraisons</div></div>
+                <div class="stat"><div class="stat-val" style="color:#0a1929">● EN LIGNE</div><div class="stat-lbl">Statut</div></div>
+            </div>
+            <h3 style="color:#0a1929;margin:2rem 0 1rem">📋 Commandes disponibles</h3>
+            <div id="driver-available-orders"></div>
+            <h3 style="color:#0a1929;margin:2rem 0 1rem">🚚 Mes livraisons en cours</h3>
+            <div id="driver-active-orders"></div>
+        </div>
+    </section>
+    <section id="driver-order-detail-section" style="background:#f5f1e8;display:none">
+        <div class="container" id="driver-order-detail-content"></div>
+    </section>
+    <section id="driver-history-section" style="background:#f5f1e8;display:none">
+        <div class="container">
+            <h2 class="title">📜 Historique des livraisons</h2>
+            <div class="stats">
+                <div class="stat"><div class="stat-val" id="d-history-total">0</div><div class="stat-lbl">Total livraisons</div></div>
+                <div class="stat"><div class="stat-val" id="d-history-earnings">0.00 $</div><div class="stat-lbl">Revenus totaux</div></div>
+                <div class="stat"><div class="stat-val">4.9 ⭐</div><div class="stat-lbl">Note moyenne</div></div>
+            </div>
+            <div id="driver-history-list"></div>
+        </div>
+    </section>
+</div>
+
+<div id="view-admin" class="view">
+    <section class="hero">
+        <h1>⚙️ Administration RuralGo</h1>
+        <p>Gestion complète de la plateforme</p>
+    </section>
+    <section style="background:#f5f1e8">
+        <div class="container">
+            <div class="admin-layout">
+                <div class="admin-side"><ul>
+                    <li class="active" onclick="adminTab('dashboard',this)">📊 Tableau de bord</li>
+                    <li onclick="adminTab('orders',this)">📦 Commandes</li>
+                    <li onclick="adminTab('stores',this)">🏪 Magasins</li>
+                    <li onclick="adminTab('categories',this)">📂 Catégories</li>
+                    <li onclick="adminTab('products',this)">🛍️ Produits</li>
+                    <li onclick="adminTab('drivers',this)">🚗 Livreurs</li>
+                    <li onclick="adminTab('clients',this)">👥 Clients</li>
+                    <li onclick="adminTab('settings',this)">⚙️ Paramètres</li>
+                </ul></div>
+                <div class="admin-main">
+                    <div id="admin-dashboard">
+                        <h3 style="color:#0a1929;margin-bottom:1rem">📊 Vue d'ensemble</h3>
+                        <div class="admin-stats">
+                            <div class="stat"><div class="stat-val" id="stat-clients">0</div><div class="stat-lbl">Clients</div></div>
+                            <div class="stat"><div class="stat-val" id="stat-drivers">0</div><div class="stat-lbl">Livreurs</div></div>
+                            <div class="stat"><div class="stat-val" id="stat-stores">0</div><div class="stat-lbl">Magasins</div></div>
+                            <div class="stat"><div class="stat-val" id="stat-orders">0</div><div class="stat-lbl">Commandes</div></div>
+                            <div class="stat"><div class="stat-val" id="stat-revenue">0 $</div><div class="stat-lbl">Revenus totaux</div></div>
+                            <div class="stat"><div class="stat-val" id="stat-pending">0</div><div class="stat-lbl">En attente</div></div>
+                        </div>
+                        <h3 style="color:#0a1929;margin:2rem 0 1rem">📦 Dernières commandes</h3>
+                        <div id="admin-recent-orders"></div>
+                    </div>
+                    <div id="admin-orders" style="display:none">
+                        <div class="admin-header"><h3>📦 Toutes les commandes</h3></div>
+                        <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+                            <button class="btn-sm btn-green" onclick="filterAdminOrders('all')">Toutes</button>
+                            <button class="btn-sm btn-orange" onclick="filterAdminOrders('pending')">En attente</button>
+                            <button class="btn-sm btn-blue" onclick="filterAdminOrders('in-progress')">En cours</button>
+                            <button class="btn-sm btn-green" onclick="filterAdminOrders('delivered')">Livrées</button>
+                            <button class="btn-sm btn-red" onclick="filterAdminOrders('cancelled')">Annulées</button>
+                        </div>
+                        <div id="admin-orders-list"></div>
+                    </div>
+                    <div id="admin-stores" style="display:none">
+                        <div class="admin-header"><h3>🏪 Magasins</h3><button class="btn-add" onclick="openStoreModal()">➕ Ajouter</button></div>
+                        <div id="stores-table-container"></div>
+                    </div>
+                    <div id="admin-categories" style="display:none">
+                        <div class="admin-header"><h3>📂 Catégories</h3><button class="btn-add" onclick="openCategoryModal()">➕ Ajouter</button></div>
+                        <div id="categories-container"></div>
+                    </div>
+                    <div id="admin-products" style="display:none">
+                        <div class="admin-header"><h3>🛍️ Produits</h3><button class="btn-add" onclick="openProductModal()">➕ Ajouter</button></div>
+                        <div id="products-table-container"></div>
+                    </div>
+                    <div id="admin-drivers" style="display:none">
+                        <h3 style="color:#0a1929;margin-bottom:1rem">🚗 Livreurs</h3>
+                        <div id="drivers-table-container"></div>
+                    </div>
+                    <div id="admin-clients" style="display:none">
+                        <h3 style="color:#0a1929;margin-bottom:1rem">👥 Clients</h3>
+                        <div id="clients-table-container"></div>
+                    </div>
+                    <div id="admin-settings" style="display:none">
+                        <h3 style="color:#0a1929;margin-bottom:1rem">⚙️ Paramètres de la plateforme</h3>
+                        <div id="admin-settings-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="modal-bg" id="choose-type-modal"><div class="modal">
+    <h2>👋 Créer un compte</h2>
+    <div class="account-types">
+        <div class="account-type" onclick="selectAccountType('client',this)"><div class="account-type-icon">🛒</div><div class="account-type-name">Client</div><div class="account-type-desc">Commander des produits</div></div>
+        <div class="account-type" onclick="selectAccountType('driver',this)"><div class="account-type-icon">🚗</div><div class="account-type-name">Livreur</div><div class="account-type-desc">Effectuer des livraisons</div></div>
+    </div>
+    <div class="modal-actions" style="justify-content:center"><button class="btn-sm btn-gray" onclick="closeModal('choose-type-modal')">Annuler</button><button class="btn-sm btn-green" id="continue-type-btn" onclick="continueToRegister()" disabled>Continuer →</button></div>
+</div></div>
+
+<div class="modal-bg" id="register-client-modal"><div class="modal">
+    <h2>📝 Inscription Client</h2>
+    <form onsubmit="registerClient(event)">
+        <div class="form-group"><label>Nom complet *</label><input type="text" id="rc-name" required></div>
+        <div class="form-group"><label>Courriel *</label><input type="email" id="rc-email" required></div>
+        <div class="form-group"><label>Mot de passe *</label><input type="password" id="rc-pass" required minlength="6"></div>
+        <div class="form-group"><label>Téléphone *</label><input type="tel" id="rc-phone" required></div>
+        <div class="form-group">
+            <label>Adresse de domicile *</label>
+            <div class="info-box">💡 Commencez à taper votre adresse pour voir des suggestions</div>
+            <div class="autocomplete-wrapper">
+                <input type="text" id="rc-address" class="autocomplete-input" required placeholder="Ex: 123 rue Principale, Maniwaki" autocomplete="off">
+                <div id="rc-address-suggestions" class="autocomplete-suggestions"></div>
+            </div>
+            <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('rc-address')">📍 Utiliser ma position GPS</button>
+        </div>
+        <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('register-client-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">✅ Créer mon compte</button></div>
+    </form>
+</div></div>
+
+<div class="modal-bg" id="register-driver-modal"><div class="modal">
+    <h2>🚗 Inscription Livreur</h2>
+    <form onsubmit="registerDriver(event)">
+        <div class="form-group"><label>Nom complet *</label><input type="text" id="rd-name" required></div>
+        <div class="form-group"><label>Courriel *</label><input type="email" id="rd-email" required></div>
+        <div class="form-group"><label>Mot de passe *</label><input type="password" id="rd-pass" required minlength="6"></div>
+        <div class="form-group"><label>Téléphone *</label><input type="tel" id="rd-phone" required></div>
+        <div class="form-group"><label>Véhicule *</label><select id="rd-vehicle" required><option value="">-- Choisir --</option><option>🚗 Voiture</option><option>🚚 Camionnette</option><option>🛻 Pick-up</option></select></div>
+        <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('register-driver-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">📨 Soumettre</button></div>
+    </form>
+</div></div>
+
+<div class="modal-bg" id="login-modal"><div class="modal">
+    <h2>🔑 Connexion</h2>
+    <form onsubmit="loginUser(event)">
+        <div class="form-group"><label>Courriel</label><input type="email" id="login-email" required></div>
+        <div class="form-group"><label>Mot de passe</label><input type="password" id="login-pass" required></div>
+        <div class="info-box">💡 <strong>Admin :</strong> admin@ruralgo.ca / admin123</div>
+        <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('login-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">🔓 Se connecter</button></div>
+    </form>
+</div></div>
+
+<div class="modal-bg" id="store-modal"><div class="modal">
+    <h2 id="store-modal-title">➕ Ajouter un magasin</h2>
+    <form onsubmit="saveStore(event)">
+        <input type="hidden" id="store-id">
+        <div class="form-group"><label>Nom *</label><input type="text" id="store-name" required></div>
+        <div class="form-group"><label>Type *</label>
+            <select id="store-type" required>
+                <option value="">-- Choisir --</option>
+                <option>🛒 Épicerie</option>
+                <option>💊 Pharmacie</option>
+                <option>🏪 Dépanneur</option>
+                <option>🍽️ Restaurant</option>
+                <option>🏬 Autres</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Adresse *</label>
+            <div class="autocomplete-wrapper">
+                <input type="text" id="store-addr" class="autocomplete-input" required placeholder="Ex: 100 rue Principale, Maniwaki, QC" autocomplete="off">
+                <div id="store-addr-suggestions" class="autocomplete-suggestions"></div>
+            </div>
+            <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('store-addr')">📍 Utiliser ma position GPS</button>
+        </div>
+        <div class="form-group"><label>Téléphone</label><input type="tel" id="store-phone"></div>
+        <div class="form-group"><label>Icône *</label><div class="icon-picker" id="store-icon-picker"></div><input type="hidden" id="store-icon"></div>
+        <div class="form-group"><label>Statut</label><select id="store-status"><option value="active">✅ Actif</option><option value="inactive">❌ Inactif</option></select></div>
+        <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('store-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">💾 Enregistrer</button></div>
+    </form>
+</div></div>
+
+<div class="modal-bg" id="category-modal"><div class="modal">
+    <h2 id="cat-modal-title">➕ Catégorie</h2>
+    <form onsubmit="saveCategory(event)">
+        <input type="hidden" id="cat-id">
+        <div class="form-group"><label>Nom *</label><input type="text" id="cat-name" required></div>
+        <div class="form-group"><label>Icône *</label><div class="icon-picker" id="cat-icon-picker"></div><input type="hidden" id="cat-icon"></div>
+        <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('category-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">💾 Enregistrer</button></div>
+    </form>
+</div></div>
+
+<div class="modal-bg" id="product-modal"><div class="modal">
+    <h2 id="prod-modal-title">➕ Produit</h2>
+    <form onsubmit="saveProduct(event)">
+        <input type="hidden" id="prod-id">
+        <div class="form-group"><label>Magasin *</label><select id="prod-store" required></select></div>
+        <div class="form-group"><label>Catégorie *</label><select id="prod-category" required></select></div>
+        <div class="form-group"><label>Nom *</label><input type="text" id="prod-name" required></div>
+        <div class="form-group"><label>Description</label><input type="text" id="prod-desc"></div>
+        <div class="form-group"><label>Prix ($) *</label><input type="number" id="prod-price" required step="0.01" min="0"></div>
+        <div class="form-group"><label>Icône *</label><div class="icon-picker" id="prod-icon-picker"></div><input type="hidden" id="prod-icon"></div>
+        <div class="form-group"><label>Disponible</label><select id="prod-available"><option value="true">✅ Oui</option><option value="false">❌ Non</option></select></div>
+        <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('product-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">💾 Enregistrer</button></div>
+    </form>
+</div></div>
+
+<div class="modal-bg" id="edit-profile-modal"><div class="modal">
+    <h2>✏️ Modifier mon profil</h2>
+    <form onsubmit="saveProfile(event)">
+        <div class="form-group"><label>Nom complet</label><input type="text" id="ep-name" required></div>
+        <div class="form-group"><label>Téléphone</label><input type="tel" id="ep-phone" required></div>
+        <div class="form-group">
+            <label>Adresse</label>
+            <div class="autocomplete-wrapper">
+                <input type="text" id="ep-address" class="autocomplete-input" autocomplete="off">
+                <div id="ep-address-suggestions" class="autocomplete-suggestions"></div>
+            </div>
+            <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('ep-address')">📍 Utiliser ma position GPS</button>
+        </div>
+        <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('edit-profile-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">💾 Enregistrer</button></div>
+    </form>
+</div></div>
+
+<div class="modal-bg" id="confirm-modal"><div style="background:white;border-radius:12px;padding:2rem;max-width:400px;text-align:center">
+    <h3 style="color:#0a1929;margin-bottom:0.5rem">⚠️ Confirmer</h3>
+    <p style="color:#666;margin-bottom:1.5rem" id="confirm-msg">Êtes-vous sûr ?</p>
+    <div style="display:flex;gap:0.5rem;justify-content:center"><button class="btn-sm btn-gray" onclick="closeModal('confirm-modal')">Annuler</button><button class="btn-sm btn-red" id="confirm-btn">🗑️ Supprimer</button></div>
+</div></div>
+
+<footer><p><strong>RURALGO</strong> • Maniwaki et environs</p><p style="margin-top:0.5rem;opacity:0.8">© 2026 RuralGo</p></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const MANIWAKI_CENTER = [46.3767, -75.9653];
+const DELIVERY_RADIUS_KM = 40;
+
+let stores=[
+    {id:1,icon:'🛒',name:'Épicerie Générale du Haut-Pays',type:'Épicerie',address:'100 rue Principale, Maniwaki, QC',phone:'(819) 449-1234',status:'active',lat:46.3770,lng:-75.9650},
+    {id:2,icon:'💊',name:'Pharmacie Maniwaki',type:'Pharmacie',address:'45 boulevard des Cascades, Maniwaki, QC',phone:'(819) 449-5678',status:'active',lat:46.3785,lng:-75.9580},
+    {id:3,icon:'🏪',name:'Dépanneur Central',type:'Dépanneur',address:'78 avenue de la Gare, Maniwaki, QC',phone:'(819) 449-9012',status:'active',lat:46.3755,lng:-75.9630},
+    {id:4,icon:'🍽️',name:'Restaurant Le Maniwaki',type:'Restaurant',address:'55 rue Principale, Maniwaki, QC',phone:'(819) 449-3456',status:'active',lat:46.3850,lng:-75.9450},
+    {id:5,icon:'🍔',name:'Casse-Croûte du Village',type:'Restaurant',address:'15 rue Saint-Joseph, Maniwaki, QC',phone:'(819) 449-7890',status:'active',lat:46.3745,lng:-75.9700},
+    {id:6,icon:'🏬',name:'Quincaillerie & Matériaux Gagné',type:'Autres',address:'88 rue Principale, Maniwaki, QC',phone:'(819) 449-2345',status:'active',lat:46.3760,lng:-75.9660}
+];
+let categories=[
+    {id:1,name:'Fruits et légumes',icon:'🥬'},{id:2,name:'Produits laitiers',icon:'🥛'},
+    {id:3,name:'Viandes et poissons',icon:'🥩'},{id:4,name:'Pain et boulangerie',icon:'🍞'},
+    {id:5,name:'Épicerie sèche',icon:'🥫'},{id:6,name:'Boissons',icon:'🥤'},
+    {id:7,name:'Surgelés',icon:'🧊'},{id:8,name:'Entretien ménager',icon:'🧹'},
+    {id:10,name:'Médicaments',icon:'💊'},{id:11,name:'Soins personnels',icon:'🧴'},
+    {id:12,name:'Bébés',icon:'👶'},{id:13,name:'Vitamines',icon:'💉'},
+    {id:15,name:'Collations',icon:'🍿'},{id:16,name:'Glaces',icon:'🍦'},
+    {id:17,name:'Tabac',icon:'🚬'},
+    {id:20,name:'Plats principaux',icon:'🍲'},{id:21,name:'Entrées',icon:'🥗'},
+    {id:22,name:'Desserts',icon:'🍰'},{id:23,name:'Restauration rapide',icon:'🍟'},
+    {id:25,name:'Outils',icon:'🔧'},{id:26,name:'Matériaux',icon:'🪵'},
+    {id:27,name:'Plomberie',icon:'🚿'},{id:28,name:'Électricité',icon:'💡'},
+    {id:29,name:'Jardinage',icon:'🌱'},{id:30,name:'Peinture',icon:'🎨'}
+];
+let products=[
+    {id:1,storeId:1,categoryId:2,name:'Lait 2% 2L',desc:'Lait frais du Québec',price:4.99,icon:'🥛',available:true},
+    {id:2,storeId:1,categoryId:4,name:'Pain tranché blanc',desc:'Pain frais du jour',price:3.49,icon:'🍞',available:true},
+    {id:3,storeId:1,categoryId:2,name:'Douzaine d\'œufs',desc:'Œufs frais gros',price:5.29,icon:'🥚',available:true},
+    {id:4,storeId:1,categoryId:2,name:'Fromage cheddar',desc:'Bloc 400g',price:7.99,icon:'🧀',available:true},
+    {id:5,storeId:1,categoryId:1,name:'Pommes Gala 3lb',desc:'Pommes du Québec',price:6.49,icon:'🍎',available:true},
+    {id:6,storeId:1,categoryId:1,name:'Carottes 2lb',desc:'Carottes fraîches',price:3.29,icon:'🥕',available:true},
+    {id:7,storeId:1,categoryId:6,name:'Jus d\'orange 1.5L',desc:'100% pur jus',price:5.99,icon:'🍊',available:true},
+    {id:8,storeId:1,categoryId:5,name:'Riz basmati 2kg',desc:'Riz importé',price:8.49,icon:'🍚',available:true},
+    {id:30,storeId:1,categoryId:3,name:'Poitrine de poulet 1kg',desc:'Fraîche du jour',price:11.99,icon:'🍗',available:true},
+    {id:31,storeId:1,categoryId:1,name:'Bananes (régime)',desc:'Par livre',price:0.79,icon:'🍌',available:true},
+    {id:32,storeId:1,categoryId:1,name:'Tomates 2lb',desc:'Tomates de serre',price:4.49,icon:'🍅',available:true},
+    {id:33,storeId:1,categoryId:7,name:'Pizza surgelée',desc:'Pepperoni',price:7.99,icon:'🍕',available:true},
+    {id:34,storeId:1,categoryId:8,name:'Savon à vaisselle',desc:'Dawn 739ml',price:4.49,icon:'🧼',available:true},
+    {id:35,storeId:1,categoryId:5,name:'Pâtes spaghetti 500g',desc:'Pâtes alimentaires',price:2.29,icon:'🍝',available:true},
+    {id:36,storeId:1,categoryId:6,name:'Café régulier 300g',desc:'Café moulu',price:9.99,icon:'☕',available:true},
+    {id:9,storeId:2,categoryId:10,name:'Acétaminophène 500mg',desc:'24 comprimés',price:8.99,icon:'💊',available:true},
+    {id:10,storeId:2,categoryId:11,name:'Désinfectant mains',desc:'500ml',price:4.99,icon:'🧴',available:true},
+    {id:11,storeId:2,categoryId:11,name:'Savon corporel',desc:'400ml Dove',price:6.49,icon:'🧼',available:true},
+    {id:40,storeId:2,categoryId:10,name:'Ibuprofène 200mg',desc:'50 comprimés',price:12.99,icon:'💊',available:true},
+    {id:41,storeId:2,categoryId:10,name:'Sirop pour la toux',desc:'100ml',price:11.49,icon:'🍯',available:true},
+    {id:42,storeId:2,categoryId:11,name:'Shampooing',desc:'400ml Pantene',price:9.99,icon:'🧴',available:true},
+    {id:43,storeId:2,categoryId:11,name:'Dentifrice',desc:'100ml Colgate',price:4.99,icon:'🪥',available:true},
+    {id:44,storeId:2,categoryId:12,name:'Couches Pampers',desc:'Taille 3, 30 unités',price:16.99,icon:'👶',available:true},
+    {id:45,storeId:2,categoryId:12,name:'Lait pour bébé',desc:'En poudre 680g',price:24.99,icon:'🍼',available:true},
+    {id:46,storeId:2,categoryId:13,name:'Vitamine C 1000mg',desc:'90 comprimés',price:14.99,icon:'💉',available:true},
+    {id:47,storeId:2,categoryId:13,name:'Multivitamines',desc:'Flacon 100 unités',price:19.99,icon:'💊',available:true},
+    {id:48,storeId:2,categoryId:11,name:'Brosse à dents',desc:'Oral-B souple',price:5.49,icon:'🪥',available:true},
+    {id:49,storeId:2,categoryId:10,name:'Pansements adhésifs',desc:'Boîte 40 unités',price:6.99,icon:'🩹',available:true},
+    {id:12,storeId:3,categoryId:6,name:'Coca-Cola 2L',desc:'Boisson gazeuse',price:2.99,icon:'🥤',available:true},
+    {id:13,storeId:3,categoryId:15,name:'Chips Lay\'s nature',desc:'235g',price:4.29,icon:'🍟',available:true},
+    {id:50,storeId:3,categoryId:6,name:'Eau embouteillée 12 pack',desc:'500ml x 12',price:4.99,icon:'💧',available:true},
+    {id:51,storeId:3,categoryId:15,name:'Barre chocolatée',desc:'Kit Kat',price:1.79,icon:'🍫',available:true},
+    {id:52,storeId:3,categoryId:15,name:'Arachides salées',desc:'250g',price:3.99,icon:'🥜',available:true},
+    {id:53,storeId:3,categoryId:16,name:'Crème glacée 2L',desc:'Vanille',price:6.99,icon:'🍦',available:true},
+    {id:54,storeId:3,categoryId:16,name:'Esquimaux (boîte 8)',desc:'Barres glacées',price:7.49,icon:'🍡',available:true},
+    {id:55,storeId:3,categoryId:6,name:'Café Tim Hortons',desc:'Moyen chaud',price:2.29,icon:'☕',available:true},
+    {id:56,storeId:3,categoryId:6,name:'Red Bull 250ml',desc:'Boisson énergisante',price:3.49,icon:'🥫',available:true},
+    {id:57,storeId:3,categoryId:15,name:'Bonbons',desc:'Sac 150g',price:2.99,icon:'🍬',available:true},
+    {id:58,storeId:3,categoryId:6,name:'Jus Minute Maid',desc:'355ml',price:2.49,icon:'🧃',available:true},
+    {id:59,storeId:3,categoryId:17,name:'Cigarettes (paquet)',desc:'Marque au choix',price:14.50,icon:'🚬',available:true},
+    {id:60,storeId:3,categoryId:15,name:'Biscuits Oreo',desc:'154g',price:3.49,icon:'🍪',available:true},
+    {id:17,storeId:4,categoryId:20,name:'Pizza pepperoni',desc:'Grand format 16 pouces',price:18.99,icon:'🍕',available:true},
+    {id:18,storeId:4,categoryId:20,name:'Pâtes carbonara',desc:'Portion généreuse',price:14.99,icon:'🍝',available:true},
+    {id:19,storeId:4,categoryId:21,name:'Salade César',desc:'Avec poulet grillé',price:12.99,icon:'🥗',available:true},
+    {id:61,storeId:4,categoryId:20,name:'Lasagne italienne',desc:'Portion familiale',price:16.99,icon:'🍲',available:true},
+    {id:62,storeId:4,categoryId:20,name:'Poulet parmesan',desc:'Servi avec pâtes',price:17.99,icon:'🍗',available:true},
+    {id:63,storeId:4,categoryId:20,name:'Filet de saumon',desc:'Servi avec légumes',price:22.99,icon:'🐟',available:true},
+    {id:64,storeId:4,categoryId:21,name:'Soupe du jour',desc:'Bol 12oz',price:5.99,icon:'🍜',available:true},
+    {id:65,storeId:4,categoryId:21,name:'Ailes de poulet (12)',desc:'Sauce BBQ ou Buffalo',price:15.99,icon:'🍗',available:true},
+    {id:66,storeId:4,categoryId:22,name:'Tiramisu',desc:'Part individuelle',price:7.99,icon:'🍰',available:true},
+    {id:67,storeId:4,categoryId:22,name:'Crème brûlée',desc:'Part individuelle',price:6.99,icon:'🍮',available:true},
+    {id:68,storeId:4,categoryId:6,name:'Vin rouge (bouteille)',desc:'Chianti italien',price:18.99,icon:'🍷',available:true},
+    {id:69,storeId:4,categoryId:6,name:'Bière locale',desc:'600ml',price:7.99,icon:'🍺',available:true},
+    {id:14,storeId:5,categoryId:23,name:'Hamburger classique',desc:'Bœuf, laitue, tomate',price:8.99,icon:'🍔',available:true},
+    {id:15,storeId:5,categoryId:23,name:'Hot-dog',desc:'Classique avec moutarde',price:4.99,icon:'🌭',available:true},
+    {id:16,storeId:5,categoryId:23,name:'Poutine',desc:'Frites, sauce, fromage',price:10.99,icon:'🍟',available:true},
+    {id:70,storeId:5,categoryId:23,name:'Cheeseburger',desc:'Double viande, fromage',price:11.99,icon:'🍔',available:true},
+    {id:71,storeId:5,categoryId:23,name:'Club sandwich',desc:'Poulet, bacon, laitue',price:12.99,icon:'🥪',available:true},
+    {id:72,storeId:5,categoryId:23,name:'Nuggets de poulet (10)',desc:'Avec sauce',price:9.99,icon:'🍗',available:true},
+    {id:73,storeId:5,categoryId:23,name:'Frites régulières',desc:'Portion moyenne',price:4.49,icon:'🍟',available:true},
+    {id:74,storeId:5,categoryId:23,name:'Frites chargées',desc:'Bacon, fromage, sauce',price:8.99,icon:'🍟',available:true},
+    {id:75,storeId:5,categoryId:22,name:'Crêpes (3)',desc:'Avec sirop d\'érable',price:6.99,icon:'🥞',available:true},
+    {id:76,storeId:5,categoryId:22,name:'Pointe de tarte',desc:'Pommes ou bleuets',price:3.99,icon:'🥧',available:true},
+    {id:77,storeId:5,categoryId:6,name:'Liqueur molle',desc:'2L',price:2.99,icon:'🥤',available:true},
+    {id:78,storeId:5,categoryId:6,name:'Café régulier',desc:'Grand',price:2.49,icon:'☕',available:true},
+    {id:20,storeId:6,categoryId:25,name:'Marteau 16oz',desc:'Manche en bois',price:15.99,icon:'🔨',available:true},
+    {id:21,storeId:6,categoryId:25,name:'Tournevis set 6 pcs',desc:'Plat et cruciforme',price:19.99,icon:'🪛',available:true},
+    {id:80,storeId:6,categoryId:25,name:'Scie à main',desc:'14 pouces',price:24.99,icon:'🪚',available:true},
+    {id:81,storeId:6,categoryId:25,name:'Pince multiprise',desc:'10 pouces',price:12.99,icon:'🔧',available:true},
+    {id:82,storeId:6,categoryId:25,name:'Mètre à ruban 25 pi',desc:'Stanley',price:14.99,icon:'📏',available:true},
+    {id:83,storeId:6,categoryId:26,name:'Bois 2x4x8\'',desc:'Poteau de construction',price:6.99,icon:'🪵',available:true},
+    {id:84,storeId:6,categoryId:26,name:'Plywood 4x8',desc:'1/2 pouce',price:45.99,icon:'🪵',available:true},
+    {id:85,storeId:6,categoryId:27,name:'Tuyau PVC 10 pi',desc:'1.5 pouce',price:8.99,icon:'🚿',available:true},
+    {id:86,storeId:6,categoryId:27,name:'Robinet de cuisine',desc:'Chrome',price:79.99,icon:'🚰',available:true},
+    {id:87,storeId:6,categoryId:28,name:'Ampoule LED 60W',desc:'Pack de 4',price:12.99,icon:'💡',available:true},
+    {id:88,storeId:6,categoryId:28,name:'Prolongateur électrique',desc:'25 pieds',price:19.99,icon:'🔌',available:true},
+    {id:89,storeId:6,categoryId:29,name:'Terreau 25kg',desc:'Pour jardin',price:8.99,icon:'🌱',available:true},
+    {id:90,storeId:6,categoryId:29,name:'Boyau d\'arrosage 50 pi',desc:'Avec embout',price:29.99,icon:'💦',available:true},
+    {id:91,storeId:6,categoryId:30,name:'Peinture intérieure 4L',desc:'Blanc, latex',price:39.99,icon:'🎨',available:true},
+    {id:92,storeId:6,categoryId:30,name:'Pinceau 2 pouces',desc:'Soies synthétiques',price:7.99,icon:'🖌️',available:true},
+    {id:93,storeId:6,categoryId:25,name:'Perceuse sans fil',desc:'18V avec batterie',price:89.99,icon:'🔩',available:true}
+];
+
+let nextStoreId=7,nextCatId=31,nextProdId=100;
+let cart=[];
+let clients=[],drivers=[],orders=[],notifications=[];
+let currentUser=null,selectedAccountType=null;
+let selectedStoreIcon='',selectedCatIcon='',selectedProdIcon='';
+let userPosition = null;
+let autocompleteTimeout = null;
+const defaultAdmin={id:'admin',name:'Administrateur',email:'admin@ruralgo.ca',password:'admin123',role:'admin',phone:'(819) 000-0000',address:'Maniwaki, QC',createdAt:new Date().toISOString()};
+const allIcons=['🛒','💊','🏪','🔨','🍞','🥩','🍽️','🏬','🥖','🧀','🍎','🥕','🌾','🛍️','🏠','⭐','🥛','🥚','🥬','🥫','🥤','🧴','🧼','🔧','🪛','🍗','🥓','🍊','🍚','🍟','🥐','🍰','📦','🚗','🛻','🍔','🍕','🍝','🌭','🥗','🍲','🍳','🍦','🍫','🍪','🍬','🥜','💧','☕','🍺','🍷','🐟','🥪','🥞','🥧','🍮','🪵','🚿','💡','🔌','🌱','💦','🎨','🖌️','🔩','📏','🪚','🪥','🩹','💉','🍼','👶','🚬'];
+
+// ============ NOUVEAU SYSTÈME DE FACTURATION ============
+let platformSettings = {
+    deliveryBaseFee: 7.00,    // Frais de base : 7$
+    deliveryPerKm: 1.00,      // 1$ par km
+    taxRate: 0.14975,         // TPS+TVQ
+    driverCommission: 0.20,   // 20% des frais de livraison pour le livreur
+    radius: 40
+};
+
+const STATUS_LABELS = {
+    'pending': {label:'En attente', class:'status-pending'},
+    'confirmed': {label:'Confirmée', class:'status-confirmed'},
+    'searching_driver': {label:'Recherche livreur', class:'status-searching'},
+    'driver_assigned': {label:'Livreur assigné', class:'status-assigned'},
+    'driver_to_store': {label:'En route vers magasin', class:'status-pickup'},
+    'at_store': {label:'Au magasin', class:'status-pickup'},
+    'picked_up': {label:'Commande récupérée', class:'status-delivering'},
+    'driver_to_client': {label:'En route vers vous', class:'status-delivering'},
+    'delivered': {label:'Livrée', class:'status-delivered'},
+    'cancelled': {label:'Annulée', class:'status-cancelled'}
+};
+
+// ============ CALCUL DES FRAIS DE LIVRAISON ============
+function calculateDeliveryFee(storeLat, storeLng, clientLat, clientLng){
+    // Si on n'a pas les coordonnées, utiliser une distance par défaut
+    if(!storeLat || !storeLng || !clientLat || !clientLng){
+        return {
+            baseFee: platformSettings.deliveryBaseFee,
+            distanceKm: 5,
+            perKmFee: platformSettings.deliveryPerKm * 5,
+            totalFee: platformSettings.deliveryBaseFee + (platformSettings.deliveryPerKm * 5)
+        };
+    }
+    
+    const distanceKm = calculateDistance(storeLat, storeLng, clientLat, clientLng);
+    const baseFee = platformSettings.deliveryBaseFee;
+    const perKmFee = platformSettings.deliveryPerKm * distanceKm;
+    const totalFee = baseFee + perKmFee;
+    
+    return {
+        baseFee: baseFee,
+        distanceKm: distanceKm,
+        perKmFee: perKmFee,
+        totalFee: totalFee
+    };
+}
+
+// Trouver le magasin principal du panier
+function getCurrentStore(){
+    if(cart.length === 0) return null;
+    const firstProductId = cart[0].productId;
+    const product = products.find(p => p.id === firstProductId);
+    if(!product) return null;
+    return stores.find(s => s.id === product.storeId);
+}
+
+function save(){localStorage.setItem('rg_stores',JSON.stringify(stores));localStorage.setItem('rg_categories',JSON.stringify(categories));localStorage.setItem('rg_products',JSON.stringify(products));localStorage.setItem('rg_clients',JSON.stringify(clients));localStorage.setItem('rg_drivers',JSON.stringify(drivers));localStorage.setItem('rg_orders',JSON.stringify(orders));localStorage.setItem('rg_notifications',JSON.stringify(notifications));localStorage.setItem('rg_settings',JSON.stringify(platformSettings));localStorage.setItem('rg_ids',JSON.stringify({s:nextStoreId,c:nextCatId,p:nextProdId}));if(currentUser)localStorage.setItem('rg_user',JSON.stringify(currentUser));else localStorage.removeItem('rg_user');}
+function load(){try{let d;d=localStorage.getItem('rg_stores');if(d)stores=JSON.parse(d);d=localStorage.getItem('rg_categories');if(d)categories=JSON.parse(d);d=localStorage.getItem('rg_products');if(d)products=JSON.parse(d);d=localStorage.getItem('rg_clients');if(d)clients=JSON.parse(d);d=localStorage.getItem('rg_drivers');if(d)drivers=JSON.parse(d);d=localStorage.getItem('rg_orders');if(d)orders=JSON.parse(d);d=localStorage.getItem('rg_notifications');if(d)notifications=JSON.parse(d);d=localStorage.getItem('rg_settings');if(d)platformSettings=JSON.parse(d);d=localStorage.getItem('rg_ids');if(d){let o=JSON.parse(d);nextStoreId=o.s;nextCatId=o.c;nextProdId=o.p;}d=localStorage.getItem('rg_user');if(d){currentUser=JSON.parse(d);showUserInterface();}}catch(e){console.error(e)}}
+
+function addNotification(userId, title, message){const notif = {id: Date.now() + Math.random(), userId, title, message, time: new Date().toISOString(), read: false};notifications.push(notif);save();updateNotifBadge();}
+function updateNotifBadge(){if(!currentUser) return;const userNotifs = notifications.filter(n => n.userId === currentUser.id && !n.read);const badge = document.getElementById('notif-badge');if(userNotifs.length > 0){badge.style.display = 'flex';badge.textContent = userNotifs.length;}else {badge.style.display = 'none';}}
+function toggleNotifPanel(){const panel = document.getElementById('notif-panel');panel.classList.toggle('show');if(panel.classList.contains('show')) renderNotifications();}
+function renderNotifications(){const list = document.getElementById('notif-list');const userNotifs = notifications.filter(n => n.userId === currentUser.id).sort((a,b) => new Date(b.time) - new Date(a.time)).slice(0, 10);if(userNotifs.length === 0){list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999">Aucune notification</div>';return;}list.innerHTML = userNotifs.map(n => `<div class="notif-item ${n.read?'':'unread'}" onclick="markNotifRead(${n.id})"><div class="notif-item-title">${n.title}</div><div class="notif-item-msg">${n.message}</div><div class="notif-item-time">${formatTime(n.time)}</div></div>`).join('');}
+function markNotifRead(id){const n = notifications.find(x => x.id === id);if(n) n.read = true;save();updateNotifBadge();renderNotifications();}
+function markAllRead(){notifications.forEach(n => { if(n.userId === currentUser.id) n.read = true; });save();updateNotifBadge();renderNotifications();}
+function formatTime(iso){const d = new Date(iso);const now = new Date();const diff = (now - d) / 1000;if(diff < 60) return 'À l\'instant';if(diff < 3600) return Math.floor(diff/60) + ' min';if(diff < 86400) return Math.floor(diff/3600) + ' h';return d.toLocaleDateString('fr-CA');}
+
+function initAutocomplete(inputId, suggestionsId){const input = document.getElementById(inputId);const suggestions = document.getElementById(suggestionsId);if(!input || !suggestions) return;input.addEventListener('input', function(e){const query = e.target.value.trim();if(autocompleteTimeout) clearTimeout(autocompleteTimeout);if(query.length < 3){suggestions.classList.remove('show');return}suggestions.innerHTML = '<div class="autocomplete-loading">Recherche...</div>';suggestions.classList.add('show');autocompleteTimeout = setTimeout(()=>{searchAddress(query, suggestionsId, inputId)}, 500);});document.addEventListener('click', function(e){if(!input.contains(e.target) && !suggestions.contains(e.target)){suggestions.classList.remove('show');}});}
+async function searchAddress(query, suggestionsId, inputId){const suggestions = document.getElementById(suggestionsId);try{const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ca&limit=5&addressdetails=1&accept-language=fr`;const response = await fetch(url);const data = await response.json();if(!data || data.length === 0){suggestions.innerHTML = '<div class="autocomplete-empty">Aucune adresse trouvée</div>';return;}suggestions.innerHTML = data.map((item, index) => {const address = item.address || {};let mainText = item.display_name;let subText = '';if(address.road || address.street){mainText = `${address.house_number || ''} ${address.road || address.street || ''}`.trim();subText = `${address.city || address.town || address.village || ''}${address.state ? ', ' + address.state : ''}${address.postcode ? ' ' + address.postcode : ''}`.trim();}return `<div class="autocomplete-item" onclick="selectAddress('${inputId}', '${suggestionsId}', ${index})"><div class="autocomplete-item-icon">📍</div><div class="autocomplete-item-content"><div class="autocomplete-item-main">${mainText}</div>${subText ? `<div class="autocomplete-item-sub">${subText}</div>` : ''}</div></div>`;}).join('');suggestions._data = data;}catch(error){suggestions.innerHTML = '<div class="autocomplete-empty">Erreur de recherche</div>';}}
+function selectAddress(inputId, suggestionsId, index){const suggestions = document.getElementById(suggestionsId);const input = document.getElementById(inputId);const data = suggestions._data;if(!data || !data[index]) return;const item = data[index];input.value = item.display_name;if(item.lat && item.lon){input._lat = parseFloat(item.lat);input._lng = parseFloat(item.lon);userPosition = {lat: input._lat, lng: input._lng};}suggestions.classList.remove('show');showToast('✅ Adresse sélectionnée !');if(currentUser && currentUser.role === 'client') updateCart();}
+function geolocateAddress(fieldId){const btn = event.target;const originalText = btn.innerHTML;if(!navigator.geolocation){showToast('⚠️ Géolocalisation non supportée');return}btn.classList.add('loading');btn.innerHTML = '📍 Localisation...';navigator.geolocation.getCurrentPosition(async (pos)=>{const lat = pos.coords.latitude, lng = pos.coords.longitude;userPosition = {lat, lng};try{const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=fr&zoom=18`);const data = await resp.json();if(data && data.display_name){document.getElementById(fieldId).value = data.display_name;document.getElementById(fieldId)._lat = lat;document.getElementById(fieldId)._lng = lng;showToast('✅ Adresse trouvée !');}else {document.getElementById(fieldId).value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;}}catch(e){document.getElementById(fieldId).value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;}btn.classList.remove('loading');btn.innerHTML = originalText;if(currentUser && currentUser.role === 'client') updateCart();},()=>{btn.classList.remove('loading');btn.innerHTML = originalText;showToast('❌ Permission refusée')},{enableHighAccuracy: true, timeout: 10000});}
+
+function openChooseTypeModal(){selectedAccountType=null;document.querySelectorAll('.account-type').forEach(t=>t.classList.remove('selected'));document.getElementById('continue-type-btn').disabled=true;openModal('choose-type-modal')}
+function selectAccountType(type,el){selectedAccountType=type;document.querySelectorAll('.account-type').forEach(t=>t.classList.remove('selected'));el.classList.add('selected');document.getElementById('continue-type-btn').disabled=false}
+function continueToRegister(){closeModal('choose-type-modal');if(selectedAccountType==='client'){openModal('register-client-modal');setTimeout(()=>initAutocomplete('rc-address','rc-address-suggestions'),100);}else openModal('register-driver-modal')}
+function openLoginModal(){openModal('login-modal')}
+
+function registerClient(e){e.preventDefault();const email=document.getElementById('rc-email').value;if(clients.find(c=>c.email===email)||drivers.find(d=>d.email===email)){showToast('⚠️ Email déjà utilisé');return}const addressInput = document.getElementById('rc-address');const u={id:Date.now(),role:'client',name:document.getElementById('rc-name').value,email,password:document.getElementById('rc-pass').value,phone:document.getElementById('rc-phone').value,address:addressInput.value,lat:addressInput._lat||userPosition?.lat,lng:addressInput._lng||userPosition?.lng,createdAt:new Date().toISOString()};clients.push(u);currentUser=u;save();closeModal('register-client-modal');showUserInterface();showToast('✅ Bienvenue '+u.name.split(' ')[0]+' !');}
+function registerDriver(e){e.preventDefault();const email=document.getElementById('rd-email').value;if(clients.find(c=>c.email===email)||drivers.find(d=>d.email===email)){showToast('⚠️ Email déjà utilisé');return}const u={id:Date.now(),role:'driver',name:document.getElementById('rd-name').value,email,password:document.getElementById('rd-pass').value,phone:document.getElementById('rd-phone').value,vehicle:document.getElementById('rd-vehicle').value,status:'pending',createdAt:new Date().toISOString()};drivers.push(u);save();closeModal('register-driver-modal');showToast('📨 Demande envoyée ! En attente d\'approbation admin.');}
+function loginUser(e){e.preventDefault();const email=document.getElementById('login-email').value,pass=document.getElementById('login-pass').value;if(email===defaultAdmin.email&&pass===defaultAdmin.password){currentUser=defaultAdmin;save();closeModal('login-modal');showUserInterface();showToast('✅ Bienvenue Admin !');return}const cl=clients.find(c=>c.email===email&&c.password===pass);if(cl){currentUser=cl;save();closeModal('login-modal');showUserInterface();showToast('✅ Bienvenue '+cl.name.split(' ')[0]+' !');return}const dr=drivers.find(d=>d.email===email&&d.password===pass);if(dr){if(dr.status==='pending'){showToast('⏳ En attente d\'approbation');return}if(dr.status==='rejected'){showToast('❌ Demande refusée');return}currentUser=dr;save();closeModal('login-modal');showUserInterface();showToast('✅ Bienvenue '+dr.name.split(' ')[0]+' !');return}showToast('❌ Email ou mot de passe incorrect');}
+function logout(){currentUser=null;localStorage.removeItem('rg_user');document.getElementById('auth-section').style.display='flex';document.getElementById('user-section').style.display='none';document.getElementById('nav-client').style.display='none';document.getElementById('nav-driver').style.display='none';document.getElementById('nav-admin').style.display='none';document.getElementById('notif-bell-container').style.display='none';switchView('view-landing');showToast('👋 Déconnexion')}
+
+function showUserInterface(){document.getElementById('auth-section').style.display='none';document.getElementById('user-section').style.display='flex';document.getElementById('notif-bell-container').style.display='block';const ini=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);document.getElementById('user-avatar').textContent=ini;document.getElementById('user-name').textContent=currentUser.name.split(' ')[0];const labels={client:'👤 Client',driver:'🚗 Livreur',admin:'⚙️ Admin'};document.getElementById('user-role').textContent=labels[currentUser.role];document.getElementById('nav-client').style.display='none';document.getElementById('nav-driver').style.display='none';document.getElementById('nav-admin').style.display='none';if(currentUser.role==='client'){document.getElementById('nav-client').style.display='block';document.getElementById('client-firstname').textContent=currentUser.name.split(' ')[0];updateDeliveryAddress();switchView('view-client');showClientStores();}else if(currentUser.role==='driver'){document.getElementById('nav-driver').style.display='block';document.getElementById('driver-firstname').textContent=currentUser.name.split(' ')[0];switchView('view-driver');showDriverDashboard();}else if(currentUser.role==='admin'){document.getElementById('nav-admin').style.display='block';switchView('view-admin');renderAllAdmin();}updateNotifBadge();}
+
+function switchView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
+function goHome(){if(currentUser){if(currentUser.role==='client')showClientStores();else if(currentUser.role==='driver')showDriverDashboard();else {switchView('view-admin');adminTab('dashboard',document.querySelector('.admin-side li'));}}else switchView('view-landing')}
+function scrollToSection(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth'})}
+
+function renderLandingStores(){const g=document.getElementById('landing-stores-grid');if(!g)return;const active=stores.filter(s=>s.status==='active').slice(0,6);g.innerHTML=active.map(s=>{const count=products.filter(p=>p.storeId===s.id&&p.available).length;return`<div class="store"><div class="store-img">${s.icon}</div><div class="store-info"><h3>${s.name}</h3><p style="color:#666;font-size:0.9rem">${s.type}</p><p style="color:#999;font-size:0.85rem;margin-top:0.3rem">📍 ${s.address}</p><p style="color:#0a1929;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📦 ${count} produit(s)</p></div></div>`}).join('');}
+
+function showClientStores(){switchView('view-client');document.getElementById('stores-section').style.display='block';document.getElementById('store-detail-section').style.display='none';document.getElementById('client-orders-section').style.display='none';document.getElementById('client-order-detail-section').style.display='none';document.getElementById('client-profile-section').style.display='none';renderClientStores();setTimeout(()=>{document.getElementById('stores-section').scrollIntoView({behavior:'smooth'})},200);}
+function renderClientStores(){const g=document.getElementById('stores-grid');const active=stores.filter(s=>s.status==='active');if(!active.length){g.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏪</div><p>Aucun magasin</p></div>';return}g.innerHTML=active.map(s=>{const count=products.filter(p=>p.storeId===s.id&&p.available).length;const dist = userPosition ? calculateDistance(userPosition.lat, userPosition.lng, s.lat, s.lng) : null;return`<div class="store" onclick="openStoreDetail(${s.id})"><div class="store-img">${s.icon}</div><div class="store-info"><h3>${s.name}</h3><p style="color:#666;font-size:0.9rem">${s.type}</p><p style="color:#999;font-size:0.85rem;margin-top:0.3rem">📍 ${s.address}</p>${dist?`<p style="color:#0284c7;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📏 ${dist.toFixed(1)} km de vous</p>`:''}<p style="color:#0a1929;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📦 ${count} produit(s)</p></div></div>`}).join('');}
+
+function openStoreDetail(storeId){const store=stores.find(s=>s.id===storeId);if(!store)return;document.getElementById('stores-section').style.display='none';document.getElementById('store-detail-section').style.display='block';const storeProducts=products.filter(p=>p.storeId===storeId&&p.available);const storeCats=[...new Set(storeProducts.map(p=>p.categoryId))].map(cid=>categories.find(c=>c.id===cid)).filter(Boolean);let html=`<button class="back-btn" onclick="showClientStores()">← Retour</button>`;html+=`<div class="store-detail-header"><div class="store-detail-icon">${store.icon}</div><div class="store-detail-info"><h2>${store.name}</h2><p>${store.type} • ${store.address}</p><p>${storeProducts.length} produit(s) disponible(s)</p></div></div>`;if(storeCats.length>0){html+=`<div class="categories-bar"><button class="cat-btn active" onclick="filterProducts(${storeId},'all',this)">🏷️ Tout (${storeProducts.length})</button>`;storeCats.forEach(c=>{const catCount = storeProducts.filter(p=>p.categoryId===c.id).length;html+=`<button class="cat-btn" onclick="filterProducts(${storeId},${c.id},this)">${c.icon} ${c.name} (${catCount})</button>`});html+=`</div>`}html+=`<div class="products-grid" id="products-grid-detail"></div>`;document.getElementById('store-detail-content').innerHTML=html;renderStoreProducts(storeId,'all');}
+
+function filterProducts(storeId,catId,btn){document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderStoreProducts(storeId,catId);}
+
+function renderStoreProducts(storeId,catId){let prods=products.filter(p=>p.storeId===storeId&&p.available);if(catId!=='all')prods=prods.filter(p=>p.categoryId===catId);const g=document.getElementById('products-grid-detail');if(!prods.length){g.innerHTML='<div class="no-products"><p>😕 Aucun produit dans cette catégorie</p></div>';return}g.innerHTML=prods.map(p=>{const cat=categories.find(c=>c.id===p.categoryId);return`<div class="product-card"><div class="product-card-img">${p.icon}</div><div class="product-card-info">${cat?`<span style="display:inline-block;background:#f5f1e8;color:#5c3a21;padding:0.15rem 0.5rem;border-radius:10px;font-size:0.75rem;margin-bottom:0.5rem">${cat.icon} ${cat.name}</span>`:''}<h4>${p.name}</h4><p style="color:#666;font-size:0.85rem">${p.desc||''}</p><div class="product-price">${p.price.toFixed(2)} $</div><button class="add-cart-btn" onclick="addToCart(${p.id})">🛒 Ajouter</button></div></div>`}).join('');}
+
+function addToCart(prodId){const p=products.find(x=>x.id===prodId);if(!p)return;const ex=cart.find(c=>c.productId===prodId);if(ex)ex.qty++;else cart.push({productId:prodId,name:p.name,icon:p.icon,price:p.price,qty:1});updateCart();showToast('✅ '+p.name+' ajouté !');}
+
+// ============ MISE À JOUR DU PANIER AVEC FRAIS DYNAMIQUES ============
+function updateCart(){
+    document.getElementById('cart-count').textContent=cart.reduce((s,c)=>s+c.qty,0);
+    const el=document.getElementById('cart-items');
+    const feeDetails = document.getElementById('delivery-fee-details');
+    
+    if(!cart.length){
+        el.innerHTML='<p style="text-align:center;color:#666;padding:2rem">Votre panier est vide</p>';
+        feeDetails.innerHTML = '';
+        document.getElementById('subtotal').textContent='0.00 $';
+        document.getElementById('fee-base').textContent=platformSettings.deliveryBaseFee.toFixed(2)+' $';
+        document.getElementById('fee-distance-label').textContent='↳ Distance (0 km × '+platformSettings.deliveryPerKm.toFixed(2)+'$)';
+        document.getElementById('fee-distance').textContent='0.00 $';
+        document.getElementById('delivery-fee').textContent=platformSettings.deliveryBaseFee.toFixed(2)+' $';
+        document.getElementById('taxes').textContent='0.00 $';
+        document.getElementById('total').textContent=platformSettings.deliveryBaseFee.toFixed(2)+' $';
+        return;
+    }
+    
+    el.innerHTML=cart.map((c,i)=>`<div class="cart-item"><div style="font-size:2rem">${c.icon}</div><div class="cart-item-info"><h4>${c.name}</h4><p style="color:#666">${c.price.toFixed(2)} $</p></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty(${i},-1)">−</button><span><strong>${c.qty}</strong></span><button class="qty-btn" onclick="changeQty(${i},1)">+</button></div><strong style="min-width:70px;text-align:right">${(c.price*c.qty).toFixed(2)} $</strong></div>`).join('');
+    
+    const sub=cart.reduce((s,c)=>s+c.price*c.qty,0);
+    
+    // Calcul des frais de livraison selon distance magasin → client
+    const store = getCurrentStore();
+    let deliveryInfo;
+    
+    if(store && currentUser && currentUser.lat && currentUser.lng && store.lat && store.lng){
+        deliveryInfo = calculateDeliveryFee(store.lat, store.lng, currentUser.lat, currentUser.lng);
+    } else {
+        // Distance par défaut si pas de coordonnées
+        deliveryInfo = {
+            baseFee: platformSettings.deliveryBaseFee,
+            distanceKm: 0,
+            perKmFee: 0,
+            totalFee: platformSettings.deliveryBaseFee
+        };
+    }
+    
+    // Afficher le détail des frais de livraison
+    if(store && currentUser && currentUser.lat && currentUser.lng){
+        feeDetails.innerHTML = `
+            <div class="delivery-fee-breakdown">
+                <h4>🚗 Détail des frais de livraison</h4>
+                <div class="delivery-fee-line">
+                    <span>🏪 Magasin :</span>
+                    <strong>${store.name}</strong>
+                </div>
+                <div class="delivery-fee-line">
+                    <span>📍 Distance :</span>
+                    <strong>${deliveryInfo.distanceKm.toFixed(1)} km</strong>
+                </div>
+                <div class="delivery-fee-line">
+                    <span>💰 Frais de base :</span>
+                    <span>${deliveryInfo.baseFee.toFixed(2)} $</span>
+                </div>
+                <div class="delivery-fee-line">
+                    <span>📏 ${deliveryInfo.distanceKm.toFixed(1)} km × ${platformSettings.deliveryPerKm.toFixed(2)} $/km :</span>
+                    <span>${deliveryInfo.perKmFee.toFixed(2)} $</span>
+                </div>
+                <div class="delivery-fee-total">
+                    <span>TOTAL LIVRAISON :</span>
+                    <span>${deliveryInfo.totalFee.toFixed(2)} $</span>
+                </div>
+            </div>
+        `;
+    } else {
+        feeDetails.innerHTML = `
+            <div class="delivery-fee-breakdown" style="background:#fee2e2;border-color:#dc2626">
+                <h4 style="color:#991b1b">⚠️ Adresse de livraison incomplète</h4>
+                <p style="font-size:0.85rem;color:#991b1b">Pour calculer les frais de livraison, votre profil doit avoir une adresse avec coordonnées GPS. 
+                <a onclick="showProfile()" style="color:#0a1929;font-weight:bold;cursor:pointer;text-decoration:underline">Modifier mon profil</a></p>
+                <p style="font-size:0.85rem;margin-top:0.5rem;color:#991b1b">Frais de base appliqués : <strong>${platformSettings.deliveryBaseFee.toFixed(2)} $</strong></p>
+            </div>
+        `;
+    }
+    
+    const tax = sub * platformSettings.taxRate;
+    const tot = sub + deliveryInfo.totalFee + tax;
+    
+    document.getElementById('subtotal').textContent=sub.toFixed(2)+' $';
+    document.getElementById('fee-base').textContent=deliveryInfo.baseFee.toFixed(2)+' $';
+    document.getElementById('fee-distance-label').textContent=`↳ Distance (${deliveryInfo.distanceKm.toFixed(1)} km × ${platformSettings.deliveryPerKm.toFixed(2)}$)`;
+    document.getElementById('fee-distance').textContent=deliveryInfo.perKmFee.toFixed(2)+' $';
+    document.getElementById('delivery-fee').textContent=deliveryInfo.totalFee.toFixed(2)+' $';
+    document.getElementById('taxes').textContent=tax.toFixed(2)+' $';
+    document.getElementById('total').textContent=tot.toFixed(2)+' $';
+}
+
+function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);updateCart()}
+function scrollToCart(){switchView('view-client');document.getElementById('stores-section').style.display='none';document.getElementById('store-detail-section').style.display='none';document.getElementById('client-orders-section').style.display='none';document.getElementById('client-order-detail-section').style.display='none';document.getElementById('client-profile-section').style.display='none';setTimeout(()=>{document.getElementById('cart-section').scrollIntoView({behavior:'smooth'})},100);}
+function updateDeliveryAddress(){const d=document.getElementById('delivery-address-display');if(currentUser&&currentUser.role==='client')d.innerHTML=`<div class="delivery-address-box"><h4>📍 Adresse de livraison</h4><p><strong>${currentUser.name}</strong><br>${currentUser.address}<br>📞 ${currentUser.phone}</p></div>`;else d.innerHTML='';}
+
+function placeOrder(){
+    if(!cart.length){showToast('⚠️ Panier vide');return}
+    const sub=cart.reduce((s,c)=>s+c.price*c.qty,0);
+    
+    // Calcul des frais selon distance
+    const store = getCurrentStore();
+    let deliveryInfo;
+    if(store && currentUser && currentUser.lat && currentUser.lng && store.lat && store.lng){
+        deliveryInfo = calculateDeliveryFee(store.lat, store.lng, currentUser.lat, currentUser.lng);
+    } else {
+        deliveryInfo = {baseFee: platformSettings.deliveryBaseFee, distanceKm: 0, perKmFee: 0, totalFee: platformSettings.deliveryBaseFee};
+    }
+    
+    const tax=sub*platformSettings.taxRate;
+    const tot=sub+deliveryInfo.totalFee+tax;
+    
+    const order = {
+        id: Date.now(),
+        orderNumber: 'RG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+        clientId: currentUser.id,
+        clientName: currentUser.name,
+        clientPhone: currentUser.phone,
+        clientAddress: currentUser.address,
+        clientLat: currentUser.lat,
+        clientLng: currentUser.lng,
+        items: JSON.parse(JSON.stringify(cart)),
+        subtotal: sub,
+        deliveryBaseFee: deliveryInfo.baseFee,
+        deliveryDistanceKm: deliveryInfo.distanceKm,
+        deliveryPerKmFee: deliveryInfo.perKmFee,
+        deliveryFee: deliveryInfo.totalFee,
+        tax: tax,
+        total: tot,
+        status: 'pending',
+        driverId: null,
+        driverName: null,
+        storeId: store ? store.id : null,
+        storeName: store ? store.name : null,
+        createdAt: new Date().toISOString(),
+        statusHistory: [{status:'pending', time:new Date().toISOString(), note:'Commande créée'}]
+    };
+    
+    orders.push(order);
+    addNotification(currentUser.id, '✅ Commande confirmée', `Votre commande ${order.orderNumber} de ${tot.toFixed(2)}$ (livraison: ${deliveryInfo.totalFee.toFixed(2)}$ pour ${deliveryInfo.distanceKm.toFixed(1)}km) a été reçue !`);
+    drivers.filter(d=>d.status==='approved').forEach(d=>{addNotification(d.id, '📦 Nouvelle commande', `Commande ${order.orderNumber} - ${deliveryInfo.totalFee.toFixed(2)}$ à gagner`);});
+    addNotification('admin', '🆕 Nouvelle commande', `Commande ${order.orderNumber} de ${currentUser.name} - ${tot.toFixed(2)}$`);
+    cart=[];updateCart();save();showToast('✅ Commande passée ! #'+order.orderNumber);showClientOrders();
+}
+
+function showClientOrders(){switchView('view-client');document.getElementById('stores-section').style.display='none';document.getElementById('store-detail-section').style.display='none';document.getElementById('cart-section').style.display='none';document.getElementById('client-order-detail-section').style.display='none';document.getElementById('client-profile-section').style.display='none';document.getElementById('client-orders-section').style.display='block';renderClientOrders();}
+
+function renderClientOrders(){const list = document.getElementById('client-orders-list');const myOrders = orders.filter(o => o.clientId === currentUser.id).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));if(myOrders.length === 0){list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div><p>Aucune commande pour le moment</p><button class="btn" style="margin-top:1rem" onclick="showClientStores()">🛍️ Commencer mes achats</button></div>';return;}list.innerHTML = myOrders.map(o => {const st = STATUS_LABELS[o.status] || STATUS_LABELS.pending;return `<div class="order-card" onclick="showClientOrderDetail(${o.id})"><div class="order-card-header"><div><h4>Commande #${o.orderNumber}</h4><p style="color:#666;font-size:0.85rem">${new Date(o.createdAt).toLocaleString('fr-CA')}</p></div><span class="status-badge ${st.class}">${st.label}</span></div><div class="order-card-details"><div>🏪 ${o.storeName || 'Magasin'}</div><div>📦 ${o.items.length} article(s)</div><div>💰 <strong>${o.total.toFixed(2)} $</strong></div><div>🚗 Livraison : ${o.deliveryFee.toFixed(2)} $ (${(o.deliveryDistanceKm||0).toFixed(1)} km)</div></div></div>`;}).join('');}
+
+function showClientOrderDetail(orderId){const order = orders.find(o => o.id === orderId);if(!order) return;switchView('view-client');document.getElementById('stores-section').style.display='none';document.getElementById('store-detail-section').style.display='none';document.getElementById('cart-section').style.display='none';document.getElementById('client-orders-section').style.display='none';document.getElementById('client-profile-section').style.display='none';document.getElementById('client-order-detail-section').style.display='block';const st = STATUS_LABELS[order.status] || STATUS_LABELS.pending;const allStatuses = ['pending','confirmed','searching_driver','driver_assigned','driver_to_store','at_store','picked_up','driver_to_client','delivered'];const currentIdx = allStatuses.indexOf(order.status);let html = `<button class="back-btn" onclick="showClientOrders()">← Retour aux commandes</button>`;html += `<div class="store-detail-header"><div class="store-detail-icon">📦</div><div class="store-detail-info"><h2>Commande #${order.orderNumber}</h2><p>${new Date(order.createdAt).toLocaleString('fr-CA')}</p><p><span class="status-badge ${st.class}">${st.label}</span></p></div></div>`;html += `<div class="tracking-steps">`;const steps = [{status:'pending', icon:'📝', title:'Commande reçue'},{status:'confirmed', icon:'✅', title:'Paiement confirmé'},{status:'searching_driver', icon:'🔍', title:'Recherche livreur'},{status:'driver_assigned', icon:'🚗', title:'Livreur assigné'},{status:'driver_to_store', icon:'🛣️', title:'En route vers magasin'},{status:'at_store', icon:'🏪', title:'Au magasin'},{status:'picked_up', icon:'📦', title:'Commande récupérée'},{status:'driver_to_client', icon:'🚗', title:'En route vers vous'},{status:'delivered', icon:'🏠', title:'Livrée !'}];steps.forEach((s) => {const idx = allStatuses.indexOf(s.status);let cls = '';if(idx < currentIdx) cls = 'done';else if(idx === currentIdx) cls = 'active';html += `<div class="tracking-step ${cls}"><div class="step-icon">${s.icon}</div><div><h4>${s.title}</h4><p style="color:#666;font-size:0.85rem">${idx <= currentIdx ? '✓ Complété' : 'En attente'}</p></div></div>`;});html += `</div>`;html += `<div class="profile-section"><h3 style="color:#0a1929;margin-bottom:1rem">📋 Détails</h3><div class="profile-grid"><div class="profile-field"><label>Magasin</label><div class="value">${order.storeName || '-'}</div></div><div class="profile-field"><label>Livreur</label><div class="value">${order.driverName || 'En attente'}</div></div><div class="profile-field"><label>Adresse</label><div class="value">${order.clientAddress}</div></div><div class="profile-field"><label>Téléphone</label><div class="value">${order.clientPhone}</div></div></div></div>`;
+
+// Détail des frais de livraison dans la commande
+html += `<div class="profile-section"><h3 style="color:#0a1929;margin-bottom:1rem">💰 Détail de la facturation</h3>
+    <div class="delivery-fee-breakdown">
+        <div class="delivery-fee-line"><span>🏪 Magasin :</span><strong>${order.storeName || '-'}</strong></div>
+        <div class="delivery-fee-line"><span>📍 Distance :</span><strong>${(order.deliveryDistanceKm||0).toFixed(1)} km</strong></div>
+        <div class="delivery-fee-line"><span>💰 Frais de base :</span><span>${(order.deliveryBaseFee||platformSettings.deliveryBaseFee).toFixed(2)} $</span></div>
+        <div class="delivery-fee-line"><span>📏 ${(order.deliveryDistanceKm||0).toFixed(1)} km × ${platformSettings.deliveryPerKm.toFixed(2)} $/km :</span><span>${(order.deliveryPerKmFee||0).toFixed(2)} $</span></div>
+        <div class="delivery-fee-total"><span>TOTAL LIVRAISON :</span><span>${order.deliveryFee.toFixed(2)} $</span></div>
+    </div>
+</div>`;
+
+html += `<div class="profile-section"><h3 style="color:#0a1929;margin-bottom:1rem">🛒 Articles commandés</h3>`;order.items.forEach(item => {html += `<div style="display:flex;align-items:center;gap:1rem;padding:0.8rem;border-bottom:1px solid #eee"><div style="font-size:2rem">${item.icon}</div><div style="flex:1"><strong>${item.name}</strong><br><span style="color:#666;font-size:0.85rem">Qté: ${item.qty} × ${item.price.toFixed(2)}$</span></div><strong style="color:#0a1929">${(item.qty*item.price).toFixed(2)} $</strong></div>`;});html += `<div style="margin-top:1rem;padding-top:1rem;border-top:2px solid #0a1929"><div style="display:flex;justify-content:space-between;padding:0.3rem 0"><span>Sous-total</span><span>${order.subtotal.toFixed(2)} $</span></div><div style="display:flex;justify-content:space-between;padding:0.3rem 0"><span>Livraison (7$ + ${(order.deliveryDistanceKm||0).toFixed(1)}km × 1$)</span><span>${order.deliveryFee.toFixed(2)} $</span></div><div style="display:flex;justify-content:space-between;padding:0.3rem 0"><span>Taxes</span><span>${order.tax.toFixed(2)} $</span></div><div style="display:flex;justify-content:space-between;padding:0.5rem 0;font-size:1.2rem;font-weight:bold;color:#0a1929;border-top:1px solid #eee;margin-top:0.5rem"><span>Total</span><span>${order.total.toFixed(2)} $</span></div></div></div>`;if(order.status === 'pending' || order.status === 'confirmed'){html += `<button class="btn" style="background:#dc2626;width:100%;margin-top:1rem" onclick="cancelOrder(${order.id})">❌ Annuler la commande</button>`;}document.getElementById('client-order-detail-content').innerHTML = html;}
+
+function cancelOrder(orderId){if(!confirm('Voulez-vous vraiment annuler cette commande ?')) return;const order = orders.find(o => o.id === orderId);if(!order) return;order.status = 'cancelled';order.statusHistory.push({status:'cancelled', time:new Date().toISOString(), note:'Annulée par le client'});addNotification(currentUser.id, '❌ Commande annulée', `Votre commande ${order.orderNumber} a été annulée`);addNotification('admin', '❌ Commande annulée', `Commande ${order.orderNumber} annulée par ${currentUser.name}`);save();showToast('❌ Commande annulée');showClientOrders();}
+
+function showProfile(){if(!currentUser) return;switchView('view-client');document.getElementById('stores-section').style.display='none';document.getElementById('store-detail-section').style.display='none';document.getElementById('cart-section').style.display='none';document.getElementById('client-orders-section').style.display='none';document.getElementById('client-order-detail-section').style.display='none';document.getElementById('client-profile-section').style.display='block';renderProfile();}
+
+function renderProfile(){const content = document.getElementById('client-profile-content');const myOrders = orders.filter(o => o.clientId === currentUser.id);const totalSpent = myOrders.reduce((s,o) => s + o.total, 0);let html = `<div class="profile-section"><div class="profile-header"><div class="profile-avatar">${currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}</div><div class="profile-info"><h2>${currentUser.name}</h2><p>${currentUser.role === 'client' ? '👤 Client' : currentUser.role === 'driver' ? '🚗 Livreur' : '⚙️ Admin'}</p><p style="font-size:0.85rem;color:#999">Membre depuis ${new Date(currentUser.createdAt).toLocaleDateString('fr-CA')}</p></div></div><div class="profile-grid"><div class="profile-field"><label>📧 Email</label><div class="value">${currentUser.email}</div></div><div class="profile-field"><label>📞 Téléphone</label><div class="value">${currentUser.phone}</div></div><div class="profile-field" style="grid-column:1/-1"><label>📍 Adresse</label><div class="value">${currentUser.address}</div></div>${currentUser.lat?`<div class="profile-field" style="grid-column:1/-1"><label>🗺️ Coordonnées GPS</label><div class="value">${currentUser.lat.toFixed(6)}, ${currentUser.lng.toFixed(6)}</div></div>`:''}</div><button class="btn" style="margin-top:1rem" onclick="openEditProfile()">✏️ Modifier mon profil</button></div>`;if(currentUser.role === 'client'){html += `<div class="stats"><div class="stat"><div class="stat-val">${myOrders.length}</div><div class="stat-lbl">Commandes</div></div><div class="stat"><div class="stat-val">${totalSpent.toFixed(2)} $</div><div class="stat-lbl">Total dépensé</div></div><div class="stat"><div class="stat-val">${myOrders.filter(o=>o.status==='delivered').length}</div><div class="stat-lbl">Livrées</div></div></div><button class="btn" style="width:100%" onclick="showClientOrders()">📦 Voir mes commandes</button>`;}else if(currentUser.role === 'driver'){const myDeliveries = orders.filter(o => o.driverId === currentUser.id && o.status === 'delivered');const totalEarnings = myDeliveries.reduce((s,o) => s + (o.deliveryFee * platformSettings.driverCommission), 0);html += `<div class="stats"><div class="stat"><div class="stat-val">${myDeliveries.length}</div><div class="stat-lbl">Livraisons</div></div><div class="stat"><div class="stat-val">${totalEarnings.toFixed(2)} $</div><div class="stat-lbl">Revenus totaux</div></div><div class="stat"><div class="stat-val">4.9 ⭐</div><div class="stat-lbl">Note</div></div></div>`;}content.innerHTML = html;}
+
+function openEditProfile(){document.getElementById('ep-name').value = currentUser.name;document.getElementById('ep-phone').value = currentUser.phone;document.getElementById('ep-address').value = currentUser.address;openModal('edit-profile-modal');setTimeout(()=>initAutocomplete('ep-address','ep-address-suggestions'),100);}
+
+function saveProfile(e){e.preventDefault();const addrInput = document.getElementById('ep-address');currentUser.name = document.getElementById('ep-name').value;currentUser.phone = document.getElementById('ep-phone').value;currentUser.address = addrInput.value;if(addrInput._lat) currentUser.lat = addrInput._lat;if(addrInput._lng) currentUser.lng = addrInput._lng;if(currentUser.role === 'client'){const idx = clients.findIndex(c => c.id === currentUser.id);if(idx >= 0) clients[idx] = currentUser;}else if(currentUser.role === 'driver'){const idx = drivers.findIndex(d => d.id === currentUser.id);if(idx >= 0) drivers[idx] = currentUser;}save();closeModal('edit-profile-modal');showUserInterface();renderProfile();showToast('✅ Profil mis à jour !');}
+
+function showDriverDashboard(){switchView('view-driver');document.getElementById('driver-dashboard-section').style.display='block';document.getElementById('driver-order-detail-section').style.display='none';document.getElementById('driver-history-section').style.display='none';renderDriverDashboard();}
+
+function renderDriverDashboard(){const today = new Date().toDateString();const myOrders = orders.filter(o => o.driverId === currentUser.id);const todayOrders = myOrders.filter(o => new Date(o.createdAt).toDateString() === today);const todayEarnings = todayOrders.filter(o=>o.status==='delivered').reduce((s,o) => s + (o.deliveryFee * platformSettings.driverCommission), 0);document.getElementById('d-deliveries').textContent = todayOrders.length;document.getElementById('d-earnings').textContent = todayEarnings.toFixed(2) + ' $';document.getElementById('d-total').textContent = myOrders.filter(o=>o.status==='delivered').length;const available = orders.filter(o => o.status === 'pending' || o.status === 'confirmed' || o.status === 'searching_driver');const availDiv = document.getElementById('driver-available-orders');if(available.length === 0){availDiv.innerHTML = '<div class="empty-state"><p>🎉 Aucune commande disponible pour le moment</p></div>';}else{availDiv.innerHTML = available.map(o => {const earning = (o.deliveryFee * platformSettings.driverCommission).toFixed(2);const dist = (o.deliveryDistanceKm||0).toFixed(1);return `<div class="driver-order"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem"><div><h4>Commande #${o.orderNumber}</h4><p style="color:#666">${o.storeName || 'Magasin'}</p></div><span style="background:#f5f1e8;padding:0.3rem 0.8rem;border-radius:20px;color:#0a1929;font-weight:bold">+ ${earning} $</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:1rem 0;font-size:0.9rem"><div>📦 ${o.items.length} article(s)</div><div>💰 Total : ${o.total.toFixed(2)} $</div><div>📍 ${dist} km</div><div>🚗 Livraison : ${o.deliveryFee.toFixed(2)} $</div></div><div class="driver-actions"><button class="btn-sm btn-green" onclick="acceptDriverOrder(${o.id})">✅ Accepter</button><button class="btn-sm btn-gray" onclick="showToast('❌ Commande refusée')">❌ Refuser</button><button class="btn-sm btn-blue" onclick="showDriverOrderDetail(${o.id})">👁️ Détails</button></div></div>`;}).join('');}const active = myOrders.filter(o => !['delivered','cancelled'].includes(o.status));const activeDiv = document.getElementById('driver-active-orders');if(active.length === 0){activeDiv.innerHTML = '<div class="empty-state"><p>Aucune livraison en cours</p></div>';}else{activeDiv.innerHTML = active.map(o => {const st = STATUS_LABELS[o.status];return `<div class="driver-order" style="border-color:#f5a623"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem"><div><h4>Commande #${o.orderNumber}</h4><p style="color:#666">${o.clientName} • ${o.storeName}</p></div><span class="status-badge ${st.class}">${st.label}</span></div><div class="driver-actions"><button class="btn-sm btn-blue" onclick="showDriverOrderDetail(${o.id})">👁️ Détails</button>${getNextActionButtons(o)}</div></div>`;}).join('');}}
+
+function getNextActionButtons(order){const actions = {'driver_assigned': `<button class="btn-sm btn-orange" onclick="updateOrderStatus(${order.id},'driver_to_store')">🛣️ En route vers magasin</button>`,'driver_to_store': `<button class="btn-sm btn-orange" onclick="updateOrderStatus(${order.id},'at_store')">🏪 Arrivé au magasin</button>`,'at_store': `<button class="btn-sm btn-green" onclick="updateOrderStatus(${order.id},'picked_up')">📦 Commande récupérée</button>`,'picked_up': `<button class="btn-sm btn-orange" onclick="updateOrderStatus(${order.id},'driver_to_client')">🚗 En route vers client</button>`,'driver_to_client': `<button class="btn-sm btn-green" onclick="updateOrderStatus(${order.id},'delivered')">🏠 Livraison complétée</button>`};return actions[order.status] || '';}
+
+function acceptDriverOrder(orderId){const order = orders.find(o => o.id === orderId);if(!order) return;order.driverId = currentUser.id;order.driverName = currentUser.name;order.status = 'driver_assigned';order.statusHistory.push({status:'driver_assigned', time:new Date().toISOString(), note:`Acceptée par ${currentUser.name}`});addNotification(order.clientId, '🚗 Livreur assigné', `${currentUser.name} s'occupe de votre commande ${order.orderNumber}`);addNotification('admin', '🚗 Commande assignée', `${order.orderNumber} → ${currentUser.name}`);save();showToast('✅ Commande acceptée !');renderDriverDashboard();}
+
+function updateOrderStatus(orderId, newStatus){const order = orders.find(o => o.id === orderId);if(!order) return;order.status = newStatus;order.statusHistory.push({status:newStatus, time:new Date().toISOString(), note:`Mis à jour par ${currentUser.name}`});const messages = {'driver_to_store': '🛣️ En route vers le magasin','at_store': '🏪 Arrivé au magasin','picked_up': '📦 Commande récupérée','driver_to_client': '🚗 En route vers vous','delivered': '🏠 Livraison complétée !'};addNotification(order.clientId, messages[newStatus] || 'Mise à jour', `Commande ${order.orderNumber}`);if(newStatus === 'delivered'){addNotification('admin', '✅ Commande livrée', `${order.orderNumber} par ${currentUser.name}`);}save();showToast('✅ Statut mis à jour : ' + (STATUS_LABELS[newStatus]?.label || newStatus));renderDriverDashboard();}
+
+function showDriverOrderDetail(orderId){const order = orders.find(o => o.id === orderId);if(!order) return;switchView('view-driver');document.getElementById('driver-dashboard-section').style.display='none';document.getElementById('driver-history-section').style.display='none';document.getElementById('driver-order-detail-section').style.display='block';const st = STATUS_LABELS[order.status];const store = stores.find(s => s.id === order.storeId);let html = `<button class="back-btn" onclick="showDriverDashboard()">← Retour</button>`;html += `<div class="store-detail-header"><div class="store-detail-icon">📦</div><div class="store-detail-info"><h2>Commande #${order.orderNumber}</h2><p>Client : ${order.clientName}</p><p><span class="status-badge ${st.class}">${st.label}</span></p></div></div>`;html += `<div class="profile-section"><h3 style="color:#0a1929;margin-bottom:1rem">👤 Client</h3><div class="profile-grid"><div class="profile-field"><label>Nom</label><div class="value">${order.clientName}</div></div><div class="profile-field"><label>Téléphone</label><div class="value"><a href="tel:${order.clientPhone}" style="color:#0a1929">${order.clientPhone}</a></div></div><div class="profile-field" style="grid-column:1/-1"><label>📍 Adresse de livraison</label><div class="value">${order.clientAddress}</div></div></div><button class="btn" style="margin-top:1rem;background:#2563eb" onclick="window.open('https://www.google.com/maps/dir/${store?.lat||MANIWAKI_CENTER[0]},${store?.lng||MANIWAKI_CENTER[1]}/${order.clientLat||MANIWAKI_CENTER[0]},${order.clientLng||MANIWAKI_CENTER[1]}','_blank')">🧭 Naviguer (Google Maps)</button></div>`;html += `<div class="profile-section"><h3 style="color:#0a1929;margin-bottom:1rem">💰 Vos gains pour cette livraison</h3><div class="delivery-fee-breakdown"><div class="delivery-fee-line"><span>📍 Distance :</span><strong>${(order.deliveryDistanceKm||0).toFixed(1)} km</strong></div><div class="delivery-fee-line"><span>🚗 Frais de livraison client :</span><span>${order.deliveryFee.toFixed(2)} $</span></div><div class="delivery-fee-total"><span>💵 VOTRE COMMISSION (${(platformSettings.driverCommission*100).toFixed(0)}%) :</span><span>${(order.deliveryFee * platformSettings.driverCommission).toFixed(2)} $</span></div></div></div>`;html += `<div class="profile-section"><h3 style="color:#0a1929;margin-bottom:1rem">🏪 Magasin</h3><div class="profile-grid"><div class="profile-field"><label>Nom</label><div class="value">${order.storeName || '-'}</div></div><div class="profile-field"><label>Adresse</label><div class="value">${store?.address || '-'}</div></div></div></div>`;html += `<div class="profile-section"><h3 style="color:#0a1929;margin-bottom:1rem">🛒 Articles à récupérer</h3>`;order.items.forEach(item => {html += `<div style="display:flex;align-items:center;gap:1rem;padding:0.8rem;border-bottom:1px solid #eee"><div style="font-size:2rem">${item.icon}</div><div style="flex:1"><strong>${item.name}</strong><br><span style="color:#666;font-size:0.85rem">Quantité : ${item.qty}</span></div></div>`;});html += `</div>`;const nextBtn = getNextActionButtons(order);if(nextBtn){html += `<div style="margin-top:1rem">${nextBtn}</div>`;}document.getElementById('driver-order-detail-content').innerHTML = html;}
+
+function showDriverHistory(){switchView('view-driver');document.getElementById('driver-dashboard-section').style.display='none';document.getElementById('driver-order-detail-section').style.display='none';document.getElementById('driver-history-section').style.display='block';const myDeliveries = orders.filter(o => o.driverId === currentUser.id);const completed = myDeliveries.filter(o => o.status === 'delivered');const totalEarnings = completed.reduce((s,o) => s + (o.deliveryFee * platformSettings.driverCommission), 0);document.getElementById('d-history-total').textContent = completed.length;document.getElementById('d-history-earnings').textContent = totalEarnings.toFixed(2) + ' $';const list = document.getElementById('driver-history-list');if(myDeliveries.length === 0){list.innerHTML = '<div class="empty-state"><p>Aucune livraison pour le moment</p></div>';return;}list.innerHTML = myDeliveries.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).map(o => {const st = STATUS_LABELS[o.status];const earning = o.status === 'delivered' ? (o.deliveryFee * platformSettings.driverCommission).toFixed(2) + ' $' : '-';return `<div class="order-card"><div class="order-card-header"><div><h4>#${o.orderNumber}</h4><p style="color:#666;font-size:0.85rem">${new Date(o.createdAt).toLocaleString('fr-CA')}</p></div><span class="status-badge ${st.class}">${st.label}</span></div><div class="order-card-details"><div>👤 ${o.clientName}</div><div>🏪 ${o.storeName}</div><div>💰 Total : ${o.total.toFixed(2)} $</div><div>💵 Gain : ${earning}</div></div></div>`;}).join('');}
+
+function adminTab(tab, btn){document.querySelectorAll('.admin-side li').forEach(l=>l.classList.remove('active'));if(btn) btn.classList.add('active');['dashboard','orders','stores','categories','products','drivers','clients','settings'].forEach(t=>{const el=document.getElementById('admin-'+t);if(el) el.style.display = t===tab ? 'block' : 'none';});if(tab==='dashboard') renderAdminDashboard();if(tab==='orders') renderAdminOrders();if(tab==='stores') renderAdminStores();if(tab==='categories') renderAdminCategories();if(tab==='products') renderAdminProducts();if(tab==='drivers') renderAdminDrivers();if(tab==='clients') renderAdminClients();if(tab==='settings') renderAdminSettings();}
+
+function renderAdminDashboard(){document.getElementById('stat-clients').textContent = clients.length;document.getElementById('stat-drivers').textContent = drivers.filter(d=>d.status==='approved').length;document.getElementById('stat-stores').textContent = stores.filter(s=>s.status==='active').length;document.getElementById('stat-orders').textContent = orders.length;const totalRevenue = orders.filter(o=>o.status==='delivered').reduce((s,o)=>s+o.total,0);document.getElementById('stat-revenue').textContent = totalRevenue.toFixed(2) + ' $';document.getElementById('stat-pending').textContent = orders.filter(o=>['pending','confirmed','searching_driver'].includes(o.status)).length;const recent = orders.slice(-5).reverse();const recentDiv = document.getElementById('admin-recent-orders');if(recent.length === 0){recentDiv.innerHTML = '<div class="empty-state"><p>Aucune commande</p></div>';}else{recentDiv.innerHTML = `<table class="admin-table"><thead><tr><th>#</th><th>Client</th><th>Magasin</th><th>Livraison</th><th>Statut</th><th>Total</th></tr></thead><tbody>${recent.map(o=>{const st = STATUS_LABELS[o.status];return `<tr><td>${o.orderNumber}</td><td>${o.clientName}</td><td>${o.storeName||'-'}</td><td>${o.deliveryFee.toFixed(2)}$ (${(o.deliveryDistanceKm||0).toFixed(1)}km)</td><td><span class="status-badge ${st.class}">${st.label}</span></td><td><strong>${o.total.toFixed(2)} $</strong></td></tr>`;}).join('')}</tbody></table>`;}}
+
+let currentOrderFilter = 'all';
+function filterAdminOrders(filter){currentOrderFilter = filter;renderAdminOrders();}
+
+function renderAdminOrders(){const list = document.getElementById('admin-orders-list');let filtered = orders.slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));if(currentOrderFilter === 'pending') filtered = filtered.filter(o => ['pending','confirmed','searching_driver'].includes(o.status));else if(currentOrderFilter === 'in-progress') filtered = filtered.filter(o => ['driver_assigned','driver_to_store','at_store','picked_up','driver_to_client'].includes(o.status));else if(currentOrderFilter === 'delivered') filtered = filtered.filter(o => o.status === 'delivered');else if(currentOrderFilter === 'cancelled') filtered = filtered.filter(o => o.status === 'cancelled');if(filtered.length === 0){list.innerHTML = '<div class="empty-state"><p>Aucune commande</p></div>';return;}list.innerHTML = `<table class="admin-table"><thead><tr><th>#</th><th>Client</th><th>Magasin</th><th>Livraison</th><th>Statut</th><th>Total</th><th>Actions</th></tr></thead><tbody>${filtered.map(o=>{const st = STATUS_LABELS[o.status];return `<tr><td><strong>${o.orderNumber}</strong><br><span style="font-size:0.75rem;color:#999">${new Date(o.createdAt).toLocaleString('fr-CA')}</span></td><td>${o.clientName}<br><span style="font-size:0.8rem;color:#666">${o.clientPhone}</span></td><td>${o.storeName||'-'}</td><td><strong>${o.deliveryFee.toFixed(2)} $</strong><br><span style="font-size:0.75rem;color:#666">${(o.deliveryDistanceKm||0).toFixed(1)} km</span></td><td><span class="status-badge ${st.class}">${st.label}</span></td><td><strong>${o.total.toFixed(2)} $</strong></td><td><div class="action-btns">${!o.driverId && o.status!=='cancelled' && o.status!=='delivered' ? `<button class="action-btn btn-blue" onclick="assignDriverModal(${o.id})">🚗 Assigner</button>` : ''}${!['cancelled','delivered'].includes(o.status) ? `<button class="action-btn btn-red" onclick="adminCancelOrder(${o.id})">❌</button>` : ''}</div></td></tr>`;}).join('')}</tbody></table>`;}
+
+function assignDriverModal(orderId){const approvedDrivers = drivers.filter(d => d.status === 'approved');if(approvedDrivers.length === 0){showToast('❌ Aucun livreur approuvé');return;}const choice = prompt('Assigner au livreur :\n\n' + approvedDrivers.map((d,i) => `${i+1}. ${d.name}`).join('\n') + '\n\nEntrez le numéro :');const idx = parseInt(choice) - 1;if(isNaN(idx) || !approvedDrivers[idx]) return;const order = orders.find(o => o.id === orderId);const driver = approvedDrivers[idx];order.driverId = driver.id;order.driverName = driver.name;order.status = 'driver_assigned';order.statusHistory.push({status:'driver_assigned', time:new Date().toISOString(), note:`Assigné par admin à ${driver.name}`});addNotification(order.clientId, '🚗 Livreur assigné', `${driver.name} s'occupe de votre commande ${order.orderNumber}`);addNotification(driver.id, '📦 Nouvelle mission', `Commande ${order.orderNumber} vous a été assignée (${order.deliveryFee.toFixed(2)}$ à gagner)`);save();showToast('✅ Livreur assigné !');renderAdminOrders();}
+
+function adminCancelOrder(orderId){if(!confirm('Annuler cette commande ?')) return;const order = orders.find(o => o.id === orderId);order.status = 'cancelled';order.statusHistory.push({status:'cancelled', time:new Date().toISOString(), note:'Annulée par admin'});addNotification(order.clientId, '❌ Commande annulée', `Votre commande ${order.orderNumber} a été annulée par l'administration`);save();showToast('❌ Commande annulée');renderAdminOrders();}
+
+function renderAdminStores(){const c=document.getElementById('stores-table-container');if(!stores.length){c.innerHTML='<div class="empty-state"><p>Aucun magasin</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Type</th><th>Adresse</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${stores.map(s=>`<tr><td style="font-size:2rem;text-align:center">${s.icon}</td><td><strong>${s.name}</strong></td><td>${s.type}</td><td style="font-size:0.9rem">${s.address}</td><td><span class="badge ${s.status==='active'?'badge-green':'badge-red'}">${s.status==='active'?'✅ Actif':'❌ Inactif'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editStore(${s.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('store',${s.id})">🗑️</button></div></td></tr>`).join('')}</tbody></table>`;}
+function openStoreModal(){document.getElementById('store-modal-title').textContent='➕ Ajouter un magasin';document.getElementById('store-id').value='';document.getElementById('store-name').value='';document.getElementById('store-type').value='';document.getElementById('store-addr').value='';document.getElementById('store-phone').value='';document.getElementById('store-status').value='active';selectedStoreIcon='';buildIconPicker('store-icon-picker','store-icon');openModal('store-modal');setTimeout(()=>initAutocomplete('store-addr','store-addr-suggestions'),100);}
+function editStore(id){const s=stores.find(x=>x.id===id);if(!s)return;document.getElementById('store-modal-title').textContent='✏️ Modifier';document.getElementById('store-id').value=s.id;document.getElementById('store-name').value=s.name;document.getElementById('store-type').value=s.type;document.getElementById('store-addr').value=s.address;document.getElementById('store-phone').value=s.phone||'';document.getElementById('store-status').value=s.status;selectedStoreIcon=s.icon;buildIconPicker('store-icon-picker','store-icon');setTimeout(()=>{document.querySelectorAll('#store-icon-picker .icon-option').forEach(o=>{if(o.dataset.icon===s.icon)o.classList.add('selected')});initAutocomplete('store-addr','store-addr-suggestions');},50);openModal('store-modal');}
+function saveStore(e){e.preventDefault();if(!selectedStoreIcon&&!document.getElementById('store-icon').value){showToast('⚠️ Choisissez une icône');return}const id=document.getElementById('store-id').value;const addrInput = document.getElementById('store-addr');const d={icon:document.getElementById('store-icon').value||selectedStoreIcon,name:document.getElementById('store-name').value,type:document.getElementById('store-type').value,address:addrInput.value,phone:document.getElementById('store-phone').value,status:document.getElementById('store-status').value,lat:addrInput._lat||null,lng:addrInput._lng||null};if(id){const i=stores.findIndex(s=>s.id===parseInt(id));stores[i]={...stores[i],...d};showToast('✅ Magasin modifié !')}else{d.id=nextStoreId++;stores.push(d);showToast('✅ Magasin ajouté !')}closeModal('store-modal');renderAdminStores();renderLandingStores();save();}
+
+function renderAdminCategories(){const c=document.getElementById('categories-container');if(!categories.length){c.innerHTML='<div class="empty-state"><p>Aucune catégorie</p></div>';return}c.innerHTML=`<div class="cat-grid">${categories.map(cat=>{const count=products.filter(p=>p.categoryId===cat.id).length;return`<div class="cat-card"><div class="cat-card-icon">${cat.icon}</div><div class="cat-card-name">${cat.name}</div><p style="color:#666;font-size:0.85rem;margin-bottom:0.5rem">${count} produit(s)</p><div class="cat-card-actions"><button class="action-btn btn-blue" onclick="editCategory(${cat.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('category',${cat.id})">🗑️</button></div></div>`}).join('')}</div>`;}
+function openCategoryModal(){document.getElementById('cat-modal-title').textContent='➕ Catégorie';document.getElementById('cat-id').value='';document.getElementById('cat-name').value='';selectedCatIcon='';buildIconPicker('cat-icon-picker','cat-icon');openModal('category-modal')}
+function editCategory(id){const c=categories.find(x=>x.id===id);if(!c)return;document.getElementById('cat-modal-title').textContent='✏️ Modifier';document.getElementById('cat-id').value=c.id;document.getElementById('cat-name').value=c.name;selectedCatIcon=c.icon;buildIconPicker('cat-icon-picker','cat-icon');setTimeout(()=>{document.querySelectorAll('#cat-icon-picker .icon-option').forEach(o=>{if(o.dataset.icon===c.icon)o.classList.add('selected')})},50);openModal('category-modal')}
+function saveCategory(e){e.preventDefault();if(!selectedCatIcon&&!document.getElementById('cat-icon').value){showToast('⚠️ Choisissez une icône');return}const id=document.getElementById('cat-id').value;const d={icon:document.getElementById('cat-icon').value||selectedCatIcon,name:document.getElementById('cat-name').value};if(id){const i=categories.findIndex(c=>c.id===parseInt(id));categories[i]={...categories[i],...d};showToast('✅ Modifiée !')}else{d.id=nextCatId++;categories.push(d);showToast('✅ Ajoutée !')}closeModal('category-modal');renderAdminCategories();save()}
+
+function renderAdminProducts(){const c=document.getElementById('products-table-container');if(!products.length){c.innerHTML='<div class="empty-state"><p>Aucun produit</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Magasin</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr></thead><tbody>${products.map(p=>{const s=stores.find(x=>x.id===p.storeId);const cat=categories.find(x=>x.id===p.categoryId);return`<tr><td style="font-size:1.5rem;text-align:center">${p.icon}</td><td><strong>${p.name}</strong></td><td>${s?s.name:'-'}</td><td>${cat?cat.icon+' '+cat.name:'-'}</td><td><strong>${p.price.toFixed(2)} $</strong></td><td><span class="badge ${p.available?'badge-green':'badge-red'}">${p.available?'✅':'❌'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editProduct(${p.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('product',${p.id})">🗑️</button></div></td></tr>`}).join('')}</tbody></table>`;}
+function openProductModal(){document.getElementById('prod-modal-title').textContent='➕ Produit';document.getElementById('prod-id').value='';document.getElementById('prod-name').value='';document.getElementById('prod-desc').value='';document.getElementById('prod-price').value='';document.getElementById('prod-available').value='true';selectedProdIcon='';document.getElementById('prod-store').innerHTML=stores.map(s=>`<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');document.getElementById('prod-category').innerHTML=categories.map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');buildIconPicker('prod-icon-picker','prod-icon');openModal('product-modal');}
+function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;document.getElementById('prod-modal-title').textContent='✏️ Modifier';document.getElementById('prod-id').value=p.id;document.getElementById('prod-name').value=p.name;document.getElementById('prod-desc').value=p.desc||'';document.getElementById('prod-price').value=p.price;document.getElementById('prod-available').value=p.available?'true':'false';selectedProdIcon=p.icon;document.getElementById('prod-store').innerHTML=stores.map(s=>`<option value="${s.id}" ${s.id===p.storeId?'selected':''}>${s.icon} ${s.name}</option>`).join('');document.getElementById('prod-category').innerHTML=categories.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${c.icon} ${c.name}</option>`).join('');buildIconPicker('prod-icon-picker','prod-icon');setTimeout(()=>{document.querySelectorAll('#prod-icon-picker .icon-option').forEach(o=>{if(o.dataset.icon===p.icon)o.classList.add('selected')})},50);openModal('product-modal');}
+function saveProduct(e){e.preventDefault();if(!selectedProdIcon&&!document.getElementById('prod-icon').value){showToast('⚠️ Choisissez une icône');return}const id=document.getElementById('prod-id').value;const d={storeId:parseInt(document.getElementById('prod-store').value),categoryId:parseInt(document.getElementById('prod-category').value),name:document.getElementById('prod-name').value,desc:document.getElementById('prod-desc').value,price:parseFloat(document.getElementById('prod-price').value),icon:document.getElementById('prod-icon').value||selectedProdIcon,available:document.getElementById('prod-available').value==='true'};if(id){const i=products.findIndex(p=>p.id===parseInt(id));products[i]={...products[i],...d};showToast('✅ Modifié !')}else{d.id=nextProdId++;products.push(d);showToast('✅ Ajouté !')}closeModal('product-modal');renderAdminProducts();save();}
+
+function renderAdminClients(){const c=document.getElementById('clients-table-container');if(!clients.length){c.innerHTML='<div class="empty-state"><p>Aucun client</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Adresse</th><th>Commandes</th><th>Total</th></tr></thead><tbody>${clients.map(cl=>{const myOrders = orders.filter(o=>o.clientId===cl.id);const total = myOrders.reduce((s,o)=>s+o.total,0);return`<tr><td><strong>${cl.name}</strong></td><td>${cl.email}</td><td>${cl.phone}</td><td style="font-size:0.85rem">${cl.address}</td><td>${myOrders.length}</td><td><strong>${total.toFixed(2)} $</strong></td></tr>`;}).join('')}</tbody></table>`;}
+
+function renderAdminDrivers(){const c=document.getElementById('drivers-table-container');if(!drivers.length){c.innerHTML='<div class="empty-state"><p>Aucun livreur</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Véhicule</th><th>Livraisons</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${drivers.map(d=>{const myDel = orders.filter(o=>o.driverId===d.id && o.status==='delivered').length;return`<tr><td><strong>${d.name}</strong><br><span style="font-size:0.8rem;color:#666">${d.phone}</span></td><td>${d.email}</td><td>${d.vehicle}</td><td>${myDel}</td><td><span class="badge ${d.status==='approved'?'badge-green':d.status==='pending'?'badge-yellow':'badge-red'}">${d.status==='approved'?'✅ Approuvé':d.status==='pending'?'⏳ En attente':'❌ Refusé'}</span></td><td><div class="action-btns">${d.status!=='approved'?`<button class="action-btn btn-green" onclick="approveDriver(${d.id})">✅</button>`:''}${d.status!=='rejected'?`<button class="action-btn btn-red" onclick="rejectDriver(${d.id})">❌</button>`:''}</div></td></tr>`;}).join('')}</tbody></table>`;}
+function approveDriver(id){const d=drivers.find(x=>x.id===id);if(!d)return;d.status='approved';addNotification(d.id, '✅ Compte approuvé', 'Vous pouvez maintenant accepter des livraisons !');save();renderAdminDrivers();showToast('✅ Livreur approuvé !');}
+function rejectDriver(id){const d=drivers.find(x=>x.id===id);if(!d)return;d.status='rejected';addNotification(d.id, '❌ Demande refusée', 'Votre demande de livreur a été refusée');save();renderAdminDrivers();showToast('❌ Livreur refusé');}
+
+function renderAdminSettings(){const c = document.getElementById('admin-settings-content');c.innerHTML = `
+    <div class="profile-section">
+        <h3 style="color:#0a1929;margin-bottom:1rem">💰 Système de facturation de livraison</h3>
+        <div class="info-box">💡 Le tarif de livraison est calculé automatiquement selon la formule : <strong>Frais de base + (Distance × Prix par km)</strong></div>
+        <div class="form-group">
+            <label>Frais de base de livraison ($)</label>
+            <input type="number" id="set-base-fee" step="0.50" value="${platformSettings.deliveryBaseFee}">
+            <small style="color:#666;font-size:0.8rem">Montant fixe appliqué à chaque livraison</small>
+        </div>
+        <div class="form-group">
+            <label>Prix par kilomètre ($/km)</label>
+            <input type="number" id="set-per-km" step="0.10" value="${platformSettings.deliveryPerKm}">
+            <small style="color:#666;font-size:0.8rem">Montant ajouté par km entre le magasin et le client</small>
+        </div>
+        <div class="form-group">
+            <label>Taux de taxes (ex: 0.14975 pour 14.975%)</label>
+            <input type="number" id="set-tax-rate" step="0.00001" value="${platformSettings.taxRate}">
+        </div>
+        <div class="form-group">
+            <label>Commission livreur (% des frais de livraison, ex: 0.20 pour 20%)</label>
+            <input type="number" id="set-commission" step="0.05" value="${platformSettings.driverCommission}">
+        </div>
+        <div class="form-group">
+            <label>Rayon de livraison (km)</label>
+            <input type="number" id="set-radius" value="${platformSettings.radius}">
+        </div>
+        <button class="btn" onclick="saveSettings()">💾 Enregistrer les paramètres</button>
+    </div>
+    <div class="profile-section">
+        <h3 style="color:#0a1929;margin-bottom:1rem">🧮 Exemple de calcul</h3>
+        <p style="color:#666;line-height:1.8">Pour une livraison à <strong>8 km</strong> du magasin :<br>
+        • Frais de base : <strong>${platformSettings.deliveryBaseFee.toFixed(2)} $</strong><br>
+        • Distance (8 km × ${platformSettings.deliveryPerKm.toFixed(2)} $) : <strong>${(8 * platformSettings.deliveryPerKm).toFixed(2)} $</strong><br>
+        • <strong>Total livraison : ${(platformSettings.deliveryBaseFee + 8 * platformSettings.deliveryPerKm).toFixed(2)} $</strong><br>
+        • Commission livreur (${(platformSettings.driverCommission*100).toFixed(0)}%) : <strong>${((platformSettings.deliveryBaseFee + 8 * platformSettings.deliveryPerKm) * platformSettings.driverCommission).toFixed(2)} $</strong></p>
+    </div>
+`;}
+function saveSettings(){platformSettings.deliveryBaseFee = parseFloat(document.getElementById('set-base-fee').value) || 7.00;platformSettings.deliveryPerKm = parseFloat(document.getElementById('set-per-km').value) || 1.00;platformSettings.taxRate = parseFloat(document.getElementById('set-tax-rate').value) || 0.14975;platformSettings.driverCommission = parseFloat(document.getElementById('set-commission').value) || 0.20;platformSettings.radius = parseInt(document.getElementById('set-radius').value) || 40;save();showToast('✅ Paramètres enregistrés !');renderAdminSettings();if(currentUser && currentUser.role === 'client') updateCart();}
+
+function confirmDelete(type,id){const names={store:stores.find(s=>s.id===id)?.name,category:categories.find(c=>c.id===id)?.name,product:products.find(p=>p.id===id)?.name};document.getElementById('confirm-msg').textContent=`Supprimer "${names[type]}" ?`;document.getElementById('confirm-btn').onclick=()=>{if(type==='store'){stores=stores.filter(s=>s.id!==id);products=products.filter(p=>p.storeId!==id)}if(type==='category'){categories=categories.filter(c=>c.id!==id)}if(type==='product'){products=products.filter(p=>p.id!==id)}closeModal('confirm-modal');showToast('🗑️ Supprimé !');renderAdminStores();renderAdminCategories();renderAdminProducts();renderLandingStores();save();};openModal('confirm-modal');}
+
+function calculateDistance(lat1, lng1, lat2, lng2){if(!lat1 || !lng1 || !lat2 || !lng2) return null;const R = 6371;const dLat = (lat2-lat1) * Math.PI/180;const dLng = (lng2-lng1) * Math.PI/180;const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));}
+
+function buildIconPicker(containerId,hiddenId){const c=document.getElementById(containerId);c.innerHTML=allIcons.map(ic=>`<div class="icon-option" data-icon="${ic}" onclick="pickIcon('${containerId}','${hiddenId}',this)">${ic}</div>`).join('');}
+function pickIcon(containerId,hiddenId,el){document.querySelectorAll('#'+containerId+' .icon-option').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');document.getElementById(hiddenId).value=el.dataset.icon;if(containerId==='store-icon-picker')selectedStoreIcon=el.dataset.icon;if(containerId==='cat-icon-picker')selectedCatIcon=el.dataset.icon;if(containerId==='prod-icon-picker')selectedProdIcon=el.dataset.icon;}
+
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+function openModal(id){document.getElementById(id).classList.add('show')}
+document.querySelectorAll('.modal-bg').forEach(m=>{m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+
+window.addEventListener('load', function(){load();renderLandingStores();updateCart();});
+document.addEventListener('click', function(e){const panel = document.getElementById('notif-panel');const bell = document.querySelector('.notif-bell');if(panel && bell && !panel.contains(e.target) && !bell.contains(e.target)){panel.classList.remove('show');}});
+</script>
+</body>
+</html>
