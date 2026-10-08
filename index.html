@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>RuralGo - Livraison en milieu rural</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
 body{background:#f5f1e8}
@@ -528,7 +527,13 @@ nav a:hover::after{width:80%}
     <section id="stores-section" style="background:white">
         <div class="container">
             <h2 class="title">🏪 Nos Magasins</h2>
-           <div class="stores-grid" id="stores-grid"></div>
+            <div class="map-wrapper">
+                <h3>🗺️ Carte des magasins à Maniwaki</h3>
+                <div class="map-container">
+                    <iframe id="client-stores-map" src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d22000!2d-75.9653!3d46.3767!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sfr!2sca!4v1" allowfullscreen="" loading="lazy"></iframe>
+                </div>
+            </div>
+            <div class="stores-grid" id="stores-grid"></div>
         </div>
     </section>
     <section id="store-detail-section" style="background:#f5f1e8;display:none">
@@ -811,9 +816,6 @@ nav a:hover::after{width:80%}
 <div class="toast" id="toast"></div>
 
 <script>
-    const SUPABASE_URL = 'https://shopfllntsigjmayqrre.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const MANIWAKI_CENTER = [46.3767, -75.9653];
 const DELIVERY_RADIUS_KM = 40;
 
