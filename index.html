@@ -811,6 +811,9 @@ nav a:hover::after{width:80%}
 <div class="toast" id="toast"></div>
 
 <script>
+    const SUPABASE_URL = 'https://shopfllntsigjmayqrre.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const MANIWAKI_CENTER = [46.3767, -75.9653];
 const DELIVERY_RADIUS_KM = 40;
 
