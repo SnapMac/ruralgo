@@ -18,7 +18,8 @@ body{background:#f5f1e8}
 .loader-bar::after{content:'';display:block;width:50%;height:100%;background:linear-gradient(90deg,#f5a623,#ffd89b);border-radius:10px;animation:loading 1.5s infinite}
 @keyframes loading{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
 @keyframes pulse-loader{0%,100%{transform:scale(1);box-shadow:0 0 60px rgba(245,166,35,0.6)}50%{transform:scale(1.05);box-shadow:0 0 80px rgba(245,166,35,0.9)}}
-header{background:#0a1929;color:white;padding:0.8rem 2rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.25)}
+header{background:linear-gradient(135deg,#0a1929 0%,#1a3a5c 50%,#0a1929 100%);background-size:200% 200%;animation:gradient-shift 8s ease infinite;color:white;padding:0.8rem 2rem;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+@keyframes gradient-shift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .nav{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
 .logo{display:flex;align-items:center;gap:0.7rem;cursor:pointer}
 .logo-icon{width:50px;height:50px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);flex-shrink:0}
@@ -469,13 +470,22 @@ nav a:hover::after{width:80%}
             <div class="map-zone-info">
                 <h2>📍 Région de Maniwaki, Québec</h2>
                 <p>Nos livreurs parcourent quotidiennement les routes de l'Outaouais.</p>
-                <ul class="zone-features">
-                    <li>Maniwaki et environs</li>
-                    <li>Rayon de 40 km</li>
-                    <li>Tarif : 7$ + 1$/km</li>
-                    <li>Suivi GPS en temps réel</li>
-                </ul>
-            </div>
+ <ul class="zone-features">
+<li>Maniwaki et environs</li>
+<li>Rayon de 40 km</li>
+<li>Tarif : 7$ + 1$/km</li>
+<li>Suivi GPS en temps réel</li>
+</ul>
+<div style="margin-top:1.5rem;padding:1rem;background:rgba(245,166,35,0.15);border-left:4px solid #f5a623;border-radius:6px">
+<h4 style="color:#ffd89b;margin-bottom:0.5rem;font-size:1rem">🚀 Expansion à venir</h4>
+<p style="font-size:0.9rem;line-height:1.6;color:rgba(255,255,255,0.95)">
+Nous travaillons activement pour étendre notre service à d'autres régions du Québec ! 
+Bientôt disponibles : <strong>Mont-Laurier</strong>, <strong>Mont-Tremblant</strong>, <strong>Labelle</strong> et plusieurs autres municipalités de l'Outaouais et des Laurentides.
+</p>
+<p style="font-size:0.85rem;margin-top:0.8rem;color:rgba(255,255,255,0.8);font-style:italic">
+💡 Inscrivez-vous dès maintenant pour être parmi les premiers informés de l'arrivée de RuralGo dans votre région !
+</p>
+</div>            
             <div class="google-map-container">
                 <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d44500!2d-75.9653!3d46.3767!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sfr!2sca!4v1" allowfullscreen="" loading="lazy"></iframe>
             </div>
