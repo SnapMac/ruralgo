@@ -844,6 +844,7 @@ Bientôt disponibles : <strong>Mont-Laurier</strong>, <strong>Mont-Tremblant</st
 <footer><p><strong>RURALGO</strong> • Maniwaki et environs</p><p style="margin-top:0.5rem;opacity:0.8">© 2026 RuralGo</p></footer>
 <div id="compteur" style="text-align:center;padding:1rem;background:#0a1929;color:white;font-size:1.2rem;"></div>
 <div class="toast" id="toast"></div>
+<div id="compteur"...></div>
 <div id="compteur" style="text-align:center;padding:1rem;background:#0a1929;color:white;font-size:1.2rem;"></div>
 
 <script>
@@ -1767,9 +1768,7 @@ window.addEventListener('load', function(){setTimeout(function(){document.getEle
 
 <script type="module">
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-  const supabase = createClient('https://shopfllntsigjmayqrre.supabase.co', '
-
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU')
+  const supabase = createClient('https://shopfllntsigjmayqrre.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU');
   let { data } = await supabase.from('visiteurs').select('*').limit(1).maybeSingle()
   let total
   if (data) {
