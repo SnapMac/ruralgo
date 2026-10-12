@@ -1764,11 +1764,26 @@ window.addEventListener('load', function(){setTimeout(function(){document.getEle
 
 <script type="module">
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+  
   const supabase = createClient('VOTRE_URL', 'VOTRE_CLE_ANON')
-  const { data } = await supabase.from('visiteurs').select('total').eq('id', 1).single()
-  const nouveauTotal = data.total + 1
-  await supabase.from('visiteurs').update({ total: nouveauTotal }).eq('id', 1)
-  document.getElementById('compteur').textContent = 'Visiteurs : ' + nouveauTotal
+  
+  // 1. Essayer de récupérer la ligne existante
+  let { data, error } = await supabase.from('visiteurs').select('*').limit(1).maybeSingle()
+  
+  let nouveauTotal
+  
+  if (data) {
+    // La ligne existe, on incrémente
+    nouveauTotal = data.total + 1
+    await supabase.from('visiteurs').update({ total: nouveauTotal }).eq('id', data.id)
+  } else {
+    // La ligne n'existe pas, on la crée
+    nouveauTotal = 1
+    await supabase.from('visiteurs').insert({ total: 1 })
+  }
+  
+  // 2. Afficher le compteur
+  document.getElementById('compteur').textContent = '👥 Visiteurs : ' + nouveauTotal
 </script>
 </body>
 </html>
