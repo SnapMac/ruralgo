@@ -1760,30 +1760,24 @@ window.addEventListener('load', function(){load();renderLandingStores();updateCa
 document.addEventListener('click', function(e){const panel = document.getElementById('notif-panel');const bell = document.querySelector('.notif-bell');if(panel && bell && !panel.contains(e.target) && !bell.contains(e.target)){panel.classList.remove('show');}});
 window.addEventListener('load', function(){setTimeout(function(){document.getElementById('page-loader').classList.add('hidden');},1500);});
 </script>
+
 <div id="compteur"></div>
 
 <script type="module">
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-  
   const supabase = createClient('VOTRE_URL', 'VOTRE_CLE_ANON')
-  
-  // 1. Essayer de récupérer la ligne existante
-  let { data, error } = await supabase.from('visiteurs').select('*').limit(1).maybeSingle()
-  
-  let nouveauTotal
-  
+  let { data } = await supabase.from('visiteurs').select('*').limit(1).maybeSingle()
+  let total
   if (data) {
-    // La ligne existe, on incrémente
-    nouveauTotal = data.total + 1
-    await supabase.from('visiteurs').update({ total: nouveauTotal }).eq('id', data.id)
+    total = data.total + 1
+    await supabase.from('visiteurs').update({ total: total }).eq('id', data.id)
   } else {
-    // La ligne n'existe pas, on la crée
-    nouveauTotal = 1
+    total = 1
     await supabase.from('visiteurs').insert({ total: 1 })
   }
-  
-  // 2. Afficher le compteur
-  document.getElementById('compteur').textContent = '👥 Visiteurs : ' + nouveauTotal
+  document.getElementById('compteur').textContent = '👥 Visiteurs : ' + total
+
 </script>
+
 </body>
 </html>
