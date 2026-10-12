@@ -1047,7 +1047,7 @@ async function load() {
     if (prodsData && prodsData.length > 0) products = prodsData;
 
     // Charger les paramètres
-    const { data: settingsData } = await supabaseClient.from('settings').select('*').single();
+    const { data: settingsData } = await supabaseClient.from('settings').select('*').maybesingle();
     if (settingsData) {
       platformSettings = {
         deliveryBaseFee: settingsData.delivery_base_fee || 7.00,
