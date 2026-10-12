@@ -845,6 +845,12 @@ Bientôt disponibles : <strong>Mont-Laurier</strong>, <strong>Mont-Tremblant</st
 <div class="toast" id="toast"></div>
 
 <script>
+    // ==========================================
+// CONNEXION À SUPABASE
+// ==========================================
+const SUPABASE_URL = 'https://shopfllntsigjmayqrre.supabase.co'; // ⚠️ SANS /rest/v1/ à la fin !
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const MANIWAKI_CENTER = [46.3767, -75.9653];
 const DELIVERY_RADIUS_KM = 40;
 
@@ -1022,14 +1028,150 @@ function getCurrentStore(){
 }
 
 function save(){localStorage.setItem('rg_stores',JSON.stringify(stores));localStorage.setItem('rg_categories',JSON.stringify(categories));localStorage.setItem('rg_products',JSON.stringify(products));localStorage.setItem('rg_clients',JSON.stringify(clients));localStorage.setItem('rg_drivers',JSON.stringify(drivers));localStorage.setItem('rg_orders',JSON.stringify(orders));localStorage.setItem('rg_notifications',JSON.stringify(notifications));localStorage.setItem('rg_settings',JSON.stringify(platformSettings));localStorage.setItem('rg_ids',JSON.stringify({s:nextStoreId,c:nextCatId,p:nextProdId}));if(currentUser)localStorage.setItem('rg_user',JSON.stringify(currentUser));else localStorage.removeItem('rg_user');}
-function load(){try{let d;d=localStorage.getItem('rg_stores');if(d)stores=JSON.parse(d);d=localStorage.getItem('rg_categories');if(d)categories=JSON.parse(d);d=localStorage.getItem('rg_products');if(d)products=JSON.parse(d);d=localStorage.getItem('rg_clients');if(d)clients=JSON.parse(d);d=localStorage.getItem('rg_drivers');if(d)drivers=JSON.parse(d);d=localStorage.getItem('rg_orders');if(d)orders=JSON.parse(d);d=localStorage.getItem('rg_notifications');if(d)notifications=JSON.parse(d);d=localStorage.getItem('rg_settings');if(d)platformSettings=JSON.parse(d);d=localStorage.getItem('rg_ids');if(d){let o=JSON.parse(d);nextStoreId=o.s;nextCatId=o.c;nextProdId=o.p;}d=localStorage.getItem('rg_user');if(d){currentUser=JSON.parse(d);showUserInterface();}}catch(e){console.error(e)}}
+async function load() {
+  try {
+    // Charger les magasins
+    const { data: storesData } = await supabaseClient.from('stores').select('*');
+    if (storesData && storesData.length > 0) stores = storesData;
 
-function addNotification(userId, title, message){const notif = {id: Date.now() + Math.random(), userId, title, message, time: new Date().toISOString(), read: false};notifications.push(notif);save();updateNotifBadge();}
+    // Charger les catégories
+    const { data: catsData } = await supabaseClient.from('categories').select('*');
+    if (catsData && catsData.length > 0) categories = catsData;
+
+    // Charger les produits
+    const { data: prodsData } = await supabaseClient.from('products').select('*');
+    if (prodsData && prodsData.length > 0) products = prodsData;
+
+    // Charger les paramètres
+    const { data: settingsData } = await supabaseClient.from('settings').select('*').single();
+    if (settingsData) {
+      platformSettings = {
+        deliveryBaseFee: settingsData.delivery_base_fee || 7.00,
+        deliveryPerKm: settingsData.delivery_per_km || 1.00,
+        taxRate: settingsData.tax_rate || 0.14975,
+        driverCommission: settingsData.driver_commission || 0.20,
+        radius: settingsData.radius || 40
+      };
+    }
+
+    // Vérifier si un utilisateur est déjà connecté
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
+      if (profile) {
+        currentUser = {
+          id: profile.id,
+          role: profile.role,
+          name: profile.name,
+          email: session.user.email,
+          phone: profile.phone,
+          address: profile.address,
+          lat: profile.lat,
+          lng: profile.lng,
+          vehicle: profile.vehicle,
+          status: profile.status,
+          createdAt: profile.created_at
+        };
+        showUserInterface();
+      }
+    }
+  } catch (e) {
+    console.error("Erreur de chargement Supabase:", e);
+  }
+}
+
+async function addNotification(userId, title, message) {
+  try {
+    await supabaseClient.from('notifications').insert({
+      user_id: String(userId),
+      title: title,
+      message: message
+    });
+    
+    // Ajouter aussi en local pour affichage immédiat
+    const notif = {
+      id: Date.now() + Math.random(),
+      userId: userId,
+      title: title,
+      message: message,
+      time: new Date().toISOString(),
+      read: false
+    };
+    notifications.push(notif);
+    updateNotifBadge();
+  } catch (e) {
+    console.error('Erreur notification:', e);
+  }
+}
 function updateNotifBadge(){if(!currentUser) return;const userNotifs = notifications.filter(n => n.userId === currentUser.id && !n.read);const badge = document.getElementById('notif-badge');if(userNotifs.length > 0){badge.style.display = 'flex';badge.textContent = userNotifs.length;}else {badge.style.display = 'none';}}
 function toggleNotifPanel(){const panel = document.getElementById('notif-panel');panel.classList.toggle('show');if(panel.classList.contains('show')) renderNotifications();}
-function renderNotifications(){const list = document.getElementById('notif-list');const userNotifs = notifications.filter(n => n.userId === currentUser.id).sort((a,b) => new Date(b.time) - new Date(a.time)).slice(0, 10);if(userNotifs.length === 0){list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999">Aucune notification</div>';return;}list.innerHTML = userNotifs.map(n => `<div class="notif-item ${n.read?'':'unread'}" onclick="markNotifRead(${n.id})"><div class="notif-item-title">${n.title}</div><div class="notif-item-msg">${n.message}</div><div class="notif-item-time">${formatTime(n.time)}</div></div>`).join('');}
-function markNotifRead(id){const n = notifications.find(x => x.id === id);if(n) n.read = true;save();updateNotifBadge();renderNotifications();}
-function markAllRead(){notifications.forEach(n => { if(n.userId === currentUser.id) n.read = true; });save();updateNotifBadge();renderNotifications();}
+async function renderNotifications() {
+  const list = document.getElementById('notif-list');
+  if (!currentUser) {
+    list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999">Connectez-vous pour voir vos notifications</div>';
+    return;
+  }
+  
+  try {
+    // Charger les notifications depuis Supabase
+    const { data: notifsData, error } = await supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('user_id', String(currentUser.id))
+      .order('time', { ascending: false })
+      .limit(10);
+    
+    if (error) {
+      console.error('Erreur notifications:', error);
+      list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999">Erreur de chargement</div>';
+      return;
+    }
+    
+    if (!notifsData || notifsData.length === 0) {
+      list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999">Aucune notification</div>';
+      return;
+    }
+    
+    list.innerHTML = notifsData.map(n => `
+      <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markNotifRead(${n.id})">
+        <div class="notif-item-title">${n.title}</div>
+        <div class="notif-item-msg">${n.message}</div>
+        <div class="notif-item-time">${formatTime(n.time)}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('Erreur renderNotifications:', e);
+    list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999">Erreur</div>';
+  }
+}
+async function markNotifRead(id) {
+  try {
+    await supabaseClient.from('notifications').update({ read: true }).eq('id', id);
+    const n = notifications.find(x => x.id === id);
+    if (n) n.read = true;
+    updateNotifBadge();
+    renderNotifications();
+  } catch (e) {
+    console.error('Erreur markNotifRead:', e);
+  }
+}
+async function markAllRead() {
+  try {
+    await supabaseClient
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', String(currentUser.id))
+      .eq('read', false);
+    
+    notifications.forEach(n => { 
+      if (n.userId === currentUser.id) n.read = true; 
+    });
+    updateNotifBadge();
+    renderNotifications();
+  } catch (e) {
+    console.error('Erreur markAllRead:', e);
+  }
+}
 function formatTime(iso){const d = new Date(iso);const now = new Date();const diff = (now - d) / 1000;if(diff < 60) return 'À l\'instant';if(diff < 3600) return Math.floor(diff/60) + ' min';if(diff < 86400) return Math.floor(diff/3600) + ' h';return d.toLocaleDateString('fr-CA');}
 
 function initAutocomplete(inputId, suggestionsId){const input = document.getElementById(inputId);const suggestions = document.getElementById(suggestionsId);if(!input || !suggestions) return;input.addEventListener('input', function(e){const query = e.target.value.trim();if(autocompleteTimeout) clearTimeout(autocompleteTimeout);if(query.length < 3){suggestions.classList.remove('show');return}suggestions.innerHTML = '<div class="autocomplete-loading">Recherche...</div>';suggestions.classList.add('show');autocompleteTimeout = setTimeout(()=>{searchAddress(query, suggestionsId, inputId)}, 500);});document.addEventListener('click', function(e){if(!input.contains(e.target) && !suggestions.contains(e.target)){suggestions.classList.remove('show');}});}
@@ -1042,11 +1184,127 @@ function selectAccountType(type,el){selectedAccountType=type;document.querySelec
 function continueToRegister(){closeModal('choose-type-modal');if(selectedAccountType==='client'){openModal('register-client-modal');setTimeout(()=>initAutocomplete('rc-address','rc-address-suggestions'),100);}else openModal('register-driver-modal')}
 function openLoginModal(){openModal('login-modal')}
 
-function registerClient(e){e.preventDefault();const email=document.getElementById('rc-email').value;if(clients.find(c=>c.email===email)||drivers.find(d=>d.email===email)){showToast('⚠️ Email déjà utilisé');return}const addressInput = document.getElementById('rc-address');const u={id:Date.now(),role:'client',name:document.getElementById('rc-name').value,email,password:document.getElementById('rc-pass').value,phone:document.getElementById('rc-phone').value,address:addressInput.value,lat:addressInput._lat||userPosition?.lat,lng:addressInput._lng||userPosition?.lng,createdAt:new Date().toISOString()};clients.push(u);currentUser=u;save();closeModal('register-client-modal');showUserInterface();showToast('✅ Bienvenue '+u.name.split(' ')[0]+' !');}
-function registerDriver(e){e.preventDefault();const email=document.getElementById('rd-email').value;if(clients.find(c=>c.email===email)||drivers.find(d=>d.email===email)){showToast('⚠️ Email déjà utilisé');return}const u={id:Date.now(),role:'driver',name:document.getElementById('rd-name').value,email,password:document.getElementById('rd-pass').value,phone:document.getElementById('rd-phone').value,vehicle:document.getElementById('rd-vehicle').value,status:'pending',createdAt:new Date().toISOString()};drivers.push(u);save();closeModal('register-driver-modal');showToast('📨 Demande envoyée ! En attente d\'approbation admin.');}
-function loginUser(e){e.preventDefault();const email=document.getElementById('login-email').value,pass=document.getElementById('login-pass').value;if(email===defaultAdmin.email&&pass===defaultAdmin.password){currentUser=defaultAdmin;save();closeModal('login-modal');showUserInterface();showToast('✅ Bienvenue Admin !');return}const cl=clients.find(c=>c.email===email&&c.password===pass);if(cl){currentUser=cl;save();closeModal('login-modal');showUserInterface();showToast('✅ Bienvenue '+cl.name.split(' ')[0]+' !');return}const dr=drivers.find(d=>d.email===email&&d.password===pass);if(dr){if(dr.status==='pending'){showToast('⏳ En attente d\'approbation');return}if(dr.status==='rejected'){showToast('❌ Demande refusée');return}currentUser=dr;save();closeModal('login-modal');showUserInterface();showToast('✅ Bienvenue '+dr.name.split(' ')[0]+' !');return}showToast('❌ Email ou mot de passe incorrect');}
-function logout(){currentUser=null;localStorage.removeItem('rg_user');document.getElementById('auth-section').style.display='flex';document.getElementById('user-section').style.display='none';document.getElementById('nav-client').style.display='none';document.getElementById('nav-driver').style.display='none';document.getElementById('nav-admin').style.display='none';document.getElementById('notif-bell-container').style.display='none';switchView('view-landing');showToast('👋 Déconnexion')}
+async function registerClient(e) {
+  e.preventDefault();
+  const email = document.getElementById('rc-email').value;
+  const password = correctPassword(document.getElementById('rc-pass').value); // Sécurité basique
+  const name = document.getElementById('rc-name').value;
+  const phone = document.getElementById('rc-phone').value;
+  const addressInput = document.getElementById('rc-address');
+  
+  // 1. Créer l'utilisateur dans Supabase Auth
+  const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+    email, password,
+    options: { data: { name, role: 'client' } }
+  });
 
+  if (authError) { 
+    showToast('❌ Erreur: ' + authError.message); 
+    return; 
+  }
+
+  // 2. Créer son profil dans la table 'profiles' de Supabase
+  await supabaseClient.from('profiles').insert({
+    id: authData.user.id, 
+    role: 'client', 
+    name, 
+    phone,
+    address: addressInput.value, 
+    lat: addressInput._lat || userPosition?.lat, 
+    lng: addressInput._lng || userPosition?.lng,
+    status: 'approved'
+  });
+
+  // 3. Mettre à jour l'utilisateur actuel dans l'application
+  currentUser = { 
+    id: authData.user.id, 
+    role: 'client', 
+    name, 
+    email, 
+    phone, 
+    address: addressInput.value, 
+    lat: addressInput._lat, 
+    lng: addressInput._lng, 
+    status: 'approved', 
+    createdAt: new Date().toISOString() 
+  };
+  
+  closeModal('register-client-modal');
+  showUserInterface();
+  showToast('✅ Bienvenue ' + name.split(' ')[0] + ' !');
+}
+
+// Petite fonction pour s'assurer que le mot de passe est bien une chaîne
+function correctPassword(pass) {
+  return typeof pass === 'string' ? pass : String(pass);
+}
+async function registerDriver(e) {
+  e.preventDefault();
+  const email = document.getElementById('rd-email').value;
+  const password = correctPassword(document.getElementById('rd-pass').value);
+  const name = document.getElementById('rd-name').value;
+  const phone = document.getElementById('rd-phone').value;
+  const vehicle = document.getElementById('rd-vehicle').value;
+
+  const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+    email, password,
+    options: { data: { name, role: 'driver' } }
+  });
+
+  if (authError) { showToast('❌ Erreur: ' + authError.message); return; }
+
+  await supabaseClient.from('profiles').insert({
+    id: authData.user.id, role: 'driver', name, phone, vehicle, status: 'pending'
+  });
+
+  closeModal('register-driver-modal');
+  showToast('📨 Demande envoyée ! En attente d\'approbation admin.');
+}
+async function loginUser(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value;
+  const pass = correctPassword(document.getElementById('login-pass').value);
+
+  // Fallback admin local (pour que tu puisses toujours accéder au panneau admin facilement)
+  if (email === 'admin@ruralgo.ca' && pass === 'admin123') {
+    currentUser = { id: 'admin', name: 'Administrateur', email, role: 'admin', phone: '(819) 000-0000', address: 'Maniwaki, QC', createdAt: new Date().toISOString() };
+    closeModal('login-modal');
+    showUserInterface();
+    showToast('✅ Bienvenue Admin !');
+    return;
+  }
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+  if (error) { showToast('❌ Email ou mot de passe incorrect'); return; }
+
+  const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('*').eq('id', data.user.id).single();
+  if (profileError || !profile) { showToast('❌ Profil introuvable'); return; }
+  
+  if (profile.role === 'driver' && profile.status === 'pending') { showToast('⏳ En attente d\'approbation'); return; }
+  if (profile.role === 'driver' && profile.status === 'rejected') { showToast('❌ Demande refusée'); return; }
+
+  currentUser = { 
+    id: profile.id, role: profile.role, name: profile.name, email: data.user.email, 
+    phone: profile.phone, address: profile.address, lat: profile.lat, lng: profile.lng, 
+    vehicle: profile.vehicle, status: profile.status, createdAt: profile.created_at 
+  };
+  
+  closeModal('login-modal');
+  showUserInterface();
+  showToast('✅ Bienvenue ' + currentUser.name.split(' ')[0] + ' !');
+}
+async function logout() {
+  await supabaseClient.auth.signOut();
+  currentUser = null;
+  document.getElementById('auth-section').style.display = 'flex';
+  document.getElementById('user-section').style.display = 'none';
+  document.getElementById('nav-client').style.display = 'none';
+  document.getElementById('nav-driver').style.display = 'none';
+  document.getElementById('nav-admin').style.display = 'none';
+  document.getElementById('notif-bell-container').style.display = 'none';
+  switchView('view-landing');
+  showToast('👋 Déconnexion');
+}
 function showUserInterface(){document.getElementById('auth-section').style.display='none';document.getElementById('user-section').style.display='flex';document.getElementById('notif-bell-container').style.display='block';const ini=currentUser.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);document.getElementById('user-avatar').textContent=ini;document.getElementById('user-name').textContent=currentUser.name.split(' ')[0];const labels={client:'👤 Client',driver:'🚗 Livreur',admin:'⚙️ Admin'};document.getElementById('user-role').textContent=labels[currentUser.role];document.getElementById('nav-client').style.display='none';document.getElementById('nav-driver').style.display='none';document.getElementById('nav-admin').style.display='none';if(currentUser.role==='client'){document.getElementById('nav-client').style.display='block';document.getElementById('client-firstname').textContent=currentUser.name.split(' ')[0];updateDeliveryAddress();switchView('view-client');showClientStores();}else if(currentUser.role==='driver'){document.getElementById('nav-driver').style.display='block';document.getElementById('driver-firstname').textContent=currentUser.name.split(' ')[0];switchView('view-driver');showDriverDashboard();}else if(currentUser.role==='admin'){document.getElementById('nav-admin').style.display='block';switchView('view-admin');renderAllAdmin();}updateNotifBadge();}
 
 function switchView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
@@ -1068,149 +1326,134 @@ function addToCart(prodId){const p=products.find(x=>x.id===prodId);if(!p)return;
 
 // ============ MISE À JOUR DU PANIER AVEC FRAIS DYNAMIQUES ============
 function updateCart(){
-    document.getElementById('cart-count').textContent=cart.reduce((s,c)=>s+c.qty,0);
-    const el=document.getElementById('cart-items');
+    document.getElementById('cart-count').textContent = cart.reduce((s,c)=>s+c.qty,0);
+    const el = document.getElementById('cart-items');
     const feeDetails = document.getElementById('delivery-fee-details');
     
+    // SÉCURITÉ : Valeurs par défaut au cas où Supabase n'a pas encore répondu
+    const settings = platformSettings || {};
+    const baseFee = settings.deliveryBaseFee || 7.00;
+    const perKm = settings.deliveryPerKm || 1.00;
+    const taxRate = settings.taxRate || 0.14975;
+
     if(!cart.length){
         el.innerHTML='<p style="text-align:center;color:#666;padding:2rem">Votre panier est vide</p>';
         feeDetails.innerHTML = '';
         document.getElementById('subtotal').textContent='0.00 $';
-        document.getElementById('fee-base').textContent=platformSettings.deliveryBaseFee.toFixed(2)+' $';
-        document.getElementById('fee-distance-label').textContent='↳ Distance (0 km × '+platformSettings.deliveryPerKm.toFixed(2)+'$)';
-        document.getElementById('fee-distance').textContent='0.00 $';
-        document.getElementById('delivery-fee').textContent=platformSettings.deliveryBaseFee.toFixed(2)+' $';
-        document.getElementById('taxes').textContent='0.00 $';
-        document.getElementById('total').textContent=platformSettings.deliveryBaseFee.toFixed(2)+' $';
+        document.getElementById('fee-base').textContent = baseFee.toFixed(2) + ' $';
+        document.getElementById('fee-distance-label').textContent = '↳ Distance (0 km × ' + perKm.toFixed(2) + '$)';
+        document.getElementById('fee-distance').textContent = '0.00 $';
+        document.getElementById('delivery-fee').textContent = baseFee.toFixed(2) + ' $';
+        document.getElementById('taxes').textContent = '0.00 $';
+        document.getElementById('total').textContent = baseFee.toFixed(2) + ' $';
         return;
     }
+
+    el.innerHTML = cart.map((c,i)=>`<div class="cart-item"><div style="font-size:2rem">${c.icon}</div><div class="cart-item-info"><h4>${c.name}</h4><p style="color:#666">${c.price.toFixed(2)} $</p></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty(${i},-1)">−</button><span><strong>${c.qty}</strong></span><button class="qty-btn" onclick="changeQty(${i},1)">+</button></div><strong style="min-width:70px;text-align:right">${(c.price*c.qty).toFixed(2)} $</strong></div>`).join('');
     
-    el.innerHTML=cart.map((c,i)=>`<div class="cart-item"><div style="font-size:2rem">${c.icon}</div><div class="cart-item-info"><h4>${c.name}</h4><p style="color:#666">${c.price.toFixed(2)} $</p></div><div class="qty-controls"><button class="qty-btn" onclick="changeQty(${i},-1)">−</button><span><strong>${c.qty}</strong></span><button class="qty-btn" onclick="changeQty(${i},1)">+</button></div><strong style="min-width:70px;text-align:right">${(c.price*c.qty).toFixed(2)} $</strong></div>`).join('');
-    
-    const sub=cart.reduce((s,c)=>s+c.price*c.qty,0);
-    
-    // Calcul des frais de livraison selon distance magasin → client
+    const sub = cart.reduce((s,c)=>s+c.price*c.qty,0);
     const store = getCurrentStore();
     let deliveryInfo;
     
     if(store && currentUser && currentUser.lat && currentUser.lng && store.lat && store.lng){
         deliveryInfo = calculateDeliveryFee(store.lat, store.lng, currentUser.lat, currentUser.lng);
     } else {
-        // Distance par défaut si pas de coordonnées
-        deliveryInfo = {
-            baseFee: platformSettings.deliveryBaseFee,
-            distanceKm: 0,
-            perKmFee: 0,
-            totalFee: platformSettings.deliveryBaseFee
-        };
+        deliveryInfo = { baseFee: baseFee, distanceKm: 0, perKmFee: 0, totalFee: baseFee };
     }
-    
-    // Afficher le détail des frais de livraison
+
     if(store && currentUser && currentUser.lat && currentUser.lng){
         feeDetails.innerHTML = `
-            <div class="delivery-fee-breakdown">
-                <h4>🚗 Détail des frais de livraison</h4>
-                <div class="delivery-fee-line">
-                    <span>🏪 Magasin :</span>
-                    <strong>${store.name}</strong>
-                </div>
-                <div class="delivery-fee-line">
-                    <span>📍 Distance :</span>
-                    <strong>${deliveryInfo.distanceKm.toFixed(1)} km</strong>
-                </div>
-                <div class="delivery-fee-line">
-                    <span>💰 Frais de base :</span>
-                    <span>${deliveryInfo.baseFee.toFixed(2)} $</span>
-                </div>
-                <div class="delivery-fee-line">
-                    <span>📏 ${deliveryInfo.distanceKm.toFixed(1)} km × ${platformSettings.deliveryPerKm.toFixed(2)} $/km :</span>
-                    <span>${deliveryInfo.perKmFee.toFixed(2)} $</span>
-                </div>
-                <div class="delivery-fee-total">
-                    <span>TOTAL LIVRAISON :</span>
-                    <span>${deliveryInfo.totalFee.toFixed(2)} $</span>
-                </div>
-            </div>
-        `;
+        <div class="delivery-fee-breakdown">
+        <h4>🚗 Détail des frais de livraison</h4>
+        <div class="delivery-fee-line"><span>🏪 Magasin :</span><strong>${store.name}</strong></div>
+        <div class="delivery-fee-line"><span>📍 Distance :</span><strong>${deliveryInfo.distanceKm.toFixed(1)} km</strong></div>
+        <div class="delivery-fee-line"><span>💰 Frais de base :</span><span>${deliveryInfo.baseFee.toFixed(2)} $</span></div>
+        <div class="delivery-fee-line"><span>📏 ${deliveryInfo.distanceKm.toFixed(1)} km × ${perKm.toFixed(2)} $/km :</span><span>${deliveryInfo.perKmFee.toFixed(2)} $</span></div>
+        <div class="delivery-fee-total"><span>TOTAL LIVRAISON :</span><span>${deliveryInfo.totalFee.toFixed(2)} $</span></div>
+        </div>`;
     } else {
-        feeDetails.innerHTML = `
-            <div class="delivery-fee-breakdown" style="background:#fee2e2;border-color:#dc2626">
-                <h4 style="color:#991b1b">⚠️ Adresse de livraison incomplète</h4>
-                <p style="font-size:0.85rem;color:#991b1b">Pour calculer les frais de livraison, votre profil doit avoir une adresse avec coordonnées GPS. 
-                <a onclick="showProfile()" style="color:#0a1929;font-weight:bold;cursor:pointer;text-decoration:underline">Modifier mon profil</a></p>
-                <p style="font-size:0.85rem;margin-top:0.5rem;color:#991b1b">Frais de base appliqués : <strong>${platformSettings.deliveryBaseFee.toFixed(2)} $</strong></p>
-            </div>
-        `;
+        feeDetails.innerHTML = `<div class="delivery-fee-breakdown" style="background:#fee2e2;border-color:#dc2626"><h4 style="color:#991b1b">⚠️ Adresse de livraison incomplète</h4><p style="font-size:0.85rem;color:#991b1b">Pour calculer les frais, votre profil doit avoir une adresse avec coordonnées GPS. <a onclick="showProfile()" style="color:#0a1929;font-weight:bold;cursor:pointer;text-decoration:underline">Modifier mon profil</a></p><p style="font-size:0.85rem;margin-top:0.5rem;color:#991b1b">Frais de base appliqués : <strong>${baseFee.toFixed(2)} $</strong></p></div>`;
     }
-    
-    const tax = sub * platformSettings.taxRate;
+
+    const tax = sub * taxRate;
     const tot = sub + deliveryInfo.totalFee + tax;
     
-    document.getElementById('subtotal').textContent=sub.toFixed(2)+' $';
-    document.getElementById('fee-base').textContent=deliveryInfo.baseFee.toFixed(2)+' $';
-    document.getElementById('fee-distance-label').textContent=`↳ Distance (${deliveryInfo.distanceKm.toFixed(1)} km × ${platformSettings.deliveryPerKm.toFixed(2)}$)`;
-    document.getElementById('fee-distance').textContent=deliveryInfo.perKmFee.toFixed(2)+' $';
-    document.getElementById('delivery-fee').textContent=deliveryInfo.totalFee.toFixed(2)+' $';
-    document.getElementById('taxes').textContent=tax.toFixed(2)+' $';
-    document.getElementById('total').textContent=tot.toFixed(2)+' $';
+    document.getElementById('subtotal').textContent = sub.toFixed(2) + ' $';
+    document.getElementById('fee-base').textContent = deliveryInfo.baseFee.toFixed(2) + ' $';
+    document.getElementById('fee-distance-label').textContent = `↳ Distance (${deliveryInfo.distanceKm.toFixed(1)} km × ${perKm.toFixed(2)}$)`;
+    document.getElementById('fee-distance').textContent = deliveryInfo.perKmFee.toFixed(2) + ' $';
+    document.getElementById('delivery-fee').textContent = deliveryInfo.totalFee.toFixed(2) + ' $';
+    document.getElementById('taxes').textContent = tax.toFixed(2) + ' $';
+    document.getElementById('total').textContent = tot.toFixed(2) + ' $';
 }
 
 function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);updateCart()}
 function scrollToCart(){switchView('view-client');document.getElementById('stores-section').style.display='none';document.getElementById('store-detail-section').style.display='none';document.getElementById('client-orders-section').style.display='none';document.getElementById('client-order-detail-section').style.display='none';document.getElementById('client-profile-section').style.display='none';setTimeout(()=>{document.getElementById('cart-section').scrollIntoView({behavior:'smooth'})},100);}
 function updateDeliveryAddress(){const d=document.getElementById('delivery-address-display');if(currentUser&&currentUser.role==='client')d.innerHTML=`<div class="delivery-address-box"><h4>📍 Adresse de livraison</h4><p><strong>${currentUser.name}</strong><br>${currentUser.address}<br>📞 ${currentUser.phone}</p></div>`;else d.innerHTML='';}
 
-function placeOrder(){
-    if(!cart.length){showToast('⚠️ Panier vide');return}
-    const sub=cart.reduce((s,c)=>s+c.price*c.qty,0);
-    
-    // Calcul des frais selon distance
-    const store = getCurrentStore();
-    let deliveryInfo;
-    if(store && currentUser && currentUser.lat && currentUser.lng && store.lat && store.lng){
-        deliveryInfo = calculateDeliveryFee(store.lat, store.lng, currentUser.lat, currentUser.lng);
-    } else {
-        deliveryInfo = {baseFee: platformSettings.deliveryBaseFee, distanceKm: 0, perKmFee: 0, totalFee: platformSettings.deliveryBaseFee};
-    }
-    
-    const tax=sub*platformSettings.taxRate;
-    const tot=sub+deliveryInfo.totalFee+tax;
-    
-    const order = {
-        id: Date.now(),
-        orderNumber: 'RG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-        clientId: currentUser.id,
-        clientName: currentUser.name,
-        clientPhone: currentUser.phone,
-        clientAddress: currentUser.address,
-        clientLat: currentUser.lat,
-        clientLng: currentUser.lng,
-        items: JSON.parse(JSON.stringify(cart)),
-        subtotal: sub,
-        deliveryBaseFee: deliveryInfo.baseFee,
-        deliveryDistanceKm: deliveryInfo.distanceKm,
-        deliveryPerKmFee: deliveryInfo.perKmFee,
-        deliveryFee: deliveryInfo.totalFee,
-        tax: tax,
-        total: tot,
-        status: 'pending',
-        driverId: null,
-        driverName: null,
-        storeId: store ? store.id : null,
-        storeName: store ? store.name : null,
-        createdAt: new Date().toISOString(),
-        statusHistory: [{status:'pending', time:new Date().toISOString(), note:'Commande créée'}]
-    };
-    
-    orders.push(order);
-    addNotification(currentUser.id, '✅ Commande confirmée', `Votre commande ${order.orderNumber} de ${tot.toFixed(2)}$ (livraison: ${deliveryInfo.totalFee.toFixed(2)}$ pour ${deliveryInfo.distanceKm.toFixed(1)}km) a été reçue !`);
-    drivers.filter(d=>d.status==='approved').forEach(d=>{addNotification(d.id, '📦 Nouvelle commande', `Commande ${order.orderNumber} - ${deliveryInfo.totalFee.toFixed(2)}$ à gagner`);});
-    addNotification('admin', '🆕 Nouvelle commande', `Commande ${order.orderNumber} de ${currentUser.name} - ${tot.toFixed(2)}$`);
-    cart=[];updateCart();save();showToast('✅ Commande passée ! #'+order.orderNumber);showClientOrders();
-}
+
 
 function showClientOrders(){switchView('view-client');document.getElementById('stores-section').style.display='none';document.getElementById('store-detail-section').style.display='none';document.getElementById('cart-section').style.display='none';document.getElementById('client-order-detail-section').style.display='none';document.getElementById('client-profile-section').style.display='none';document.getElementById('client-orders-section').style.display='block';renderClientOrders();}
 
-function renderClientOrders(){const list = document.getElementById('client-orders-list');const myOrders = orders.filter(o => o.clientId === currentUser.id).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));if(myOrders.length === 0){list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div><p>Aucune commande pour le moment</p><button class="btn" style="margin-top:1rem" onclick="showClientStores()">🛍️ Commencer mes achats</button></div>';return;}list.innerHTML = myOrders.map(o => {const st = STATUS_LABELS[o.status] || STATUS_LABELS.pending;return `<div class="order-card" onclick="showClientOrderDetail(${o.id})"><div class="order-card-header"><div><h4>Commande #${o.orderNumber}</h4><p style="color:#666;font-size:0.85rem">${new Date(o.createdAt).toLocaleString('fr-CA')}</p></div><span class="status-badge ${st.class}">${st.label}</span></div><div class="order-card-details"><div>🏪 ${o.storeName || 'Magasin'}</div><div>📦 ${o.items.length} article(s)</div><div>💰 <strong>${o.total.toFixed(2)} $</strong></div><div>🚗 Livraison : ${o.deliveryFee.toFixed(2)} $ (${(o.deliveryDistanceKm||0).toFixed(1)} km)</div></div></div>`;}).join('');}
+async function renderClientOrders() {
+  const list = document.getElementById('client-orders-list');
+  
+  try {
+    // Charger les commandes du client depuis Supabase
+    const { data: ordersData, error } = await supabaseClient
+      .from('orders')
+      .select('*')
+      .eq('client_id', currentUser.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Erreur chargement commandes:', error);
+      list.innerHTML = '<div class="empty-state"><p>Erreur de chargement</p></div>';
+      return;
+    }
+    
+    // Mettre à jour le tableau local
+    orders = ordersData.map(o => ({
+      id: o.id,
+      orderNumber: o.order_number,
+      clientId: o.client_id,
+      clientName: o.client_name,
+      clientPhone: o.client_phone,
+      clientAddress: o.client_address,
+      clientLat: o.client_lat,
+      clientLng: o.client_lng,
+      items: o.items,
+      subtotal: o.subtotal,
+      deliveryBaseFee: o.delivery_base_fee,
+      deliveryDistanceKm: o.delivery_distance_km,
+      deliveryPerKmFee: o.delivery_per_km_fee,
+      deliveryFee: o.delivery_fee,
+      tax: o.tax,
+      total: o.total,
+      status: o.status,
+      driverId: o.driver_id,
+      driverName: o.driver_name,
+      storeId: o.store_id,
+      storeName: o.store_name,
+      createdAt: o.created_at,
+      statusHistory: o.status_history
+    }));
+    
+    if (orders.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div><p>Aucune commande pour le moment</p><button class="btn" style="margin-top:1rem" onclick="showClientStores()">🛍️ Commencer mes achats</button></div>';
+      return;
+    }
+    
+    list.innerHTML = orders.map(o => {
+      const st = STATUS_LABELS[o.status] || STATUS_LABELS.pending;
+      return `<div class="order-card" onclick="showClientOrderDetail(${o.id})"><div class="order-card-header"><div><h4>Commande #${o.orderNumber}</h4><p style="color:#666;font-size:0.85rem">${new Date(o.createdAt).toLocaleString('fr-CA')}</p></div><span class="status-badge ${st.class}">${st.label}</span></div><div class="order-card-details"><div>🏪 ${o.storeName || 'Magasin'}</div><div>📦 ${o.items.length} article(s)</div><div>💰 <strong>${o.total.toFixed(2)} $</strong></div><div>🚗 Livraison : ${o.deliveryFee.toFixed(2)} $ (${(o.deliveryDistanceKm||0).toFixed(1)} km)</div></div></div>`;
+    }).join('');
+    
+  } catch (e) {
+    console.error('Erreur renderClientOrders:', e);
+    list.innerHTML = '<div class="empty-state"><p>Erreur</p></div>';
+  }
+}
 
 function showClientOrderDetail(orderId){const order = orders.find(o => o.id === orderId);if(!order) return;switchView('view-client');document.getElementById('stores-section').style.display='none';document.getElementById('store-detail-section').style.display='none';document.getElementById('cart-section').style.display='none';document.getElementById('client-orders-section').style.display='none';document.getElementById('client-profile-section').style.display='none';document.getElementById('client-order-detail-section').style.display='block';const st = STATUS_LABELS[order.status] || STATUS_LABELS.pending;const allStatuses = ['pending','confirmed','searching_driver','driver_assigned','driver_to_store','at_store','picked_up','driver_to_client','delivered'];const currentIdx = allStatuses.indexOf(order.status);let html = `<button class="back-btn" onclick="showClientOrders()">← Retour aux commandes</button>`;html += `<div class="store-detail-header"><div class="store-detail-icon">📦</div><div class="store-detail-info"><h2>Commande #${order.orderNumber}</h2><p>${new Date(order.createdAt).toLocaleString('fr-CA')}</p><p><span class="status-badge ${st.class}">${st.label}</span></p></div></div>`;html += `<div class="tracking-steps">`;const steps = [{status:'pending', icon:'📝', title:'Commande reçue'},{status:'confirmed', icon:'✅', title:'Paiement confirmé'},{status:'searching_driver', icon:'🔍', title:'Recherche livreur'},{status:'driver_assigned', icon:'🚗', title:'Livreur assigné'},{status:'driver_to_store', icon:'🛣️', title:'En route vers magasin'},{status:'at_store', icon:'🏪', title:'Au magasin'},{status:'picked_up', icon:'📦', title:'Commande récupérée'},{status:'driver_to_client', icon:'🚗', title:'En route vers vous'},{status:'delivered', icon:'🏠', title:'Livrée !'}];steps.forEach((s) => {const idx = allStatuses.indexOf(s.status);let cls = '';if(idx < currentIdx) cls = 'done';else if(idx === currentIdx) cls = 'active';html += `<div class="tracking-step ${cls}"><div class="step-icon">${s.icon}</div><div><h4>${s.title}</h4><p style="color:#666;font-size:0.85rem">${idx <= currentIdx ? '✓ Complété' : 'En attente'}</p></div></div>`;});html += `</div>`;html += `<div class="profile-section"><h3 style="color:#0a1929;margin-bottom:1rem">📋 Détails</h3><div class="profile-grid"><div class="profile-field"><label>Magasin</label><div class="value">${order.storeName || '-'}</div></div><div class="profile-field"><label>Livreur</label><div class="value">${order.driverName || 'En attente'}</div></div><div class="profile-field"><label>Adresse</label><div class="value">${order.clientAddress}</div></div><div class="profile-field"><label>Téléphone</label><div class="value">${order.clientPhone}</div></div></div></div>`;
 
@@ -1267,17 +1510,128 @@ function adminCancelOrder(orderId){if(!confirm('Annuler cette commande ?')) retu
 function renderAdminStores(){const c=document.getElementById('stores-table-container');if(!stores.length){c.innerHTML='<div class="empty-state"><p>Aucun magasin</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Type</th><th>Adresse</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${stores.map(s=>`<tr><td style="font-size:2rem;text-align:center">${s.icon}</td><td><strong>${s.name}</strong></td><td>${s.type}</td><td style="font-size:0.9rem">${s.address}</td><td><span class="badge ${s.status==='active'?'badge-green':'badge-red'}">${s.status==='active'?'✅ Actif':'❌ Inactif'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editStore(${s.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('store',${s.id})">🗑️</button></div></td></tr>`).join('')}</tbody></table>`;}
 function openStoreModal(){document.getElementById('store-modal-title').textContent='➕ Ajouter un magasin';document.getElementById('store-id').value='';document.getElementById('store-name').value='';document.getElementById('store-type').value='';document.getElementById('store-addr').value='';document.getElementById('store-phone').value='';document.getElementById('store-status').value='active';selectedStoreIcon='';buildIconPicker('store-icon-picker','store-icon');openModal('store-modal');setTimeout(()=>initAutocomplete('store-addr','store-addr-suggestions'),100);}
 function editStore(id){const s=stores.find(x=>x.id===id);if(!s)return;document.getElementById('store-modal-title').textContent='✏️ Modifier';document.getElementById('store-id').value=s.id;document.getElementById('store-name').value=s.name;document.getElementById('store-type').value=s.type;document.getElementById('store-addr').value=s.address;document.getElementById('store-phone').value=s.phone||'';document.getElementById('store-status').value=s.status;selectedStoreIcon=s.icon;buildIconPicker('store-icon-picker','store-icon');setTimeout(()=>{document.querySelectorAll('#store-icon-picker .icon-option').forEach(o=>{if(o.dataset.icon===s.icon)o.classList.add('selected')});initAutocomplete('store-addr','store-addr-suggestions');},50);openModal('store-modal');}
-function saveStore(e){e.preventDefault();if(!selectedStoreIcon&&!document.getElementById('store-icon').value){showToast('⚠️ Choisissez une icône');return}const id=document.getElementById('store-id').value;const addrInput = document.getElementById('store-addr');const d={icon:document.getElementById('store-icon').value||selectedStoreIcon,name:document.getElementById('store-name').value,type:document.getElementById('store-type').value,address:addrInput.value,phone:document.getElementById('store-phone').value,status:document.getElementById('store-status').value,lat:addrInput._lat||null,lng:addrInput._lng||null};if(id){const i=stores.findIndex(s=>s.id===parseInt(id));stores[i]={...stores[i],...d};showToast('✅ Magasin modifié !')}else{d.id=nextStoreId++;stores.push(d);showToast('✅ Magasin ajouté !')}closeModal('store-modal');renderAdminStores();renderLandingStores();save();}
+async function saveStore(e) {
+  e.preventDefault();
+  if (!selectedStoreIcon && !document.getElementById('store-icon').value) {
+    showToast('⚠️ Choisissez une icône');
+    return;
+  }
+  
+  const id = document.getElementById('store-id').value;
+  const addrInput = document.getElementById('store-addr');
+  const storeData = {
+    icon: document.getElementById('store-icon').value || selectedStoreIcon,
+    name: document.getElementById('store-name').value,
+    type: document.getElementById('store-type').value,
+    address: addrInput.value,
+    phone: document.getElementById('store-phone').value,
+    status: document.getElementById('store-status').value,
+    lat: addrInput._lat || null,
+    lng: addrInput._lng || null
+  };
+  
+  try {
+    if (id) {
+      // Modifier un magasin existant
+      await supabaseClient.from('stores').update(storeData).eq('id', parseInt(id));
+      const idx = stores.findIndex(s => s.id === parseInt(id));
+      stores[idx] = { ...stores[idx], ...storeData };
+      showToast('✅ Magasin modifié !');
+    } else {
+      // Ajouter un nouveau magasin
+      const { data: newStore, error } = await supabaseClient.from('stores').insert(storeData).select().single();
+      if (error) throw error;
+      stores.push(newStore);
+      showToast('✅ Magasin ajouté !');
+    }
+    
+    closeModal('store-modal');
+    renderAdminStores();
+    renderLandingStores();
+  } catch (err) {
+    console.error('Erreur saveStore:', err);
+    showToast('❌ Erreur lors de la sauvegarde');
+  }
+}
 
 function renderAdminCategories(){const c=document.getElementById('categories-container');if(!categories.length){c.innerHTML='<div class="empty-state"><p>Aucune catégorie</p></div>';return}c.innerHTML=`<div class="cat-grid">${categories.map(cat=>{const count=products.filter(p=>p.categoryId===cat.id).length;return`<div class="cat-card"><div class="cat-card-icon">${cat.icon}</div><div class="cat-card-name">${cat.name}</div><p style="color:#666;font-size:0.85rem;margin-bottom:0.5rem">${count} produit(s)</p><div class="cat-card-actions"><button class="action-btn btn-blue" onclick="editCategory(${cat.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('category',${cat.id})">🗑️</button></div></div>`}).join('')}</div>`;}
 function openCategoryModal(){document.getElementById('cat-modal-title').textContent='➕ Catégorie';document.getElementById('cat-id').value='';document.getElementById('cat-name').value='';selectedCatIcon='';buildIconPicker('cat-icon-picker','cat-icon');openModal('category-modal')}
 function editCategory(id){const c=categories.find(x=>x.id===id);if(!c)return;document.getElementById('cat-modal-title').textContent='✏️ Modifier';document.getElementById('cat-id').value=c.id;document.getElementById('cat-name').value=c.name;selectedCatIcon=c.icon;buildIconPicker('cat-icon-picker','cat-icon');setTimeout(()=>{document.querySelectorAll('#cat-icon-picker .icon-option').forEach(o=>{if(o.dataset.icon===c.icon)o.classList.add('selected')})},50);openModal('category-modal')}
-function saveCategory(e){e.preventDefault();if(!selectedCatIcon&&!document.getElementById('cat-icon').value){showToast('⚠️ Choisissez une icône');return}const id=document.getElementById('cat-id').value;const d={icon:document.getElementById('cat-icon').value||selectedCatIcon,name:document.getElementById('cat-name').value};if(id){const i=categories.findIndex(c=>c.id===parseInt(id));categories[i]={...categories[i],...d};showToast('✅ Modifiée !')}else{d.id=nextCatId++;categories.push(d);showToast('✅ Ajoutée !')}closeModal('category-modal');renderAdminCategories();save()}
+async function saveCategory(e) {
+  e.preventDefault();
+  if (!selectedCatIcon && !document.getElementById('cat-icon').value) {
+    showToast('⚠️ Choisissez une icône');
+    return;
+  }
+  
+  const id = document.getElementById('cat-id').value;
+  const catData = {
+    icon: document.getElementById('cat-icon').value || selectedCatIcon,
+    name: document.getElementById('cat-name').value
+  };
+  
+  try {
+    if (id) {
+      await supabaseClient.from('categories').update(catData).eq('id', parseInt(id));
+      const idx = categories.findIndex(c => c.id === parseInt(id));
+      categories[idx] = { ...categories[idx], ...catData };
+      showToast('✅ Modifiée !');
+    } else {
+      const { data: newCat, error } = await supabaseClient.from('categories').insert(catData).select().single();
+      if (error) throw error;
+      categories.push(newCat);
+      showToast('✅ Ajoutée !');
+    }
+    
+    closeModal('category-modal');
+    renderAdminCategories();
+  } catch (err) {
+    console.error('Erreur saveCategory:', err);
+    showToast('❌ Erreur lors de la sauvegarde');
+  }
+}
 
 function renderAdminProducts(){const c=document.getElementById('products-table-container');if(!products.length){c.innerHTML='<div class="empty-state"><p>Aucun produit</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Magasin</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr></thead><tbody>${products.map(p=>{const s=stores.find(x=>x.id===p.storeId);const cat=categories.find(x=>x.id===p.categoryId);return`<tr><td style="font-size:1.5rem;text-align:center">${p.icon}</td><td><strong>${p.name}</strong></td><td>${s?s.name:'-'}</td><td>${cat?cat.icon+' '+cat.name:'-'}</td><td><strong>${p.price.toFixed(2)} $</strong></td><td><span class="badge ${p.available?'badge-green':'badge-red'}">${p.available?'✅':'❌'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editProduct(${p.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('product',${p.id})">🗑️</button></div></td></tr>`}).join('')}</tbody></table>`;}
 function openProductModal(){document.getElementById('prod-modal-title').textContent='➕ Produit';document.getElementById('prod-id').value='';document.getElementById('prod-name').value='';document.getElementById('prod-desc').value='';document.getElementById('prod-price').value='';document.getElementById('prod-available').value='true';selectedProdIcon='';document.getElementById('prod-store').innerHTML=stores.map(s=>`<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');document.getElementById('prod-category').innerHTML=categories.map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');buildIconPicker('prod-icon-picker','prod-icon');openModal('product-modal');}
 function editProduct(id){const p=products.find(x=>x.id===id);if(!p)return;document.getElementById('prod-modal-title').textContent='✏️ Modifier';document.getElementById('prod-id').value=p.id;document.getElementById('prod-name').value=p.name;document.getElementById('prod-desc').value=p.desc||'';document.getElementById('prod-price').value=p.price;document.getElementById('prod-available').value=p.available?'true':'false';selectedProdIcon=p.icon;document.getElementById('prod-store').innerHTML=stores.map(s=>`<option value="${s.id}" ${s.id===p.storeId?'selected':''}>${s.icon} ${s.name}</option>`).join('');document.getElementById('prod-category').innerHTML=categories.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${c.icon} ${c.name}</option>`).join('');buildIconPicker('prod-icon-picker','prod-icon');setTimeout(()=>{document.querySelectorAll('#prod-icon-picker .icon-option').forEach(o=>{if(o.dataset.icon===p.icon)o.classList.add('selected')})},50);openModal('product-modal');}
-function saveProduct(e){e.preventDefault();if(!selectedProdIcon&&!document.getElementById('prod-icon').value){showToast('⚠️ Choisissez une icône');return}const id=document.getElementById('prod-id').value;const d={storeId:parseInt(document.getElementById('prod-store').value),categoryId:parseInt(document.getElementById('prod-category').value),name:document.getElementById('prod-name').value,desc:document.getElementById('prod-desc').value,price:parseFloat(document.getElementById('prod-price').value),icon:document.getElementById('prod-icon').value||selectedProdIcon,available:document.getElementById('prod-available').value==='true'};if(id){const i=products.findIndex(p=>p.id===parseInt(id));products[i]={...products[i],...d};showToast('✅ Modifié !')}else{d.id=nextProdId++;products.push(d);showToast('✅ Ajouté !')}closeModal('product-modal');renderAdminProducts();save();}
+async function saveProduct(e) {
+  e.preventDefault();
+  if (!selectedProdIcon && !document.getElementById('prod-icon').value) {
+    showToast('⚠️ Choisissez une icône');
+    return;
+  }
+  
+  const id = document.getElementById('prod-id').value;
+  const prodData = {
+    store_id: parseInt(document.getElementById('prod-store').value),
+    category_id: parseInt(document.getElementById('prod-category').value),
+    name: document.getElementById('prod-name').value,
+    description: document.getElementById('prod-desc').value,
+    price: parseFloat(document.getElementById('prod-price').value),
+    icon: document.getElementById('prod-icon').value || selectedProdIcon,
+    available: document.getElementById('prod-available').value === 'true'
+  };
+  
+  try {
+    if (id) {
+      await supabaseClient.from('products').update(prodData).eq('id', parseInt(id));
+      const idx = products.findIndex(p => p.id === parseInt(id));
+      products[idx] = { ...products[idx], ...prodData, storeId: prodData.store_id, categoryId: prodData.category_id };
+      showToast('✅ Modifié !');
+    } else {
+      const { data: newProd, error } = await supabaseClient.from('products').insert(prodData).select().single();
+      if (error) throw error;
+      products.push({ ...newProd, storeId: newProd.store_id, categoryId: newProd.category_id });
+      showToast('✅ Ajouté !');
+    }
+    
+    closeModal('product-modal');
+    renderAdminProducts();
+  } catch (err) {
+    console.error('Erreur saveProduct:', err);
+    showToast('❌ Erreur lors de la sauvegarde');
+  }
+}
 
 function renderAdminClients(){const c=document.getElementById('clients-table-container');if(!clients.length){c.innerHTML='<div class="empty-state"><p>Aucun client</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Adresse</th><th>Commandes</th><th>Total</th></tr></thead><tbody>${clients.map(cl=>{const myOrders = orders.filter(o=>o.clientId===cl.id);const total = myOrders.reduce((s,o)=>s+o.total,0);return`<tr><td><strong>${cl.name}</strong></td><td>${cl.email}</td><td>${cl.phone}</td><td style="font-size:0.85rem">${cl.address}</td><td>${myOrders.length}</td><td><strong>${total.toFixed(2)} $</strong></td></tr>`;}).join('')}</tbody></table>`;}
 
@@ -1324,7 +1678,41 @@ function renderAdminSettings(){const c = document.getElementById('admin-settings
 `;}
 function saveSettings(){platformSettings.deliveryBaseFee = parseFloat(document.getElementById('set-base-fee').value) || 7.00;platformSettings.deliveryPerKm = parseFloat(document.getElementById('set-per-km').value) || 1.00;platformSettings.taxRate = parseFloat(document.getElementById('set-tax-rate').value) || 0.14975;platformSettings.driverCommission = parseFloat(document.getElementById('set-commission').value) || 0.20;platformSettings.radius = parseInt(document.getElementById('set-radius').value) || 40;save();showToast('✅ Paramètres enregistrés !');renderAdminSettings();if(currentUser && currentUser.role === 'client') updateCart();}
 
-function confirmDelete(type,id){const names={store:stores.find(s=>s.id===id)?.name,category:categories.find(c=>c.id===id)?.name,product:products.find(p=>p.id===id)?.name};document.getElementById('confirm-msg').textContent=`Supprimer "${names[type]}" ?`;document.getElementById('confirm-btn').onclick=()=>{if(type==='store'){stores=stores.filter(s=>s.id!==id);products=products.filter(p=>p.storeId!==id)}if(type==='category'){categories=categories.filter(c=>c.id!==id)}if(type==='product'){products=products.filter(p=>p.id!==id)}closeModal('confirm-modal');showToast('🗑️ Supprimé !');renderAdminStores();renderAdminCategories();renderAdminProducts();renderLandingStores();save();};openModal('confirm-modal');}
+async function confirmDelete(type, id) {
+  const names = {
+    store: stores.find(s => s.id === id)?.name,
+    category: categories.find(c => c.id === id)?.name,
+    product: products.find(p => p.id === id)?.name
+  };
+  document.getElementById('confirm-msg').textContent = `Supprimer "${names[type]}" ?`;
+  document.getElementById('confirm-btn').onclick = async () => {
+    try {
+      if (type === 'store') {
+        await supabaseClient.from('stores').delete().eq('id', id);
+        stores = stores.filter(s => s.id !== id);
+        products = products.filter(p => p.store_id !== id);
+      }
+      if (type === 'category') {
+        await supabaseClient.from('categories').delete().eq('id', id);
+        categories = categories.filter(c => c.id !== id);
+      }
+      if (type === 'product') {
+        await supabaseClient.from('products').delete().eq('id', id);
+        products = products.filter(p => p.id !== id);
+      }
+      closeModal('confirm-modal');
+      showToast('🗑️ Supprimé !');
+      renderAdminStores();
+      renderAdminCategories();
+      renderAdminProducts();
+      renderLandingStores();
+    } catch (err) {
+      console.error('Erreur suppression:', err);
+      showToast('❌ Erreur lors de la suppression');
+    }
+  };
+  openModal('confirm-modal');
+}
 
 function calculateDistance(lat1, lng1, lat2, lng2){if(!lat1 || !lng1 || !lat2 || !lng2) return null;const R = 6371;const dLat = (lat2-lat1) * Math.PI/180;const dLng = (lng2-lng1) * Math.PI/180;const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));}
 
