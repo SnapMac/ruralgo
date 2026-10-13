@@ -1572,7 +1572,106 @@ function assignDriverModal(orderId){const approvedDrivers = drivers.filter(d => 
 
 function adminCancelOrder(orderId){if(!confirm('Annuler cette commande ?')) return;const order = orders.find(o => o.id === orderId);order.status = 'cancelled';order.statusHistory.push({status:'cancelled', time:new Date().toISOString(), note:'Annulée par admin'});addNotification(order.clientId, '❌ Commande annulée', `Votre commande ${order.orderNumber} a été annulée par l'administration`);save();showToast('❌ Commande annulée');renderAdminOrders();}
 
-function renderAdminStores(){const c=document.getElementById('stores-table-container');if(!stores.length){c.innerHTML='<div class="empty-state"><p>Aucun magasin</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Type</th><th>Adresse</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${stores.map(s=>`<tr><td style="font-size:2rem;text-align:center">${s.icon}</td><td><strong>${s.name}</strong></td><td>${s.type}</td><td style="font-size:0.9rem">${s.address}</td><td><span class="badge ${s.status==='active'?'badge-green':'badge-red'}">${s.status==='active'?'✅ Actif':'❌ Inactif'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editStore(${s.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('store',${s.id})">🗑️</button></div></td></tr>`).join('')}</tbody></table>`;}
+function renderAdminStores(){
+const c=document.getElementById('stores-table-container');
+if(!stores.length){c.innerHTML='<div class="empty-state"><p>Aucun magasin</p></div>';return}
+c.innerHTML=`<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Type</th><th>Adresse</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${stores.map(s=>{
+const catCount = categories.filter(cat => cat.storeId === s.id).length;
+const prodCount = products.filter(p => p.storeId === s.id).length;
+return`<tr><td style="font-size:2rem;text-align:center">${s.icon}</td><td><strong>${s.name}</strong></td><td>${s.type}</td><td style="font-size:0.9rem">${s.address}</td><td><span class="badge ${s.status==='active'?'badge-green':'badge-red'}">${s.status==='active'?'✅ Actif':'❌ Inactif'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editStore(${s.id})">✏️</button><button class="action-btn btn-green" onclick="manageStoreCategories(${s.id})">📂 ${catCount} cat.</button><button class="action-btn btn-orange" onclick="manageStoreProducts(${s.id})">🛍️ ${prodCount} prod.</button><button class="action-btn btn-red" onclick="confirmDelete('store',${s.id})">🗑️</button></div></td></tr>`}).join('')}</tbody></table>`;
+}
+function manageStoreCategories(storeId){
+const store = stores.find(s => s.id === storeId);
+if(!store) return;
+const modal = document.createElement('div');
+modal.className = 'modal-bg show';
+modal.id = 'store-cats-modal';
+modal.innerHTML = `
+<div class="modal" style="max-width:700px">
+<h2>📂 Catégories de ${store.name}</h2>
+<div style="margin-bottom:1rem">
+<button class="btn-sm btn-green" onclick="openCategoryModalForStore(${storeId})">➕ Ajouter une catégorie</button>
+</div>
+<div id="store-categories-list"></div>
+<div style="margin-top:1.5rem;text-align:right">
+<button class="btn-sm btn-gray" onclick="closeModal('store-cats-modal')">Fermer</button>
+</div>
+</div>
+`;
+document.body.appendChild(modal);
+renderStoreCategoriesList(storeId);
+}
+
+function renderStoreCategoriesList(storeId){
+const list = document.getElementById('store-categories-list');
+const storeCats = categories.filter(c => c.storeId === storeId);
+if(storeCats.length === 0){
+list.innerHTML = '<div class="empty-state"><p>Aucune catégorie pour ce magasin</p></div>';
+return;
+}
+list.innerHTML = `<div class="cat-grid">${storeCats.map(cat=>{const count=products.filter(p=>p.categoryId===cat.id).length;return`<div class="cat-card"><div class="cat-card-icon">${cat.icon}</div><div class="cat-card-name">${cat.name}</div><p style="color:#666;font-size:0.85rem;margin-bottom:0.5rem">${count} produit(s)</p><div class="cat-card-actions"><button class="action-btn btn-red" onclick="confirmDelete('category',${cat.id})">🗑️</button></div></div>`}).join('')}</div>`;
+}
+
+function manageStoreProducts(storeId){
+const store = stores.find(s => s.id === storeId);
+if(!store) return;
+const modal = document.createElement('div');
+modal.className = 'modal-bg show';
+modal.id = 'store-prods-modal';
+modal.innerHTML = `
+<div class="modal" style="max-width:900px">
+<h2>🛍️ Produits de ${store.name}</h2>
+<div style="margin-bottom:1rem">
+<button class="btn-sm btn-green" onclick="openProductModalForStore(${storeId})">➕ Ajouter un produit</button>
+</div>
+<div id="store-products-list"></div>
+<div style="margin-top:1.5rem;text-align:right">
+<button class="btn-sm btn-gray" onclick="closeModal('store-prods-modal')">Fermer</button>
+</div>
+</div>
+`;
+document.body.appendChild(modal);
+renderStoreProductsList(storeId);
+}
+
+function renderStoreProductsList(storeId){
+const list = document.getElementById('store-products-list');
+const storeProds = products.filter(p => p.storeId === storeId);
+if(storeProds.length === 0){
+list.innerHTML = '<div class="empty-state"><p>Aucun produit pour ce magasin</p></div>';
+return;
+}
+list.innerHTML = `<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr></thead><tbody>${storeProds.map(p=>{const cat=categories.find(x=>x.id===p.categoryId);return`<tr><td style="font-size:1.5rem;text-align:center">${p.icon}</td><td><strong>${p.name}</strong></td><td>${cat?cat.icon+' '+cat.name:'-'}</td><td><strong>${p.price.toFixed(2)} $</strong></td><td><span class="badge ${p.available?'badge-green':'badge-red'}">${p.available?'✅':'❌'}</span></td><td><div class="action-btns"><button class="action-btn btn-red" onclick="confirmDelete('product',${p.id})">🗑️</button></div></td></tr>`}).join('')}</tbody></table>`;
+}
+
+function openCategoryModalForStore(storeId){
+document.getElementById('cat-modal-title').textContent='➕ Catégorie pour ce magasin';
+document.getElementById('cat-id').value='';
+document.getElementById('cat-name').value='';
+document.getElementById('cat-store-id').value=storeId;
+selectedCatIcon='';
+buildIconPicker('cat-icon-picker','cat-icon');
+openModal('category-modal');
+}
+
+function openProductModalForStore(storeId){
+document.getElementById('prod-modal-title').textContent='➕ Produit pour ce magasin';
+document.getElementById('prod-id').value='';
+document.getElementById('prod-name').value='';
+document.getElementById('prod-desc').value='';
+document.getElementById('prod-price').value='';
+document.getElementById('prod-available').value='true';
+selectedProdIcon='';
+const storeCats = categories.filter(c => c.storeId === storeId);
+if(storeCats.length === 0){
+showToast('⚠️ Ajoutez d\'abord des catégories pour ce magasin');
+return;
+}
+document.getElementById('prod-store').innerHTML=`<option value="${storeId}" selected>${stores.find(s=>s.id===storeId).name}</option>`;
+document.getElementById('prod-category').innerHTML=storeCats.map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+buildIconPicker('prod-icon-picker','prod-icon');
+openModal('product-modal');
+}
 function openStoreModal(){document.getElementById('store-modal-title').textContent='➕ Ajouter un magasin';document.getElementById('store-id').value='';document.getElementById('store-name').value='';document.getElementById('store-type').value='';document.getElementById('store-addr').value='';document.getElementById('store-phone').value='';document.getElementById('store-status').value='active';selectedStoreIcon='';buildIconPicker('store-icon-picker','store-icon');openModal('store-modal');setTimeout(()=>initAutocomplete('store-addr','store-addr-suggestions'),100);}
 function editStore(id){const s=stores.find(x=>x.id===id);if(!s)return;document.getElementById('store-modal-title').textContent='✏️ Modifier';document.getElementById('store-id').value=s.id;document.getElementById('store-name').value=s.name;document.getElementById('store-type').value=s.type;document.getElementById('store-addr').value=s.address;document.getElementById('store-phone').value=s.phone||'';document.getElementById('store-status').value=s.status;selectedStoreIcon=s.icon;buildIconPicker('store-icon-picker','store-icon');setTimeout(()=>{document.querySelectorAll('#store-icon-picker .icon-option').forEach(o=>{if(o.dataset.icon===s.icon)o.classList.add('selected')});initAutocomplete('store-addr','store-addr-suggestions');},50);openModal('store-modal');}
 async function saveStore(e) {
@@ -1620,7 +1719,15 @@ async function saveStore(e) {
 }
 
 function renderAdminCategories(){const c=document.getElementById('categories-container');if(!categories.length){c.innerHTML='<div class="empty-state"><p>Aucune catégorie</p></div>';return}c.innerHTML=`<div class="cat-grid">${categories.map(cat=>{const count=products.filter(p=>p.categoryId===cat.id).length;return`<div class="cat-card"><div class="cat-card-icon">${cat.icon}</div><div class="cat-card-name">${cat.name}</div><p style="color:#666;font-size:0.85rem;margin-bottom:0.5rem">${count} produit(s)</p><div class="cat-card-actions"><button class="action-btn btn-blue" onclick="editCategory(${cat.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('category',${cat.id})">🗑️</button></div></div>`}).join('')}</div>`;}
-function openCategoryModal(){document.getElementById('cat-modal-title').textContent='➕ Catégorie';document.getElementById('cat-id').value='';document.getElementById('cat-name').value='';selectedCatIcon='';buildIconPicker('cat-icon-picker','cat-icon');openModal('category-modal')}
+function openCategoryModal(storeId){
+document.getElementById('cat-modal-title').textContent='➕ Catégorie';
+document.getElementById('cat-id').value='';
+document.getElementById('cat-name').value='';
+document.getElementById('cat-store-id').value=storeId;
+selectedCatIcon='';
+buildIconPicker('cat-icon-picker','cat-icon');
+openModal('category-modal')
+}
 function editCategory(id){const c=categories.find(x=>x.id===id);if(!c)return;document.getElementById('cat-modal-title').textContent='✏️ Modifier';document.getElementById('cat-id').value=c.id;document.getElementById('cat-name').value=c.name;selectedCatIcon=c.icon;buildIconPicker('cat-icon-picker','cat-icon');setTimeout(()=>{document.querySelectorAll('#cat-icon-picker .icon-option').forEach(o=>{if(o.dataset.icon===c.icon)o.classList.add('selected')})},50);openModal('category-modal')}
 async function saveCategory(e) {
   e.preventDefault();
