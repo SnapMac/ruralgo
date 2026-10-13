@@ -1047,7 +1047,11 @@ async function load() {
     if (prodsData && prodsData.length > 0) products = prodsData;
 
     // Charger les paramètres
-    const { data: settingsData } = await supabaseClient.from('settings').select('*').maybesingle();
+ HEAD
+    const { data: settingsData } = await supabaseClient.from('settings').select('*').maybeSingle();
+
+
+ 666
     if (settingsData) {
       platformSettings = {
         deliveryBaseFee: settingsData.delivery_base_fee || 7.00,
@@ -1281,7 +1285,7 @@ async function loginUser(e) {
   const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
   if (error) { showToast('❌ Email ou mot de passe incorrect'); return; }
 
-  const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('*').eq('id', data.user.id).single();
+ const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('*').eq('id', data.user.id).maybeSingle();
   if (profileError || !profile) { showToast('❌ Profil introuvable'); return; }
   
   if (profile.role === 'driver' && profile.status === 'pending') { showToast('⏳ En attente d\'approbation'); return; }
