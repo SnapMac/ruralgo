@@ -1319,8 +1319,31 @@ function switchView(id){document.querySelectorAll('.view').forEach(v=>v.classLis
 function goHome(){if(currentUser){if(currentUser.role==='client')showClientStores();else if(currentUser.role==='driver')showDriverDashboard();else {switchView('view-admin');adminTab('dashboard',document.querySelector('.admin-side li'));}}else switchView('view-landing')}
 function scrollToSection(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth'})}
 
-function renderLandingStores(){const g=document.getElementById('landing-stores-grid');if(!g)return;const active=stores.filter(s=>s.status==='active').slice(0,6);g.innerHTML=active.map(s=>{const count=products.filter(p=>p.storeId===s.id&&p.available).length;return`<div class="store"><div class="store-img">${s.icon}</div><div class="store-info"><h3>${s.name}</h3><p style="color:#666;font-size:0.9rem">${s.type}</p><p style="color:#999;font-size:0.85rem;margin-top:0.3rem">📍 ${s.address}</p><p style="color:#0a1929;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📦 ${count} produit(s)</p></div></div>`}).join('');}
-
+function renderLandingStores(){
+const g=document.getElementById('landing-stores-grid');
+if(!g)return;
+const active=stores.filter(s=>s.status==='active').slice(0,6);
+g.innerHTML=active.map(s=>{
+const count=products.filter(p=>p.storeId===s.id&&p.available).length;
+return`<div class="store" onclick="openStoreFromLanding(${s.id})">
+<div class="store-img">${s.icon}</div>
+<div class="store-info">
+<h3>${s.name}</h3>
+<p style="color:#666;font-size:0.9rem">${s.type}</p>
+<p style="color:#999;font-size:0.85rem;margin-top:0.3rem">📍 ${s.address}</p>
+<p style="color:#0a1929;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📦 ${count} produit(s)</p>
+</div>
+</div>`
+}).join('');
+}
+function openStoreFromLanding(storeId){
+if(!currentUser){
+showToast('🔑 Connectez-vous pour voir les magasins');
+setTimeout(()=>openChooseTypeModal(),1000);
+return;
+}
+openStoreDetail(storeId);
+}
 function showClientStores(){switchView('view-client');document.getElementById('stores-section').style.display='block';document.getElementById('store-detail-section').style.display='none';document.getElementById('client-orders-section').style.display='none';document.getElementById('client-order-detail-section').style.display='none';document.getElementById('client-profile-section').style.display='none';renderClientStores();setTimeout(()=>{document.getElementById('stores-section').scrollIntoView({behavior:'smooth'})},200);}
 function renderClientStores(){const g=document.getElementById('stores-grid');const active=stores.filter(s=>s.status==='active');if(!active.length){g.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏪</div><p>Aucun magasin</p></div>';return}g.innerHTML=active.map(s=>{const count=products.filter(p=>p.storeId===s.id&&p.available).length;const dist = userPosition ? calculateDistance(userPosition.lat, userPosition.lng, s.lat, s.lng) : null;return`<div class="store" onclick="openStoreDetail(${s.id})"><div class="store-img">${s.icon}</div><div class="store-info"><h3>${s.name}</h3><p style="color:#666;font-size:0.9rem">${s.type}</p><p style="color:#999;font-size:0.85rem;margin-top:0.3rem">📍 ${s.address}</p>${dist?`<p style="color:#0284c7;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📏 ${dist.toFixed(1)} km de vous</p>`:''}<p style="color:#0a1929;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📦 ${count} produit(s)</p></div></div>`}).join('');}
 
