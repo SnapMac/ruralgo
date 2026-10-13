@@ -1080,6 +1080,24 @@ if (ordersData) {
   }));
 }
 
+// Charger les clients depuis Supabase
+const { data: clientsData } = await supabaseClient.from('profiles').select('*').eq('role', 'client');
+if (clientsData) {
+  clients = clientsData.map(c => ({
+    id: c.id, name: c.name, email: c.email || '', phone: c.phone,
+    address: c.address, role: c.role, status: c.status, createdAt: c.created_at
+  }));
+}
+
+// Charger les livreurs depuis Supabase
+const { data: driversData } = await supabaseClient.from('profiles').select('*').eq('role', 'driver');
+if (driversData) {
+  drivers = driversData.map(d => ({
+    id: d.id, name: d.name, email: d.email || '', phone: d.phone,
+    vehicle: d.vehicle, role: d.role, status: d.status, createdAt: d.created_at
+  }));
+}
+
     // Charger les paramètres
  HEAD
     const { data: settingsData } = await supabaseClient.from('settings').select('*').maybeSingle();
@@ -1824,6 +1842,7 @@ async function rejectDriver(id){
     showToast('❌ Erreur: ' + err.message);
   }
 }
+
 async function approveDriver(id){
   const d=drivers.find(x=>x.id===id);
   if(!d)return;
@@ -1839,6 +1858,7 @@ async function approveDriver(id){
     showToast('❌ Erreur: ' + err.message);
   }
 }
+
 function renderAdminSettings(){const c = document.getElementById('admin-settings-content');c.innerHTML = `
     <div class="profile-section">
         <h3 style="color:#0a1929;margin-bottom:1rem">💰 Système de facturation de livraison</h3>
