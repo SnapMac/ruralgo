@@ -1860,6 +1860,49 @@ function renderAdminDrivers() {
   }).join('')}</tbody></table>`;
 }
 
+async function rejectDriver(id) {
+  const d = drivers.find(x => x.id === id);
+  if (!d) return;
+  
+  try {
+    // Mettre à jour dans Supabase
+    await supabaseClient.from('profiles').update({ status: 'rejected' }).eq('id', id);
+    
+    // Mettre à jour le tableau local
+    d.status = 'rejected';
+    
+    // Envoyer une notification
+    await addNotification(d.id, '❌ Demande refusée', 'Votre demande de livreur a été refusée');
+    
+    renderAdminDrivers();
+    showToast('❌ Livreur refusé');
+  } catch (err) {
+    console.error('Erreur rejectDriver:', err);
+    showToast('❌ Erreur lors du refus');
+  }
+}
+async function approveDriver(id) {
+  const d = drivers.find(x => x.id === id);
+  if (!d) return;
+  
+  try {
+    // Mettre à jour dans Supabase
+    await supabaseClient.from('profiles').update({ status: 'approved' }).eq('id', id);
+    
+    // Mettre à jour le tableau local
+    d.status = 'approved';
+    
+    // Envoyer une notification
+    await addNotification(d.id, '✅ Compte approuvé', 'Vous pouvez maintenant accepter des livraisons !');
+    
+    renderAdminDrivers();
+    showToast('✅ Livreur approuvé !');
+  } catch (err) {
+    console.error('Erreur approveDriver:', err);
+    showToast('❌ Erreur lors de l\'approbation');
+  }
+}
+
 // ============ ADMIN - PARAMÈTRES ============
 function renderAdminSettings() {
   const c = document.getElementById('admin-settings-content');
