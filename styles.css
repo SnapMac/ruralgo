@@ -31,7 +31,7 @@ nav a:hover::after{width:80%}
 .user-name{font-size:0.9rem;font-weight:bold}
 .user-role{font-size:0.7rem;background:#f5a623;padding:0.1rem 0.5rem;border-radius:10px;margin-top:2px;width:fit-content}
 .logout-btn{background:rgba(255,255,255,0.2);color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:bold}
-.auth-btn{background:#f5a623;color:color:#0a1929;border:2px solid white;padding:0.6rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:bold;transition:all 0.3s;position:relative;overflow:hidden}
+.auth-btn{background:#f5a623;color:color:#FFF799;border:2px solid white;padding:0.6rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:bold;transition:all 0.3s;position:relative;overflow:hidden}
 .auth-btn:hover{background:#e6951a}
 .auth-btn.secondary{background:rgba(255,255,255,0.2);margin-left:0.3rem;border:2px solid white}
 .auth-buttons{display:flex;gap:0.3rem}
