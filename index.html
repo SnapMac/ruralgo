@@ -1085,11 +1085,10 @@ if (ordersData) {
 }
 
     // Charger les paramètres
- HEAD
+ 
     const { data: settingsData } = await supabaseClient.from('settings').select('*').maybeSingle();
 
 
- 666
     if (settingsData) {
       platformSettings = {
         deliveryBaseFee: settingsData.delivery_base_fee || 7.00,
