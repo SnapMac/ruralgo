@@ -1456,6 +1456,44 @@ function updateCart(){
 }
 
 function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);updateCart()}
+async function placeOrder() {
+  if (!currentUser) { showToast('🔑 Connectez-vous'); return; }
+  if (cart.length === 0) { showToast('🛒 Panier vide'); return; }
+  
+  const store = getCurrentStore();
+  const deliveryInfo = calculateDeliveryFee(store.lat, store.lng, currentUser.lat, currentUser.lng);
+  const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
+  const tax = subtotal * platformSettings.taxRate;
+  const total = subtotal + deliveryInfo.totalFee + tax;
+
+  const { data, error } = await supabaseClient.from('orders').insert({
+    order_number: 'RG' + Date.now().toString().slice(-6),
+    client_id: currentUser.id,
+    client_name: currentUser.name,
+    client_phone: currentUser.phone,
+    client_address: currentUser.address,
+    client_lat: currentUser.lat,
+    client_lng: currentUser.lng,
+    items: cart,
+    subtotal: subtotal,
+    delivery_base_fee: deliveryInfo.baseFee,
+    delivery_distance_km: deliveryInfo.distanceKm,
+    delivery_per_km_fee: deliveryInfo.perKmFee,
+    delivery_fee: deliveryInfo.totalFee,
+    tax: tax,
+    total: total,
+    status: 'pending',
+    store_id: store.id,
+    store_name: store.name,
+    status_history: [{status:'pending', time:new Date().toISOString()}]
+  });
+
+  if (error) { showToast('❌ Erreur'); return; }
+  cart = [];
+  updateCart();
+  showToast('✅ Commande passée !');
+  showClientOrders();
+}
 function scrollToCart(){switchView('view-client');document.getElementById('stores-section').style.display='none';document.getElementById('store-detail-section').style.display='none';document.getElementById('client-orders-section').style.display='none';document.getElementById('client-order-detail-section').style.display='none';document.getElementById('client-profile-section').style.display='none';setTimeout(()=>{document.getElementById('cart-section').scrollIntoView({behavior:'smooth'})},100);}
 function updateDeliveryAddress(){const d=document.getElementById('delivery-address-display');if(currentUser&&currentUser.role==='client')d.innerHTML=`<div class="delivery-address-box"><h4>📍 Adresse de livraison</h4><p><strong>${currentUser.name}</strong><br>${currentUser.address}<br>📞 ${currentUser.phone}</p></div>`;else d.innerHTML='';}
 
@@ -1546,7 +1584,28 @@ function renderProfile(){const content = document.getElementById('client-profile
 
 function openEditProfile(){document.getElementById('ep-name').value = currentUser.name;document.getElementById('ep-phone').value = currentUser.phone;document.getElementById('ep-address').value = currentUser.address;openModal('edit-profile-modal');setTimeout(()=>initAutocomplete('ep-address','ep-address-suggestions'),100);}
 
-function saveProfile(e){e.preventDefault();const addrInput = document.getElementById('ep-address');currentUser.name = document.getElementById('ep-name').value;currentUser.phone = document.getElementById('ep-phone').value;currentUser.address = addrInput.value;if(addrInput._lat) currentUser.lat = addrInput._lat;if(addrInput._lng) currentUser.lng = addrInput._lng;if(currentUser.role === 'client'){const idx = clients.findIndex(c => c.id === currentUser.id);if(idx >= 0) clients[idx] = currentUser;}else if(currentUser.role === 'driver'){const idx = drivers.findIndex(d => d.id === currentUser.id);if(idx >= 0) drivers[idx] = currentUser;}save();closeModal('edit-profile-modal');showUserInterface();renderProfile();showToast('✅ Profil mis à jour !');}
+async function saveProfile(e) {
+  e.preventDefault();
+  const addrInput = document.getElementById('ep-address');
+  currentUser.name = document.getElementById('ep-name').value;
+  currentUser.phone = document.getElementById('ep-phone').value;
+  currentUser.address = addrInput.value;
+  if (addrInput._lat) currentUser.lat = addrInput._lat;
+  if (addrInput._lng) currentUser.lng = addrInput._lng;
+
+  await supabaseClient.from('profiles').update({
+    name: currentUser.name,
+    phone: currentUser.phone,
+    address: currentUser.address,
+    lat: currentUser.lat,
+    lng: currentUser.lng
+  }).eq('id', currentUser.id);
+
+  closeModal('edit-profile-modal');
+  showUserInterface();
+  renderProfile();
+  showToast('✅ Profil mis à jour !');
+}
 
 function showDriverDashboard(){switchView('view-driver');document.getElementById('driver-dashboard-section').style.display='block';document.getElementById('driver-order-detail-section').style.display='none';document.getElementById('driver-history-section').style.display='none';renderDriverDashboard();}
 
@@ -1811,8 +1870,22 @@ async function saveProduct(e) {
 function renderAdminClients(){const c=document.getElementById('clients-table-container');if(!clients.length){c.innerHTML='<div class="empty-state"><p>Aucun client</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Adresse</th><th>Commandes</th><th>Total</th></tr></thead><tbody>${clients.map(cl=>{const myOrders = orders.filter(o=>o.clientId===cl.id);const total = myOrders.reduce((s,o)=>s+o.total,0);return`<tr><td><strong>${cl.name}</strong></td><td>${cl.email}</td><td>${cl.phone}</td><td style="font-size:0.85rem">${cl.address}</td><td>${myOrders.length}</td><td><strong>${total.toFixed(2)} $</strong></td></tr>`;}).join('')}</tbody></table>`;}
 
 function renderAdminDrivers(){const c=document.getElementById('drivers-table-container');if(!drivers.length){c.innerHTML='<div class="empty-state"><p>Aucun livreur</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Véhicule</th><th>Livraisons</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${drivers.map(d=>{const myDel = orders.filter(o=>o.driverId===d.id && o.status==='delivered').length;return`<tr><td><strong>${d.name}</strong><br><span style="font-size:0.8rem;color:#666">${d.phone}</span></td><td>${d.email}</td><td>${d.vehicle}</td><td>${myDel}</td><td><span class="badge ${d.status==='approved'?'badge-green':d.status==='pending'?'badge-yellow':'badge-red'}">${d.status==='approved'?'✅ Approuvé':d.status==='pending'?'⏳ En attente':'❌ Refusé'}</span></td><td><div class="action-btns">${d.status!=='approved'?`<button class="action-btn btn-green" onclick="approveDriver(${d.id})">✅</button>`:''}${d.status!=='rejected'?`<button class="action-btn btn-red" onclick="rejectDriver(${d.id})">❌</button>`:''}</div></td></tr>`;}).join('')}</tbody></table>`;}
-function approveDriver(id){const d=drivers.find(x=>x.id===id);if(!d)return;d.status='approved';addNotification(d.id, '✅ Compte approuvé', 'Vous pouvez maintenant accepter des livraisons !');save();renderAdminDrivers();showToast('✅ Livreur approuvé !');}
-function rejectDriver(id){const d=drivers.find(x=>x.id===id);if(!d)return;d.status='rejected';addNotification(d.id, '❌ Demande refusée', 'Votre demande de livreur a été refusée');save();renderAdminDrivers();showToast('❌ Livreur refusé');}
+async function approveDriver(id) {
+  const d = drivers.find(x => x.id === id);
+  if (!d) return;
+  await supabaseClient.from('profiles').update({ status: 'approved' }).eq('id', id);
+  d.status = 'approved';
+  renderAdminDrivers();
+  showToast('✅ Livreur approuvé !');
+}
+async function rejectDriver(id) {
+  const d = drivers.find(x => x.id === id);
+  if (!d) return;
+  await supabaseClient.from('profiles').update({ status: 'rejected' }).eq('id', id);
+  d.status = 'rejected';
+  renderAdminDrivers();
+  showToast('❌ Livreur refusé');
+}
 
 function renderAdminSettings(){const c = document.getElementById('admin-settings-content');c.innerHTML = `
     <div class="profile-section">
@@ -1851,7 +1924,25 @@ function renderAdminSettings(){const c = document.getElementById('admin-settings
         • Commission livreur (${(platformSettings.driverCommission*100).toFixed(0)}%) : <strong>${((platformSettings.deliveryBaseFee + 8 * platformSettings.deliveryPerKm) * platformSettings.driverCommission).toFixed(2)} $</strong></p>
     </div>
 `;}
-function saveSettings(){platformSettings.deliveryBaseFee = parseFloat(document.getElementById('set-base-fee').value) || 7.00;platformSettings.deliveryPerKm = parseFloat(document.getElementById('set-per-km').value) || 1.00;platformSettings.taxRate = parseFloat(document.getElementById('set-tax-rate').value) || 0.14975;platformSettings.driverCommission = parseFloat(document.getElementById('set-commission').value) || 0.20;platformSettings.radius = parseInt(document.getElementById('set-radius').value) || 40;save();showToast('✅ Paramètres enregistrés !');renderAdminSettings();if(currentUser && currentUser.role === 'client') updateCart();}
+async function saveSettings() {
+  platformSettings.deliveryBaseFee = parseFloat(document.getElementById('set-base-fee').value) || 7.00;
+  platformSettings.deliveryPerKm = parseFloat(document.getElementById('set-per-km').value) || 1.00;
+  platformSettings.taxRate = parseFloat(document.getElementById('set-tax-rate').value) || 0.14975;
+  platformSettings.driverCommission = parseFloat(document.getElementById('set-commission').value) || 0.20;
+  platformSettings.radius = parseInt(document.getElementById('set-radius').value) || 40;
+  
+  await supabaseClient.from('settings').upsert({
+    id: 1,
+    delivery_base_fee: platformSettings.deliveryBaseFee,
+    delivery_per_km: platformSettings.deliveryPerKm,
+    tax_rate: platformSettings.taxRate,
+    driver_commission: platformSettings.driverCommission,
+    radius: platformSettings.radius
+  });
+  
+  showToast('✅ Paramètres enregistrés !');
+  renderAdminSettings();
+}
 
 async function confirmDelete(type, id) {
   const names = {
