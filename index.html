@@ -401,12 +401,37 @@
 <div class="modal-bg" id="register-client-modal"><div class="modal">
   <h2>📝 Inscription Client</h2>
   <form onsubmit="registerClient(event)">
-    <div class="form-group"><label>Nom complet *</label><input type="text" id="rc-name" required></div>
-    <div class="form-group"><label>Courriel *</label><input type="email" id="rc-email" required></div>
-    <div class="form-group"><label>Mot de passe *</label><input type="password" id="rc-pass" required minlength="6"></div>
-    <div class="form-group"><label>Téléphone *</label><input type="tel" id="rc-phone" required></div>
     <div class="form-group">
-      <label>Adresse de domicile *</label>
+      <label>👤 Nom complet *</label>
+      <input type="text" id="rc-name" required placeholder="Jean Tremblay">
+    </div>
+    <div class="form-group">
+      <label>📧 Courriel *</label>
+      <input type="email" id="rc-email" required placeholder="jean@exemple.com">
+    </div>
+    <div class="form-group">
+      <label>🔒 Mot de passe * (min. 6 caractères)</label>
+      <input type="password" id="rc-pass" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>🔒 Confirmer le mot de passe *</label>
+      <input type="password" id="rc-pass-confirm" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>📱 Téléphone *</label>
+      <input type="tel" id="rc-phone" required placeholder="(819) 123-4567">
+    </div>
+    <div class="form-group">
+      <label>📍 Province *</label>
+      <select id="rc-province" required style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%">
+        <option value="QC" selected>Québec</option>
+        <option value="ON">Ontario</option>
+        <option value="NB">Nouveau-Brunswick</option>
+        <option value="Autre">Autre</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>🏠 Adresse de domicile *</label>
       <div class="info-box">💡 Commencez à taper votre adresse pour voir des suggestions</div>
       <div class="autocomplete-wrapper">
         <input type="text" id="rc-address" class="autocomplete-input" required placeholder="Ex: 123 rue Principale, Maniwaki" autocomplete="off">
@@ -414,21 +439,63 @@
       </div>
       <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('rc-address')">📍 Utiliser ma position GPS</button>
     </div>
-    <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('register-client-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">✅ Créer mon compte</button></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('register-client-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">✅ Créer mon compte</button>
+    </div>
   </form>
 </div></div>
 
-<div class="modal-bg" id="register-driver-modal"><div class="modal">
+  <div class="modal-bg" id="register-driver-modal"><div class="modal">
   <h2>🚗 Inscription Livreur</h2>
   <form onsubmit="registerDriver(event)">
-    <div class="form-group"><label>Nom complet *</label><input type="text" id="rd-name" required></div>
-    <div class="form-group"><label>Courriel *</label><input type="email" id="rd-email" required></div>
-    <div class="form-group"><label>Mot de passe *</label><input type="password" id="rd-pass" required minlength="6"></div>
-    <div class="form-group"><label>Téléphone *</label><input type="tel" id="rd-phone" required></div>
-    <div class="form-group"><label>Véhicule *</label><select id="rd-vehicle" required><option value="">-- Choisir --</option><option>🚗 Voiture</option><option>🚚 Camionnette</option><option>🛻 Pick-up</option></select></div>
-    <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('register-driver-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">📨 Soumettre</button></div>
+    <div class="form-group">
+      <label>👤 Nom complet *</label>
+      <input type="text" id="rd-name" required placeholder="Jean Tremblay">
+    </div>
+    <div class="form-group">
+      <label>📧 Courriel *</label>
+      <input type="email" id="rd-email" required placeholder="jean@exemple.com">
+    </div>
+    <div class="form-group">
+      <label>🔒 Mot de passe * (min. 6 caractères)</label>
+      <input type="password" id="rd-pass" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>🔒 Confirmer le mot de passe *</label>
+      <input type="password" id="rd-pass-confirm" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>📱 Téléphone *</label>
+      <input type="tel" id="rd-phone" required placeholder="(819) 123-4567">
+    </div>
+    <div class="form-group">
+      <label>📍 Province *</label>
+      <select id="rd-province" required style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%">
+        <option value="QC" selected>Québec</option>
+        <option value="ON">Ontario</option>
+        <option value="NB">Nouveau-Brunswick</option>
+        <option value="Autre">Autre</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>🚙 Véhicule *</label>
+      <select id="rd-vehicle" required style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%">
+        <option value="">-- Choisir --</option>
+        <option value="Voiture">🚗 Voiture</option>
+        <option value="Camionnette">🚚 Camionnette</option>
+        <option value="Pick-up">🛻 Pick-up</option>
+        <option value="VTT/Quad">🏍️ VTT/Quad (Saison été)</option>
+        <option value="Motoneige">🛷 Motoneige (Saison hiver)</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('register-driver-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">📨 Soumettre ma demande</button>
+    </div>
   </form>
 </div></div>
+
 
 <div class="modal-bg" id="login-modal"><div class="modal">
   <h2>🔑 Connexion</h2>
