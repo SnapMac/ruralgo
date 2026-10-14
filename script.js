@@ -1851,56 +1851,42 @@ function renderAdminClients() {
   }).join('')}</tbody></table>`;
 }
 
-function renderAdminDrivers() {
-  const c = document.getElementById('drivers-table-container');
-  if (!drivers.length) { c.innerHTML = '<div class="empty-state"><p>Aucun livreur</p></div>'; return; }
-  c.innerHTML = `<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Véhicule</th><th>Livraisons</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${drivers.map(d => {
-    const myDel = orders.filter(o => o.driverId === d.id && o.status === 'delivered').length;
-    return `<tr><td><strong>${d.name}</strong><br><span style="font-size:0.8rem;color:#666">${d.phone}</span></td><td>${d.email}</td><td>${d.vehicle}</td><td>${myDel}</td><td><span class="badge ${d.status === 'approved' ? 'badge-green' : d.status === 'pending' ? 'badge-yellow' : 'badge-red'}">${d.status === 'approved' ? '✅ Approuvé' : d.status === 'pending' ? '⏳ En attente' : '❌ Refusé'}</span></td><td><div class="action-btns">${d.status !== 'approved' ? `<button class="action-btn btn-green" onclick="approveDriver(${d.id})">✅</button>` : ''}${d.status !== 'rejected' ? `<button class="action-btn btn-red" onclick="rejectDriver(${d.id})">❌</button>` : ''}</div></td></tr>`;
-  }).join('')}</tbody></table>`;
+function renderAdminDrivers(){const c=document.getElementById('drivers-table-container');if(!drivers.length){c.innerHTML='<div class="empty-state"><p>Aucun livreur</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Véhicule</th><th>Livraisons</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${drivers.map(d=>{const myDel = orders.filter(o=>String(o.driverId)===String(d.id) && o.status==='delivered').length;return`<tr><td><strong>${d.name}</strong><br><span style="font-size:0.8rem;color:#666">${d.phone}</span></td><td>${d.email}</td><td>${d.vehicle}</td><td>${myDel}</td><td><span class="badge ${d.status==='approved'?'badge-green':d.status==='pending'?'badge-yellow':'badge-red'}">${d.status==='approved'?'✅ Approuvé':d.status==='pending'?'⏳ En attente':'❌ Refusé'}</span></td><td><div class="action-btns">${d.status!=='approved'?`<button class="action-btn btn-green" onclick="approveDriver('${d.id}')">✅</button>`:''}${d.status!=='rejected'?`<button class="action-btn btn-red" onclick="rejectDriver('${d.id}')">❌</button>`:''}</div></td></tr>`}).join('')}</tbody></table>`;}
 }
 
-async function rejectDriver(id) {
-  const d = drivers.find(x => x.id === id);
-  if (!d) return;
-  
+
+
+async function approveDriver(id){
+  const d=drivers.find(x=>String(x.id)===String(id));
+  if(!d)return;
   try {
-    // Mettre à jour dans Supabase
-    await supabaseClient.from('profiles').update({ status: 'rejected' }).eq('id', id);
-    
-    // Mettre à jour le tableau local
-    d.status = 'rejected';
-    
-    // Envoyer une notification
-    await addNotification(d.id, '❌ Demande refusée', 'Votre demande de livreur a été refusée');
-    
-    renderAdminDrivers();
-    showToast('❌ Livreur refusé');
-  } catch (err) {
-    console.error('Erreur rejectDriver:', err);
-    showToast('❌ Erreur lors du refus');
-  }
-}
-async function approveDriver(id) {
-  const d = drivers.find(x => x.id === id);
-  if (!d) return;
-  
-  try {
-    // Mettre à jour dans Supabase
-    await supabaseClient.from('profiles').update({ status: 'approved' }).eq('id', id);
-    
-    // Mettre à jour le tableau local
-    d.status = 'approved';
-    
-    // Envoyer une notification
-    await addNotification(d.id, '✅ Compte approuvé', 'Vous pouvez maintenant accepter des livraisons !');
-    
+    const { error } = await supabaseClient.from('profiles').update({ status: 'approved' }).eq('id', id);
+    if (error) throw error;
+    d.status='approved';
+    addNotification(d.id, '✅ Compte approuvé', 'Vous pouvez maintenant accepter des livraisons !');
     renderAdminDrivers();
     showToast('✅ Livreur approuvé !');
   } catch (err) {
     console.error('Erreur approveDriver:', err);
-    showToast('❌ Erreur lors de l\'approbation');
+    showToast('❌ Erreur: ' + err.message);
   }
+}
+
+async function rejectDriver(id){
+  const d=drivers.find(x=>String(x.id)===String(id));
+  if(!d)return;
+  try {
+    const { error } = await supabaseClient.from('profiles').update({ status: 'rejected' }).eq('id', id);
+    if (error) throw error;
+    d.status='rejected';
+    addNotification(d.id, '❌ Demande refusée', 'Votre demande de livreur a été refusée');
+    renderAdminDrivers();
+    showToast('❌ Livreur refusé');
+  } catch (err) {
+    console.error('Erreur rejectDriver:', err);
+    showToast('❌ Erreur: ' + err.message);
+  }
+}
 }
 
 // ============ ADMIN - PARAMÈTRES ============
