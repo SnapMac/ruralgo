@@ -421,15 +421,12 @@
       <label>📱 Téléphone *</label>
       <input type="tel" id="rc-phone" required placeholder="(819) 123-4567">
     </div>
-    <div class="form-group">
-      <label>📍 Province *</label>
-      <select id="rc-province" required style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%">
-        <option value="QC" selected>Québec</option>
-        <option value="ON">Ontario</option>
-        <option value="NB">Nouveau-Brunswick</option>
-        <option value="Autre">Autre</option>
-      </select>
-    </div>
+    
+   <div class="form-group">
+     <label>📍 Province *</label>
+     <input type="text" id="rc-province" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;">
+   </div>
+    
     <div class="form-group">
       <label>🏠 Adresse de domicile *</label>
       <div class="info-box">💡 Commencez à taper votre adresse pour voir des suggestions</div>
@@ -469,15 +466,12 @@
       <label>📱 Téléphone *</label>
       <input type="tel" id="rd-phone" required placeholder="(819) 123-4567">
     </div>
+    
     <div class="form-group">
-      <label>📍 Province *</label>
-      <select id="rd-province" required style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%">
-        <option value="QC" selected>Québec</option>
-        <option value="ON">Ontario</option>
-        <option value="NB">Nouveau-Brunswick</option>
-        <option value="Autre">Autre</option>
-      </select>
-    </div>
+     <label>📍 Province *</label>
+     <input type="text" id="rd-province" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;">
+   </div>
+    
     <div class="form-group">
       <label>🚙 Véhicule *</label>
       <select id="rd-vehicle" required style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%">
@@ -566,6 +560,10 @@
   <form onsubmit="saveProfile(event)">
     <div class="form-group"><label>Nom complet</label><input type="text" id="ep-name" required></div>
     <div class="form-group"><label>Téléphone</label><input type="tel" id="ep-phone" required></div>
+       <div class="form-group">
+     <label>📍 Province</label>
+     <input type="text" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;">
+   </div>
     <div class="form-group">
       <label>Adresse</label>
       <div class="autocomplete-wrapper">
