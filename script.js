@@ -2143,6 +2143,7 @@ function toggleNotifPanel() {
 }
 
 // ===== DÉTAILS DES FONCTIONNALITÉS =====
+// ===== DÉTAILS DES FONCTIONNALITÉS =====
 function showFeatureDetail(type) {
   let title = '';
   let content = '';
@@ -2286,6 +2287,10 @@ function showFeatureDetail(type) {
     `;
   }
   
+  // Supprimer l'ancien modal s'il existe
+  const oldModal = document.getElementById('feature-detail-modal');
+  if (oldModal) oldModal.remove();
+  
   // Créer le modal
   const modal = document.createElement('div');
   modal.className = 'modal-bg show';
@@ -2295,9 +2300,16 @@ function showFeatureDetail(type) {
       <h2 style="color:#0a1929;margin-bottom:1.5rem">${title}</h2>
       ${content}
       <div style="margin-top:2rem;text-align:right">
-        <button class="btn-sm btn-gray" onclick="closeModal('feature-detail-modal')">Fermer</button>
+        <button class="btn-sm btn-gray" onclick="closeFeatureDetailModal()">Fermer</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+}
+
+function closeFeatureDetailModal() {
+  const modal = document.getElementById('feature-detail-modal');
+  if (modal) {
+    modal.remove();
+  }
 }
