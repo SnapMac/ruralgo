@@ -251,7 +251,7 @@ async function load() {
     console.error("Erreur de chargement Supabase:", e);
   }
 }
-
+loadNotifications();
 // ============ NOTIFICATIONS ============
 async function addNotification(userId, title, message) {
   try {
