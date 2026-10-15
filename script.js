@@ -2017,6 +2017,8 @@ async function approveDriver(id) {
     const { error } = await supabaseClient.from('profiles').update({ status: 'approved' }).eq('id', id);
     if (error) throw error;
     d.status = 'approved';
+
+    await addNotification(id, '✅ Compte approuvé', 'Bienvenue dans l\'équipe RuralGo ! Vous pouvez maintenant accepter des livraisons.', 'success');
     renderAdminDrivers();
     showToast('✅ Livreur approuvé !');
   } catch (err) {
