@@ -187,9 +187,15 @@ async function load() {
 
     const { data: catsData } = await supabaseClient.from('categories').select('*');
     if (catsData && catsData.length > 0) categories = catsData;
-
-    const { data: prodsData } = await supabaseClient.from('products').select('*');
-    if (prodsData && prodsData.length > 0) products = prodsData;
+    
+const { data: prodsData } = await supabaseClient.from('products').select('*');
+if (prodsData && prodsData.length > 0) {
+  products = prodsData.map(p => ({
+    ...p,
+    storeId: p.store_id,
+    categoryId: p.category_id
+  }));
+}
 
     const { data: clientsData } = await supabaseClient.from('profiles').select('*').eq('role', 'client');
     if (clientsData) {
@@ -1804,7 +1810,6 @@ function editProduct(id) {
   }, 50);
   openModal('product-modal');
 }
-
 async function saveProduct(e) {
   e.preventDefault();
   if (!selectedProdIcon && !document.getElementById('prod-icon').value) {
@@ -1812,7 +1817,7 @@ async function saveProduct(e) {
   }
   const id = document.getElementById('prod-id').value;
   const prodData = {
-    store_id: parseInt(document.getElementById('prod-store').value),
+    store_id: parseInt(document.getElementById('prod-store').value),           
     category_id: parseInt(document.getElementById('prod-category').value),
     name: document.getElementById('prod-name').value,
     description: document.getElementById('prod-desc').value,
@@ -1835,11 +1840,13 @@ async function saveProduct(e) {
     }
     closeModal('product-modal');
     renderAdminProducts();
+    renderLandingStores(); // ✅ NOUVEAU : Met à jour la page d'accueil
   } catch (err) {
     console.error('Erreur saveProduct:', err);
     showToast('❌ Erreur : ' + err.message);
   }
 }
+
 
 // ============ ADMIN - CLIENTS ET LIVREURS ============
 function renderAdminClients() {
@@ -1904,36 +1911,31 @@ async function saveSettings() {
 }
 
 // ============ SUPPRESSION ============
-async function confirmDelete(type, id) {
-  const names = {
-    store: stores.find(s => s.id === id)?.name,
-    category: categories.find(c => c.id === id)?.name,
-    product: products.find(p => p.id === id)?.name
-  };
-  document.getElementById('confirm-msg').textContent = `Supprimer "${names[type]}" ?`;
-  document.getElementById('confirm-btn').onclick = async () => {
+function confirmDelete(type, id) {
+  document.getElementById('confirm-msg').textContent = `Êtes-vous sûr de vouloir supprimer cet élément ?`;
+  document.getElementById('confirm-btn').onclick = async function() {
     try {
       if (type === 'store') {
         await supabaseClient.from('stores').delete().eq('id', id);
         stores = stores.filter(s => s.id !== id);
-      }
-      if (type === 'category') {
+        showToast('✅ Magasin supprimé');
+      } else if (type === 'category') {
         await supabaseClient.from('categories').delete().eq('id', id);
         categories = categories.filter(c => c.id !== id);
-      }
-      if (type === 'product') {
+        showToast('✅ Catégorie supprimée');
+      } else if (type === 'product') {
         await supabaseClient.from('products').delete().eq('id', id);
         products = products.filter(p => p.id !== id);
+        showToast('✅ Produit supprimé');
       }
       closeModal('confirm-modal');
-      showToast('🗑️ Supprimé !');
       renderAdminStores();
       renderAdminCategories();
       renderAdminProducts();
-      renderLandingStores();
+      renderLandingStores(); // ✅ NOUVEAU : Met à jour la page d'accueil
     } catch (err) {
-      console.error('Erreur:', err);
-      showToast('❌ Erreur');
+      console.error('Erreur suppression:', err);
+      showToast('❌ Erreur: ' + err.message);
     }
   };
   openModal('confirm-modal');
