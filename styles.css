@@ -310,3 +310,65 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
 .store-detail-header{flex-direction:column;text-align:center}
 .notif-panel{width:90%;right:5%}
 }
+
+/* ===== NOTIFICATIONS ===== */
+.notif-bell {
+  cursor: pointer;
+  position: relative;
+  font-size: 1.5rem;
+  padding: 0.5rem;
+  transition: transform 0.2s;
+}
+.notif-bell:hover { transform: scale(1.1); }
+
+.notif-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #e74c3c;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.notif-panel {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 350px;
+  max-height: 450px;
+  overflow-y: auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  z-index: 1000;
+  margin-top: 0.5rem;
+}
+
+.notif-panel-header {
+  padding: 1rem;
+  background: #0a1929;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 12px 12px 0 0;
+  font-weight: bold;
+}
+
+.notif-item {
+  display: flex;
+  gap: 0.8rem;
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.notif-item:hover { background: #f9f9f9; }
+.notif-item.unread { background: #fff8e1; }
+.notif-item.unread:hover { background: #fff3c4; }
