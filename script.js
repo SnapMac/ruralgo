@@ -2042,4 +2042,97 @@ async function rejectDriver(id) {
     showToast('❌ Erreur: ' + err.message);
   }
 }
+// ===== SYSTÈME DE NOTIFICATIONS =====
+async function addNotification(userId, title, message, type = 'info') {
+  try {
+    const { error } = await supabaseClient.from('notifications').insert({
+      user_id: userId,
+      title: title,
+      message: message,
+      type: type,
+      is_read: false
+    });
+    if (error) throw error;
+    loadNotifications();
+  } catch (err) {
+    console.error('Erreur addNotification:', err);
+  }
+}
 
+async function loadNotifications() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (error) throw error;
+    
+    const unreadCount = data.filter(n => !n.is_read).length;
+    const badge = document.getElementById('notif-badge');
+    
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+    
+    renderNotifications(data);
+  } catch (err) {
+    console.error('Erreur loadNotifications:', err);
+  }
+}
+
+function renderNotifications(notifs) {
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  
+  if (notifs.length === 0) {
+    list.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#666">Aucune notification</div>';
+    return;
+  }
+  
+  list.innerHTML = notifs.map(n => {
+    const icon = n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : n.type === 'warning' ? '⚠️' : 'ℹ️';
+    const date = new Date(n.created_at).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return `<div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markAsRead(${n.id})">
+      <div style="font-size:1.3rem">${icon}</div>
+      <div style="flex:1">
+        <div style="font-weight:bold;font-size:0.9rem">${n.title}</div>
+        <div style="font-size:0.85rem;color:#666">${n.message}</div>
+        <div style="font-size:0.75rem;color:#999;margin-top:0.2rem">${date}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function markAsRead(id) {
+  try {
+    await supabaseClient.from('notifications').update({ is_read: true }).eq('id', id);
+    loadNotifications();
+  } catch (err) {
+    console.error('Erreur markAsRead:', err);
+  }
+}
+
+async function markAllRead() {
+  if (!currentUser) return;
+  try {
+    await supabaseClient.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id);
+    loadNotifications();
+    showToast('✅ Toutes marquées comme lues');
+  } catch (err) {
+    console.error('Erreur markAllRead:', err);
+  }
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  if (panel) {
+    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  }
+}
