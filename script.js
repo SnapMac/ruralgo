@@ -2006,3 +2006,40 @@ document.addEventListener('click', function(e) {
 window.addEventListener('load', function() {
   setTimeout(function() { document.getElementById('page-loader').classList.add('hidden'); }, 1500);
 });
+// ===== APPROBATION DES LIVREURS =====
+async function approveDriver(id) {
+  const d = drivers.find(x => String(x.id) === String(id));
+  if (!d) {
+    showToast('❌ Livreur introuvable');
+    return;
+  }
+  try {
+    const { error } = await supabaseClient.from('profiles').update({ status: 'approved' }).eq('id', id);
+    if (error) throw error;
+    d.status = 'approved';
+    renderAdminDrivers();
+    showToast('✅ Livreur approuvé !');
+  } catch (err) {
+    console.error('Erreur approveDriver:', err);
+    showToast('❌ Erreur: ' + err.message);
+  }
+}
+
+async function rejectDriver(id) {
+  const d = drivers.find(x => String(x.id) === String(id));
+  if (!d) {
+    showToast('❌ Livreur introuvable');
+    return;
+  }
+  try {
+    const { error } = await supabaseClient.from('profiles').update({ status: 'rejected' }).eq('id', id);
+    if (error) throw error;
+    d.status = 'rejected';
+    renderAdminDrivers();
+    showToast('❌ Livreur refusé');
+  } catch (err) {
+    console.error('Erreur rejectDriver:', err);
+    showToast('❌ Erreur: ' + err.message);
+  }
+}
+
