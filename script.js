@@ -1,3 +1,4 @@
+;
 // ==========================================
 // CONNEXION À SUPABASE
 // ==========================================
@@ -186,9 +187,15 @@ async function load() {
 
     const { data: catsData } = await supabaseClient.from('categories').select('*');
     if (catsData && catsData.length > 0) categories = catsData;
-
-    const { data: prodsData } = await supabaseClient.from('products').select('*');
-    if (prodsData && prodsData.length > 0) products = prodsData;
+    
+const { data: prodsData } = await supabaseClient.from('products').select('*');
+if (prodsData && prodsData.length > 0) {
+  products = prodsData.map(p => ({
+    ...p,
+    storeId: p.store_id,
+    categoryId: p.category_id
+  }));
+}
 
     const { data: clientsData } = await supabaseClient.from('profiles').select('*').eq('role', 'client');
     if (clientsData) {
@@ -251,7 +258,7 @@ async function load() {
     console.error("Erreur de chargement Supabase:", e);
   }
 }
-
+loadNotifications();
 // ============ NOTIFICATIONS ============
 async function addNotification(userId, title, message) {
   try {
@@ -1803,7 +1810,6 @@ function editProduct(id) {
   }, 50);
   openModal('product-modal');
 }
-
 async function saveProduct(e) {
   e.preventDefault();
   if (!selectedProdIcon && !document.getElementById('prod-icon').value) {
@@ -1811,7 +1817,7 @@ async function saveProduct(e) {
   }
   const id = document.getElementById('prod-id').value;
   const prodData = {
-    store_id: parseInt(document.getElementById('prod-store').value),
+    store_id: parseInt(document.getElementById('prod-store').value),           
     category_id: parseInt(document.getElementById('prod-category').value),
     name: document.getElementById('prod-name').value,
     description: document.getElementById('prod-desc').value,
@@ -1834,11 +1840,13 @@ async function saveProduct(e) {
     }
     closeModal('product-modal');
     renderAdminProducts();
+    renderLandingStores(); // ✅ NOUVEAU : Met à jour la page d'accueil
   } catch (err) {
     console.error('Erreur saveProduct:', err);
     showToast('❌ Erreur : ' + err.message);
   }
 }
+
 
 // ============ ADMIN - CLIENTS ET LIVREURS ============
 function renderAdminClients() {
@@ -1851,42 +1859,13 @@ function renderAdminClients() {
   }).join('')}</tbody></table>`;
 }
 
-function renderAdminDrivers(){const c=document.getElementById('drivers-table-container');if(!drivers.length){c.innerHTML='<div class="empty-state"><p>Aucun livreur</p></div>';return}c.innerHTML=`<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Véhicule</th><th>Livraisons</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${drivers.map(d=>{const myDel = orders.filter(o=>String(o.driverId)===String(d.id) && o.status==='delivered').length;return`<tr><td><strong>${d.name}</strong><br><span style="font-size:0.8rem;color:#666">${d.phone}</span></td><td>${d.email}</td><td>${d.vehicle}</td><td>${myDel}</td><td><span class="badge ${d.status==='approved'?'badge-green':d.status==='pending'?'badge-yellow':'badge-red'}">${d.status==='approved'?'✅ Approuvé':d.status==='pending'?'⏳ En attente':'❌ Refusé'}</span></td><td><div class="action-btns">${d.status!=='approved'?`<button class="action-btn btn-green" onclick="approveDriver('${d.id}')">✅</button>`:''}${d.status!=='rejected'?`<button class="action-btn btn-red" onclick="rejectDriver('${d.id}')">❌</button>`:''}</div></td></tr>`}).join('')}</tbody></table>`;}
-}
-
-
-
-async function approveDriver(id){
-  const d=drivers.find(x=>String(x.id)===String(id));
-  if(!d)return;
-  try {
-    const { error } = await supabaseClient.from('profiles').update({ status: 'approved' }).eq('id', id);
-    if (error) throw error;
-    d.status='approved';
-    addNotification(d.id, '✅ Compte approuvé', 'Vous pouvez maintenant accepter des livraisons !');
-    renderAdminDrivers();
-    showToast('✅ Livreur approuvé !');
-  } catch (err) {
-    console.error('Erreur approveDriver:', err);
-    showToast('❌ Erreur: ' + err.message);
-  }
-}
-
-async function rejectDriver(id){
-  const d=drivers.find(x=>String(x.id)===String(id));
-  if(!d)return;
-  try {
-    const { error } = await supabaseClient.from('profiles').update({ status: 'rejected' }).eq('id', id);
-    if (error) throw error;
-    d.status='rejected';
-    addNotification(d.id, '❌ Demande refusée', 'Votre demande de livreur a été refusée');
-    renderAdminDrivers();
-    showToast('❌ Livreur refusé');
-  } catch (err) {
-    console.error('Erreur rejectDriver:', err);
-    showToast('❌ Erreur: ' + err.message);
-  }
-}
+function renderAdminDrivers() {
+  const c = document.getElementById('drivers-table-container');
+  if (!drivers.length) { c.innerHTML = '<div class="empty-state"><p>Aucun livreur</p></div>'; return; }
+  c.innerHTML = `<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Véhicule</th><th>Livraisons</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${drivers.map(d => {
+    const myDel = orders.filter(o => o.driverId === d.id && o.status === 'delivered').length;
+ return `<tr><td><strong>${d.name}</strong><br><span style="font-size:0.8rem;color:#666">${d.phone}</span></td><td>${d.email}</td><td>${d.vehicle}</td><td>${myDel}</td><td><span class="badge ${d.status === 'approved' ? 'badge-green' : d.status === 'pending' ? 'badge-yellow' : 'badge-red'}">${d.status === 'approved' ? '✅ Approuvé' : d.status === 'pending' ? '⏳ En attente' : '❌ Refusé'}</span></td><td><div class="action-btns">${d.status !== 'approved' ? `<button class="action-btn btn-green" onclick="approveDriver('${d.id}')">✅</button>` : ''}${d.status !== 'rejected' ? `<button class="action-btn btn-red" onclick="rejectDriver('${d.id}')">❌</button>` : ''}</div></td></tr>`;
+  }).join('')}</tbody></table>`;
 }
 
 // ============ ADMIN - PARAMÈTRES ============
@@ -1932,36 +1911,31 @@ async function saveSettings() {
 }
 
 // ============ SUPPRESSION ============
-async function confirmDelete(type, id) {
-  const names = {
-    store: stores.find(s => s.id === id)?.name,
-    category: categories.find(c => c.id === id)?.name,
-    product: products.find(p => p.id === id)?.name
-  };
-  document.getElementById('confirm-msg').textContent = `Supprimer "${names[type]}" ?`;
-  document.getElementById('confirm-btn').onclick = async () => {
+function confirmDelete(type, id) {
+  document.getElementById('confirm-msg').textContent = `Êtes-vous sûr de vouloir supprimer cet élément ?`;
+  document.getElementById('confirm-btn').onclick = async function() {
     try {
       if (type === 'store') {
         await supabaseClient.from('stores').delete().eq('id', id);
         stores = stores.filter(s => s.id !== id);
-      }
-      if (type === 'category') {
+        showToast('✅ Magasin supprimé');
+      } else if (type === 'category') {
         await supabaseClient.from('categories').delete().eq('id', id);
         categories = categories.filter(c => c.id !== id);
-      }
-      if (type === 'product') {
+        showToast('✅ Catégorie supprimée');
+      } else if (type === 'product') {
         await supabaseClient.from('products').delete().eq('id', id);
         products = products.filter(p => p.id !== id);
+        showToast('✅ Produit supprimé');
       }
       closeModal('confirm-modal');
-      showToast('🗑️ Supprimé !');
       renderAdminStores();
       renderAdminCategories();
       renderAdminProducts();
-      renderLandingStores();
+      renderLandingStores(); // ✅ NOUVEAU : Met à jour la page d'accueil
     } catch (err) {
-      console.error('Erreur:', err);
-      showToast('❌ Erreur');
+      console.error('Erreur suppression:', err);
+      showToast('❌ Erreur: ' + err.message);
     }
   };
   openModal('confirm-modal');
@@ -2035,3 +2009,306 @@ document.addEventListener('click', function(e) {
 window.addEventListener('load', function() {
   setTimeout(function() { document.getElementById('page-loader').classList.add('hidden'); }, 1500);
 });
+// ===== APPROBATION DES LIVREURS =====
+async function approveDriver(id) {
+  const d = drivers.find(x => String(x.id) === String(id));
+  if (!d) {
+    showToast('❌ Livreur introuvable');
+    return;
+  }
+  try {
+    const { error } = await supabaseClient.from('profiles').update({ status: 'approved' }).eq('id', id);
+    if (error) throw error;
+    d.status = 'approved';
+
+    await addNotification(id, '✅ Compte approuvé', 'Bienvenue dans l\'équipe RuralGo ! Vous pouvez maintenant accepter des livraisons.', 'success');
+    renderAdminDrivers();
+    showToast('✅ Livreur approuvé !');
+  } catch (err) {
+    console.error('Erreur approveDriver:', err);
+    showToast('❌ Erreur: ' + err.message);
+  }
+}
+
+async function rejectDriver(id) {
+  const d = drivers.find(x => String(x.id) === String(id));
+  if (!d) {
+    showToast('❌ Livreur introuvable');
+    return;
+  }
+  try {
+    const { error } = await supabaseClient.from('profiles').update({ status: 'rejected' }).eq('id', id);
+    if (error) throw error;
+    d.status = 'rejected';
+    renderAdminDrivers();
+    showToast('❌ Livreur refusé');
+  } catch (err) {
+    console.error('Erreur rejectDriver:', err);
+    showToast('❌ Erreur: ' + err.message);
+  }
+}
+// ===== SYSTÈME DE NOTIFICATIONS =====
+async function addNotification(userId, title, message, type = 'info') {
+  try {
+    const { error } = await supabaseClient.from('notifications').insert({
+      user_id: userId,
+      title: title,
+      message: message,
+      type: type,
+      is_read: false
+    });
+    if (error) throw error;
+    loadNotifications();
+  } catch (err) {
+    console.error('Erreur addNotification:', err);
+  }
+}
+
+async function loadNotifications() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (error) throw error;
+    
+    const unreadCount = data.filter(n => !n.is_read).length;
+    const badge = document.getElementById('notif-badge');
+    
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+    
+    renderNotifications(data);
+  } catch (err) {
+    console.error('Erreur loadNotifications:', err);
+  }
+}
+
+function renderNotifications(notifs) {
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  
+  if (notifs.length === 0) {
+    list.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#666">Aucune notification</div>';
+    return;
+  }
+  
+  list.innerHTML = notifs.map(n => {
+    const icon = n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : n.type === 'warning' ? '⚠️' : 'ℹ️';
+    const date = new Date(n.created_at).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return `<div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markAsRead(${n.id})">
+      <div style="font-size:1.3rem">${icon}</div>
+      <div style="flex:1">
+        <div style="font-weight:bold;font-size:0.9rem">${n.title}</div>
+        <div style="font-size:0.85rem;color:#666">${n.message}</div>
+        <div style="font-size:0.75rem;color:#999;margin-top:0.2rem">${date}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function markAsRead(id) {
+  try {
+    await supabaseClient.from('notifications').update({ is_read: true }).eq('id', id);
+    loadNotifications();
+  } catch (err) {
+    console.error('Erreur markAsRead:', err);
+  }
+}
+
+async function markAllRead() {
+  if (!currentUser) return;
+  try {
+    await supabaseClient.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id);
+    loadNotifications();
+    showToast('✅ Toutes marquées comme lues');
+  } catch (err) {
+    console.error('Erreur markAllRead:', err);
+  }
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  if (panel) {
+    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  } 
+}
+
+// ===== DÉTAILS DES FONCTIONNALITÉS =====
+// ===== DÉTAILS DES FONCTIONNALITÉS =====
+function showFeatureDetail(type) {
+  let title = '';
+  let content = '';
+  
+  if (type === 'gps') {
+    title = '🗺️ Suivi GPS en temps réel';
+    content = `
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="font-size:4rem">🗺️</div>
+      </div>
+      <h3 style="color:#0a1929;margin-bottom:1rem">Comment ça marche ?</h3>
+      <ul style="line-height:1.8;color:#333">
+        <li>✅ Dès que votre commande est confirmée, un livreur est assigné</li>
+        <li>✅ Vous recevez une notification avec les détails du livreur</li>
+        <li>✅ Ouvrez la carte pour voir la position en temps réel</li>
+        <li>✅ Suivez le parcours du magasin jusqu'à chez vous</li>
+        <li>✅ Estimation précise de l'heure d'arrivée</li>
+      </ul>
+      <div style="margin-top:1.5rem;padding:1rem;background:#e8f5e9;border-radius:8px;border-left:4px solid #4caf50">
+        <strong>💡 Astuce :</strong> Vous pouvez partager votre suivi avec un proche pour qu'il sache quand vous attendre !
+      </div>
+    `;
+  } else if (type === 'tarif') {
+    title = '💰 Tarif transparent';
+    content = `
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="font-size:4rem">💰</div>
+      </div>
+      <h3 style="color:#0a1929;margin-bottom:1rem">Notre grille tarifaire</h3>
+      <div style="background:#f5f1e8;padding:1.5rem;border-radius:12px;margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid #ddd">
+          <span><strong>Frais de base</strong></span>
+          <span style="color:#0a1929;font-weight:bold">7.00 $</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid #ddd">
+          <span><strong>Par kilomètre</strong></span>
+          <span style="color:#0a1929;font-weight:bold">1.00 $</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:0.5rem 0;font-size:1.2rem;font-weight:bold;color:#0a1929">
+          <span>Exemple : 5 km</span>
+          <span>12.00 $</span>
+        </div>
+      </div>
+      <h4 style="color:#0a1929;margin:1rem 0 0.5rem">📊 Exemples de tarifs</h4>
+      <ul style="line-height:1.8;color:#333">
+        <li>🚗 3 km = 10.00 $</li>
+        <li>🚗 5 km = 12.00 $</li>
+        <li>🚗 10 km = 17.00 $</li>
+        <li>🚗 20 km = 27.00 $</li>
+        <li>🚗 40 km (max) = 47.00 $</li>
+      </ul>
+      <div style="margin-top:1.5rem;padding:1rem;background:#fff3e0;border-radius:8px;border-left:4px solid #f5a623">
+        <strong>✅ Pas de frais cachés !</strong> Le prix affiché est le prix final.
+      </div>
+    `;
+  } else if (type === 'commerces') {
+    title = '🏪 Nos commerces partenaires';
+    const activeStores = stores.filter(s => s.status === 'active');
+    const storesList = activeStores.map(s => {
+      const count = products.filter(p => p.storeId === s.id && p.available).length;
+      return `<div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#f5f1e8;border-radius:8px;margin-bottom:0.5rem">
+        <div style="font-size:2.5rem">${s.icon}</div>
+        <div style="flex:1">
+          <div style="font-weight:bold;color:#0a1929">${s.name}</div>
+          <div style="font-size:0.85rem;color:#666">${s.type}</div>
+          <div style="font-size:0.8rem;color:#999">📍 ${s.address}</div>
+          <div style="font-size:0.85rem;color:#0a1929;font-weight:bold;margin-top:0.3rem">📦 ${count} produit(s) disponible(s)</div>
+        </div>
+      </div>`;
+    }).join('');
+    
+    content = `
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="font-size:4rem">🏪</div>
+      </div>
+      <h3 style="color:#0a1929;margin-bottom:1rem">Soutenez les entreprises locales !</h3>
+      <p style="color:#666;margin-bottom:1.5rem">Nous travaillons avec les meilleurs commerces de Maniwaki et environs pour vous offrir un service de qualité.</p>
+      ${activeStores.length > 0 ? storesList : '<p style="text-align:center;color:#666;padding:2rem">Aucun commerce disponible pour le moment</p>'}
+      <div style="margin-top:1.5rem;padding:1rem;background:#e3f2fd;border-radius:8px;border-left:4px solid #2196f3">
+        <strong>🤝 Vous êtes un commerçant ?</strong><br>
+        Contactez-nous pour rejoindre notre réseau de partenaires !
+      </div>
+    `;
+  } else if (type === 'paiement') {
+    title = '💳 Paiement sécurisé';
+    content = `
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="font-size:4rem">💳</div>
+      </div>
+      <h3 style="color:#0a1929;margin-bottom:1rem">Vos transactions sont protégées</h3>
+      <ul style="line-height:1.8;color:#333">
+        <li>🔒 Cryptage SSL 256 bits</li>
+        <li>🏦 Conformité aux normes bancaires canadiennes</li>
+        <li>✅ Vérification en temps réel</li>
+        <li>🛡️ Protection contre la fraude</li>
+        <li>💰 Remboursement garanti en cas de problème</li>
+      </ul>
+      <div style="margin-top:1.5rem;padding:1rem;background:#e8f5e9;border-radius:8px;border-left:4px solid #4caf50">
+        <strong>✅ 100% sécurisé</strong><br>
+        Vos informations financières ne sont jamais stockées sur nos serveurs.
+      </div>
+    `;
+  } else if (type === 'itineraire') {
+    title = '📱 Itinéraire optimisé';
+    content = `
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="font-size:4rem">📱</div>
+      </div>
+      <h3 style="color:#0a1929;margin-bottom:1rem">Technologie de pointe</h3>
+      <ul style="line-height:1.8;color:#333">
+        <li>🗺️ Calcul automatique du chemin le plus court</li>
+        <li>⏱️ Estimation précise du temps de livraison</li>
+        <li>🚦 Prise en compte du trafic en temps réel</li>
+        <li>📍 Géolocalisation GPS haute précision</li>
+        <li>🔄 Mise à jour automatique de l'itinéraire</li>
+      </ul>
+      <div style="margin-top:1.5rem;padding:1rem;background:#fff3e0;border-radius:8px;border-left:4px solid #f5a623">
+        <strong>💡 Le saviez-vous ?</strong><br>
+        Notre algorithme permet d'économiser en moyenne 15% de temps de livraison !
+      </div>
+    `;
+  } else if (type === 'communaute') {
+    title = '🤝 Service communautaire';
+    content = `
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="font-size:4rem">🤝</div>
+      </div>
+      <h3 style="color:#0a1929;margin-bottom:1rem">Des livreurs qui vous connaissent</h3>
+      <p style="color:#666;margin-bottom:1rem">Nos livreurs sont des membres actifs de la communauté de Maniwaki. Ils connaissent la région, les routes et les commerces.</p>
+      <ul style="line-height:1.8;color:#333">
+        <li>👥 Livreurs locaux et fiables</li>
+        <li>🏘️ Connaissance approfondie de la région</li>
+        <li>⭐ Note moyenne de 4.9/5</li>
+        <li>💬 Service client réactif et personnalisé</li>
+        <li>🌱 Engagement envers le développement local</li>
+      </ul>
+      <div style="margin-top:1.5rem;padding:1rem;background:#e3f2fd;border-radius:8px;border-left:4px solid #2196f3">
+        <strong>🚀 Rejoignez l'aventure !</strong><br>
+        Devenez livreur et contribuez au développement de votre communauté.
+      </div>
+    `;
+  }
+  
+  // Supprimer l'ancien modal s'il existe
+  const oldModal = document.getElementById('feature-detail-modal');
+  if (oldModal) oldModal.remove();
+  
+  // Créer le modal
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg show';
+  modal.id = 'feature-detail-modal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:600px">
+      <h2 style="color:#0a1929;margin-bottom:1.5rem">${title}</h2>
+      ${content}
+      <div style="margin-top:2rem;text-align:right">
+        <button class="btn-sm btn-gray" onclick="closeFeatureDetailModal()">Fermer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+function closeFeatureDetailModal() {
+  const modal = document.getElementById('feature-detail-modal');
+  if (modal) {
+    modal.remove();
+  }
+}

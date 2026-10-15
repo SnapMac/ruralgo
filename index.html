@@ -26,7 +26,7 @@
 </div>
 
 <!-- BANDEAU INFO -->
-<div style="background:linear-gradient(135deg,#f5a623,#e6951a);color:white;text-align:center;padding:0.8rem 1rem;font-size:0.95rem;font-weight:bold;box-shadow:0 2px 10px rgba(0,0,0,0.15);position:relative;z-index:101">
+<div style="background:linear-gradient(135deg,#f5a623,#e6951a);color:#0a1929;text-align:center;padding:0.8rem 1rem;font-size:0.95rem;font-weight:bold;box-shadow:0 2px 10px rgba(0,0,0,0.15);position:relative;z-index:101">
   🚧 <strong>Site en phase de développement</strong> — Bienvenue sur RuralGo !
 </div>
 
@@ -61,16 +61,17 @@
     <nav id="nav-admin" style="display:none"><ul>
       <li><a onclick="adminTab('dashboard',document.querySelector('.admin-side li'))">Dashboard</a></li>
     </ul></nav>
+
     <div id="notif-bell-container" style="display:none;position:relative">
-      <div class="notif-bell" onclick="toggleNotifPanel()">🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span></div>
-      <div class="notif-panel" id="notif-panel">
-        <div class="notif-panel-header">
-          <span>🔔 Notifications</span>
-          <span style="cursor:pointer;font-size:0.85rem" onclick="markAllRead()">Tout marquer lu</span>
-        </div>
-        <div id="notif-list"></div>
-      </div>
+  <div class="notif-bell" onclick="toggleNotifPanel()">🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span></div>
+  <div class="notif-panel" id="notif-panel">
+    <div class="notif-panel-header">
+      <span>🔔 Notifications</span>
+      <span style="cursor:pointer;font-size:0.85rem" onclick="markAllRead()">Tout marquer lu</span>
     </div>
+    <div id="notif-list"></div>
+  </div>
+</div>
     <div id="auth-section" class="auth-buttons">
       <button class="auth-btn" onclick="openChooseTypeModal()">📝 S'inscrire</button>
       <button class="auth-btn secondary" onclick="openLoginModal()">🔑 Connexion</button>
@@ -170,14 +171,40 @@
       <span class="section-tag">NOS AVANTAGES</span>
       <h2 class="section-title">Pourquoi choisir RuralGo ?</h2>
     </div>
-    <div class="features-grid">
-      <div class="feature-card"><div class="feature-icon">🗺️</div><h3>Suivi GPS en direct</h3><p>Suivez votre livreur en temps réel</p></div>
-      <div class="feature-card"><div class="feature-icon">💰</div><h3>Tarif transparent</h3><p>7$ de base + 1$ par km</p></div>
-      <div class="feature-card"><div class="feature-icon">🏪</div><h3>Commerces locaux</h3><p>Soutenez les entreprises de votre région</p></div>
-      <div class="feature-card"><div class="feature-icon">💳</div><h3>Paiement sécurisé</h3><p>Transactions 100% sécurisées</p></div>
-      <div class="feature-card"><div class="feature-icon">📱</div><h3>Itinéraire optimisé</h3><p>Calcul automatique du chemin</p></div>
-      <div class="feature-card"><div class="feature-icon">🤝</div><h3>Service communautaire</h3><p>Des livreurs qui connaissent votre région</p></div>
-    </div>
+    
+<div class="features-grid">
+  <div class="feature-card" onclick="showFeatureDetail('gps')" style="cursor:pointer">
+    <div class="feature-icon">🗺️</div>
+    <h3>Suivi GPS en direct</h3>
+    <p>Suivez votre livreur en temps réel</p>
+  </div>
+  <div class="feature-card" onclick="showFeatureDetail('tarif')" style="cursor:pointer">
+    <div class="feature-icon">💰</div>
+    <h3>Tarif transparent</h3>
+    <p>7$ de base + 1$ par km</p>
+  </div>
+  <div class="feature-card" onclick="showFeatureDetail('commerces')" style="cursor:pointer">
+    <div class="feature-icon">🏪</div>
+    <h3>Commerces locaux</h3>
+    <p>Soutenez les entreprises de votre région</p>
+  </div>
+  <div class="feature-card" onclick="showFeatureDetail('paiement')" style="cursor:pointer">
+    <div class="feature-icon">💳</div>
+    <h3>Paiement sécurisé</h3>
+    <p>Transactions 100% sécurisées</p>
+  </div>
+  <div class="feature-card" onclick="showFeatureDetail('itineraire')" style="cursor:pointer">
+    <div class="feature-icon">📱</div>
+    <h3>Itinéraire optimisé</h3>
+    <p>Calcul automatique du chemin</p>
+  </div>
+  <div class="feature-card" onclick="showFeatureDetail('communaute')" style="cursor:pointer">
+    <div class="feature-icon">🤝</div>
+    <h3>Service communautaire</h3>
+    <p>Des livreurs qui connaissent votre région</p>
+  </div>
+</div>
+    
   </section>
 
   <section class="how-section" id="how-section">
@@ -401,12 +428,34 @@
 <div class="modal-bg" id="register-client-modal"><div class="modal">
   <h2>📝 Inscription Client</h2>
   <form onsubmit="registerClient(event)">
-    <div class="form-group"><label>Nom complet *</label><input type="text" id="rc-name" required></div>
-    <div class="form-group"><label>Courriel *</label><input type="email" id="rc-email" required></div>
-    <div class="form-group"><label>Mot de passe *</label><input type="password" id="rc-pass" required minlength="6"></div>
-    <div class="form-group"><label>Téléphone *</label><input type="tel" id="rc-phone" required></div>
     <div class="form-group">
-      <label>Adresse de domicile *</label>
+      <label>👤 Nom complet *</label>
+      <input type="text" id="rc-name" required placeholder="Jean Tremblay">
+    </div>
+    <div class="form-group">
+      <label>📧 Courriel *</label>
+      <input type="email" id="rc-email" required placeholder="jean@exemple.com">
+    </div>
+    <div class="form-group">
+      <label>🔒 Mot de passe * (min. 6 caractères)</label>
+      <input type="password" id="rc-pass" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>🔒 Confirmer le mot de passe *</label>
+      <input type="password" id="rc-pass-confirm" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>📱 Téléphone *</label>
+      <input type="tel" id="rc-phone" required placeholder="(819) 123-4567">
+    </div>
+    
+   <div class="form-group">
+     <label>📍 Province *</label>
+     <input type="text" id="rc-province" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;">
+   </div>
+    
+    <div class="form-group">
+      <label>🏠 Adresse de domicile *</label>
       <div class="info-box">💡 Commencez à taper votre adresse pour voir des suggestions</div>
       <div class="autocomplete-wrapper">
         <input type="text" id="rc-address" class="autocomplete-input" required placeholder="Ex: 123 rue Principale, Maniwaki" autocomplete="off">
@@ -414,28 +463,66 @@
       </div>
       <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('rc-address')">📍 Utiliser ma position GPS</button>
     </div>
-    <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('register-client-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">✅ Créer mon compte</button></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('register-client-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">✅ Créer mon compte</button>
+    </div>
   </form>
 </div></div>
 
-<div class="modal-bg" id="register-driver-modal"><div class="modal">
+  <div class="modal-bg" id="register-driver-modal"><div class="modal">
   <h2>🚗 Inscription Livreur</h2>
   <form onsubmit="registerDriver(event)">
-    <div class="form-group"><label>Nom complet *</label><input type="text" id="rd-name" required></div>
-    <div class="form-group"><label>Courriel *</label><input type="email" id="rd-email" required></div>
-    <div class="form-group"><label>Mot de passe *</label><input type="password" id="rd-pass" required minlength="6"></div>
-    <div class="form-group"><label>Téléphone *</label><input type="tel" id="rd-phone" required></div>
-    <div class="form-group"><label>Véhicule *</label><select id="rd-vehicle" required><option value="">-- Choisir --</option><option>🚗 Voiture</option><option>🚚 Camionnette</option><option>🛻 Pick-up</option></select></div>
-    <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('register-driver-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">📨 Soumettre</button></div>
+    <div class="form-group">
+      <label>👤 Nom complet *</label>
+      <input type="text" id="rd-name" required placeholder="Jean Tremblay">
+    </div>
+    <div class="form-group">
+      <label>📧 Courriel *</label>
+      <input type="email" id="rd-email" required placeholder="jean@exemple.com">
+    </div>
+    <div class="form-group">
+      <label>🔒 Mot de passe * (min. 6 caractères)</label>
+      <input type="password" id="rd-pass" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>🔒 Confirmer le mot de passe *</label>
+      <input type="password" id="rd-pass-confirm" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>📱 Téléphone *</label>
+      <input type="tel" id="rd-phone" required placeholder="(819) 123-4567">
+    </div>
+    
+    <div class="form-group">
+     <label>📍 Province *</label>
+     <input type="text" id="rd-province" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;">
+   </div>
+    
+    <div class="form-group">
+      <label>🚙 Véhicule *</label>
+      <select id="rd-vehicle" required style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%">
+        <option value="">-- Choisir --</option>
+        <option value="Voiture">🚗 Voiture</option>
+        <option value="Camionnette">🚚 Camionnette</option>
+        <option value="Pick-up">🛻 Pick-up</option>
+        <option value="VTT/Quad">🏍️ VTT/Quad (Saison été)</option>
+        <option value="Motoneige">🛷 Motoneige (Saison hiver)</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('register-driver-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">📨 Soumettre ma demande</button>
+    </div>
   </form>
 </div></div>
+
 
 <div class="modal-bg" id="login-modal"><div class="modal">
   <h2>🔑 Connexion</h2>
   <form onsubmit="loginUser(event)">
     <div class="form-group"><label>Courriel</label><input type="email" id="login-email" required></div>
     <div class="form-group"><label>Mot de passe</label><input type="password" id="login-pass" required></div>
-    <div class="info-box">💡 <strong>Admin :</strong> admin@ruralgo.ca / admin123</div>
     <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('login-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">🔓 Se connecter</button></div>
   </form>
 </div></div>
@@ -500,6 +587,10 @@
   <form onsubmit="saveProfile(event)">
     <div class="form-group"><label>Nom complet</label><input type="text" id="ep-name" required></div>
     <div class="form-group"><label>Téléphone</label><input type="tel" id="ep-phone" required></div>
+       <div class="form-group">
+     <label>📍 Province</label>
+     <input type="text" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;">
+   </div>
     <div class="form-group">
       <label>Adresse</label>
       <div class="autocomplete-wrapper">

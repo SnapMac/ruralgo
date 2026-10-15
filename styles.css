@@ -31,7 +31,7 @@ nav a:hover::after{width:80%}
 .user-name{font-size:0.9rem;font-weight:bold}
 .user-role{font-size:0.7rem;background:#f5a623;padding:0.1rem 0.5rem;border-radius:10px;margin-top:2px;width:fit-content}
 .logout-btn{background:rgba(255,255,255,0.2);color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:bold}
-.auth-btn{background:#f5a623;color:white;border:2px solid white;padding:0.6rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:bold;transition:all 0.3s;position:relative;overflow:hidden}
+.auth-btn{background:#f5a623;color:#0a1929;border:2px solid white;padding:0.6rem 1.2rem;border-radius:8px;cursor:pointer;font-weight:bold;transition:all 0.3s;position:relative;overflow:hidden}
 .auth-btn:hover{background:#e6951a}
 .auth-btn.secondary{background:rgba(255,255,255,0.2);margin-left:0.3rem;border:2px solid white}
 .auth-buttons{display:flex;gap:0.3rem}
@@ -310,3 +310,65 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
 .store-detail-header{flex-direction:column;text-align:center}
 .notif-panel{width:90%;right:5%}
 }
+
+/* ===== NOTIFICATIONS ===== */
+.notif-bell {
+  cursor: pointer;
+  position: relative;
+  font-size: 1.5rem;
+  padding: 0.5rem;
+  transition: transform 0.2s;
+}
+.notif-bell:hover { transform: scale(1.1); }
+
+.notif-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #e74c3c;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.notif-panel {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 350px;
+  max-height: 450px;
+  overflow-y: auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  z-index: 1000;
+  margin-top: 0.5rem;
+}
+
+.notif-panel-header {
+  padding: 1rem;
+  background: #0a1929;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 12px 12px 0 0;
+  font-weight: bold;
+}
+
+.notif-item {
+  display: flex;
+  gap: 0.8rem;
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.notif-item:hover { background: #f9f9f9; }
+.notif-item.unread { background: #fff8e1; }
+.notif-item.unread:hover { background: #fff3c4; }
