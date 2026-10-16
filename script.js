@@ -526,6 +526,71 @@ async function registerClient(e) {
 function correctPassword(pass) {
   return typeof pass === 'string' ? pass : String(pass);
 }
+async function registerStore(e) {
+  e.preventDefault();
+  const email = document.getElementById('rs-email').value;
+  const password = correctPassword(document.getElementById('rs-pass').value);
+  const name = document.getElementById('rs-name').value;
+  const phone = document.getElementById('rs-phone').value;
+  const addressInput = document.getElementById('rs-address');
+  const type = document.getElementById('rs-type').value;
+  const forfait = document.getElementById('rs-forfait').value;
+
+  // Si un forfait a été sélectionné depuis la page des tarifs, l'utiliser
+  const selectedForfait = window.selectedForfait || forfait;
+  if (selectedForfait) {
+    document.getElementById('rs-forfait').value = selectedForfait;
+  }
+
+  // 1. Créer l'utilisateur dans Supabase Auth
+  const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+    email, password,
+    options: { data: { name, role: 'store' } }
+  });
+
+  if (authError) {
+    showToast('❌ Erreur: ' + authError.message);
+    return;
+  }
+
+  // 2. Créer le profil du commerce dans la table 'profiles'
+  await supabaseClient.from('profiles').insert({
+    id: authData.user.id,
+    role: 'store',
+    name,
+    phone,
+    address: addressInput.value,
+    lat: addressInput._lat || userPosition?.lat,
+    lng: addressInput._lng || userPosition?.lng,
+    status: 'pending',
+    store_type: type,
+    store_forfait: document.getElementById('rs-forfait').value,
+    created_at: new Date().toISOString()
+  });
+
+  // 3. Créer aussi une entrée dans la table 'stores' (pour que le commerce apparaisse)
+  await supabaseClient.from('stores').insert({
+    name: name,
+    type: type,
+    address: addressInput.value,
+    phone: phone,
+    icon: '🏪',
+    status: 'inactive', // Inactif jusqu'à approbation
+    lat: addressInput._lat || null,
+    lng: addressInput._lng || null,
+    owner_id: authData.user.id,
+    forfait: document.getElementById('rs-forfait').value
+  });
+
+  // 4. Envoyer une notification à l'admin
+  await addNotification('admin', '🏪 Nouveau commerce inscrit', `${name} (${type}) - Forfait: ${document.getElementById('rs-forfait').value}`);
+
+  closeModal('register-store-modal');
+  showToast('📨 Demande envoyée ! Votre commerce sera examiné par notre équipe.');
+  
+  // Réinitialiser le forfait sélectionné
+  window.selectedForfait = null;
+}
 
 async function registerDriver(e) {
   e.preventDefault();
@@ -1979,15 +2044,13 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+
 // ============ FONCTION POUR LES FORFAITS COMMERCES ============
 function openStoreRegisterModal(forfait) {
-  const noms = {
-    'essai': 'Essai (0$/mois)',
-    'base': 'Base (7,99$/mois)',
-    'croissance': 'Croissance (29,99$/mois)',
-    'partenaire': 'Partenaire Plus (89,99$/mois)'
-  };
-  showToast('🏪 Forfait choisi : ' + noms[forfait] + ' — Formulaire à venir !');
+  // Stocker le forfait choisi pour l'utiliser plus tard
+  window.selectedForfait = forfait;
+  // Ouvrir la modal de choix de type de compte
+  openChooseTypeModal();
 }
 
 // ============ ANIMATIONS ============
@@ -2343,4 +2406,15 @@ function openStoreRegisterModal(forfait) {
     'partenaire': 'Partenaire Plus (89,99$/mois)'
   };
   showToast('🏪 Forfait choisi : ' + noms[forfait] + ' — Formulaire à venir !');
+}function continueToRegister(){
+  closeModal('choose-type-modal');
+  if(selectedAccountType==='client'){
+    openModal('register-client-modal');
+    setTimeout(()=>initAutocomplete('rc-address','rc-address-suggestions'),100);
+  } else if(selectedAccountType==='driver'){
+    openModal('register-driver-modal');
+  } else if(selectedAccountType==='store'){
+    openModal('register-store-modal');
+    setTimeout(()=>initAutocomplete('rs-address','rs-address-suggestions'),100);
+  }
 }
