@@ -1979,6 +1979,17 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// ============ FONCTION POUR LES FORFAITS COMMERCES ============
+function openStoreRegisterModal(forfait) {
+  const noms = {
+    'essai': 'Essai (0$/mois)',
+    'base': 'Base (7,99$/mois)',
+    'croissance': 'Croissance (29,99$/mois)',
+    'partenaire': 'Partenaire Plus (89,99$/mois)'
+  };
+  showToast('🏪 Forfait choisi : ' + noms[forfait] + ' — Formulaire à venir !');
+}
+
 // ============ ANIMATIONS ============
 function initScrollAnimations() {
   const observer = new IntersectionObserver((entries) => {
