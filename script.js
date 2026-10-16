@@ -1991,6 +1991,16 @@ function initScrollAnimations() {
 }
 setTimeout(initScrollAnimations, 500);
 
+// ============ FONCTION POUR LES FORFAITS COMMERCES ============
+function openStoreRegisterModal(forfait) {
+  const noms = {
+    'essai': 'Essai (0$/mois)',
+    'base': 'Base (7,99$/mois)',
+    'croissance': 'Croissance (29,99$/mois)',
+    'partenaire': 'Partenaire Plus (89,99$/mois)'
+  };
+  showToast('🏪 Forfait choisi : ' + noms[forfait] + ' — Formulaire à venir !');
+}
 // ============ DÉMARRAGE ============
 window.addEventListener('load', async function() {
   await load();
@@ -2312,4 +2322,14 @@ function closeFeatureDetailModal() {
   if (modal) {
     modal.remove();
   }
+}
+// ============ FONCTION POUR LES FORFAITS COMMERCES ============
+function openStoreRegisterModal(forfait) {
+  const noms = {
+    'essai': 'Essai (0$/mois)',
+    'base': 'Base (7,99$/mois)',
+    'croissance': 'Croissance (29,99$/mois)',
+    'partenaire': 'Partenaire Plus (89,99$/mois)'
+  };
+  showToast('🏪 Forfait choisi : ' + noms[forfait] + ' — Formulaire à venir !');
 }

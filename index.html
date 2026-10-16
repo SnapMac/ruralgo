@@ -241,6 +241,101 @@
     <div style="text-align:center;margin-top:2rem"><button class="btn-primary" onclick="openChooseTypeModal()">🛍️ Commencer mes achats</button></div>
   </section>
 
+<!-- SECTION FORFAITS COMMERCES -->
+<section class="pricing-section">
+  <div class="section-header">
+    <span class="section-tag">💼 FORFAITS COMMERCES</span>
+    <h2 class="section-title">Des solutions pour votre commerce</h2>
+    <p style="color:#666;font-size:1.1rem;margin-top:1rem">Faites connaître votre commerce et vendez vos produits en milieu rural</p>
+  </div>
+  
+  <div class="pricing-grid">
+    
+    <!-- FORFAIT ESSAI -->
+    <div class="pricing-card">
+      <div class="pricing-header">
+        <div class="pricing-icon">🎁</div>
+        <h3>Essai</h3>
+        <div class="pricing-price">0<span>$</span><span class="pricing-period">/mois</span></div>
+      </div>
+      <ul class="pricing-features">
+        <li>✅ Frais de 1$ par livraison</li>
+        <li>✅ Jusqu'à 10 articles</li>
+        <li>✅ Commerce affiché sur RuralGo</li>
+        <li class="disabled">❌ Gestion des stocks</li>
+        <li class="disabled">❌ Promotions</li>
+        <li class="disabled">❌ Soutien prioritaire</li>
+      </ul>
+      <button class="pricing-btn" onclick="selectPlan('essai')">Commencer gratuitement</button>
+    </div>
+
+    <!-- FORFAIT BASE -->
+    <div class="pricing-card">
+      <div class="pricing-header">
+        <div class="pricing-icon">🌱</div>
+        <h3>Base</h3>
+        <div class="pricing-price">7,99<span>$</span><span class="pricing-period">/mois</span></div>
+      </div>
+      <ul class="pricing-features">
+        <li>✅ <strong>Aucun frais de livraison</strong></li>
+        <li>✅ Jusqu'à 25 articles</li>
+        <li>✅ Commerce affiché sur RuralGo</li>
+        <li>✅ Gestion des stocks et commandes</li>
+        <li class="disabled">❌ Promotions</li>
+        <li class="disabled">❌ Soutien prioritaire</li>
+      </ul>
+      <button class="pricing-btn" onclick="selectPlan('base')">Choisir ce forfait</button>
+    </div>
+
+    <!-- FORFAIT CROISSANCE (RECOMMANDÉ) -->
+    <div class="pricing-card featured">
+      <div class="pricing-badge">⭐ RECOMMANDÉ</div>
+      <div class="pricing-header">
+        <div class="pricing-icon">🚀</div>
+        <h3>Croissance</h3>
+        <div class="pricing-price">29,99<span>$</span><span class="pricing-period">/mois</span></div>
+      </div>
+      <ul class="pricing-features">
+        <li>✅ <strong>Tous les avantages Base</strong></li>
+        <li>✅ Jusqu'à 100 articles</li>
+        <li>✅ Promotions et offres spéciales</li>
+        <li>✅ Suivi des ventes</li>
+        <li>✅ <strong>Aucun frais de livraison</strong></li>
+        <li class="disabled">❌ Soutien prioritaire</li>
+      </ul>
+      <button class="pricing-btn featured" onclick="selectPlan('croissance')">Choisir ce forfait</button>
+    </div>
+
+    <!-- FORFAIT PARTENAIRE PLUS -->
+    <div class="pricing-card">
+      <div class="pricing-header">
+        <div class="pricing-icon">💎</div>
+        <h3>Partenaire Plus</h3>
+        <div class="pricing-price">89,99<span>$</span><span class="pricing-period">/mois</span></div>
+      </div>
+      <ul class="pricing-features">
+        <li>✅ <strong>Tous les avantages précédents</strong></li>
+        <li>✅ Jusqu'à 250 articles</li>
+        <li>✅ Ajout d'articles par RuralGo</li>
+        <li>✅ Priorité livraison</li>
+        <li>✅ Soutien prioritaire</li>
+        <li>✅ Statistiques avancées</li>
+      </ul>
+      <button class="pricing-btn" onclick="selectPlan('partenaire_plus')">Choisir ce forfait</button>
+    </div>
+
+  </div>
+
+  <div class="pricing-info">
+    <p><strong>💡 Informations générales :</strong></p>
+    <ul>
+      <li>Les forfaits sont facturés mensuellement</li>
+      <li>Prix en dollars canadiens, avant taxes</li>
+      <li>Annulation possible en tout temps</li>
+    </ul>
+  </div>
+</section>
+
   <section class="cta-section">
     <div class="cta-content">
       <h2>Prêt à simplifier vos courses ?</h2>
