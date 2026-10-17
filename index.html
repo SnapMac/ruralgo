@@ -565,11 +565,16 @@
     </div>
   </form>
 </div></div>
+
 <div class="modal-bg" id="register-store-modal"><div class="modal">
   <h2>🏪 Inscription Commerce</h2>
   <form onsubmit="registerStore(event)">
-    <div class="form-group"><label>Nom du commerce *</label><input type="text" id="rs-name" required placeholder="Ex: Épicerie du Village"></div>
-    <div class="form-group"><label>Type de commerce *</label>
+    <div class="form-group">
+      <label>🏪 Nom du commerce *</label>
+      <input type="text" id="rs-name" required placeholder="Ex: Épicerie du Village">
+    </div>
+    <div class="form-group">
+      <label>📂 Type de commerce *</label>
       <select id="rs-type" required>
         <option value="">-- Choisir --</option>
         <option>🛒 Épicerie</option>
@@ -579,11 +584,33 @@
         <option>🏬 Autres</option>
       </select>
     </div>
-    <div class="form-group"><label>Courriel *</label><input type="email" id="rs-email" required></div>
-    <div class="form-group"><label>Mot de passe *</label><input type="password" id="rs-pass" required minlength="6"></div>
-    <div class="form-group"><label>Téléphone *</label><input type="tel" id="rs-phone" required></div>
     <div class="form-group">
-      <label>Adresse du commerce *</label>
+      <label>👤 Nom du responsable *</label>
+      <input type="text" id="rs-owner" required placeholder="Jean Tremblay">
+    </div>
+    <div class="form-group">
+      <label>📧 Courriel *</label>
+      <input type="email" id="rs-email" required placeholder="contact@commerce.com">
+    </div>
+    <div class="form-group">
+      <label>🔒 Mot de passe * (min. 6 caractères)</label>
+      <input type="password" id="rs-pass" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>🔒 Confirmer le mot de passe *</label>
+      <input type="password" id="rs-pass-confirm" required minlength="6" placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label>📱 Téléphone *</label>
+      <input type="tel" id="rs-phone" required placeholder="(819) 123-4567">
+    </div>
+    <div class="form-group">
+      <label>📍 Province *</label>
+      <input type="text" id="rs-province" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;">
+    </div>
+    <div class="form-group">
+      <label>🏠 Adresse du commerce *</label>
+      <div class="info-box">💡 Commencez à taper votre adresse pour voir des suggestions</div>
       <div class="autocomplete-wrapper">
         <input type="text" id="rs-address" class="autocomplete-input" required placeholder="Ex: 100 rue Principale, Maniwaki" autocomplete="off">
         <div id="rs-address-suggestions" class="autocomplete-suggestions"></div>
@@ -591,7 +618,7 @@
       <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('rs-address')">📍 Utiliser ma position GPS</button>
     </div>
     <div class="form-group">
-      <label>Forfait choisi *</label>
+      <label>🎟️ Forfait choisi *</label>
       <select id="rs-forfait" required>
         <option value="">-- Choisir un forfait --</option>
         <option value="essai">🌱 Essai - 0$/mois (10 articles, 1$/livraison)</option>
@@ -601,10 +628,12 @@
       </select>
     </div>
     <div class="info-box">💡 <strong>Note :</strong> Votre commerce sera examiné par notre équipe avant d'être activé. Vous recevrez une confirmation par courriel.</div>
-    <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('register-store-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">📨 Soumettre</button></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('register-store-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">📨 Soumettre ma demande</button>
+    </div>
   </form>
 </div></div>
-
 
   <div class="modal-bg" id="register-driver-modal"><div class="modal">
   <h2>🚗 Inscription Livreur</h2>

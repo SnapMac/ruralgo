@@ -548,70 +548,114 @@ async function registerClient(e) {
 function correctPassword(pass) {
   return typeof pass === 'string' ? pass : String(pass);
 }
-async function registerStore(e) {
-  e.preventDefault();
-  const email = document.getElementById('rs-email').value;
-  const password = correctPassword(document.getElementById('rs-pass').value);
-  const name = document.getElementById('rs-name').value;
-  const phone = document.getElementById('rs-phone').value;
-  const addressInput = document.getElementById('rs-address');
+
+// ============ INSCRIPTION COMMERCE ============
+async function registerStore(event) {
+  event.preventDefault();
+  
+  // 1. Récupérer toutes les valeurs du formulaire
+  const name = document.getElementById('rs-name').value.trim();
   const type = document.getElementById('rs-type').value;
+  const owner = document.getElementById('rs-owner').value.trim();
+  const email = document.getElementById('rs-email').value.trim();
+  const pass = document.getElementById('rs-pass').value;
+  const passConfirm = document.getElementById('rs-pass-confirm').value;
+  const phone = document.getElementById('rs-phone').value.trim();
+  const province = document.getElementById('rs-province').value;
+  const address = document.getElementById('rs-address').value.trim();
   const forfait = document.getElementById('rs-forfait').value;
-
-  // Si un forfait a été sélectionné depuis la page des tarifs, l'utiliser
-  const selectedForfait = window.selectedForfait || forfait;
-  if (selectedForfait) {
-    document.getElementById('rs-forfait').value = selectedForfait;
-  }
-
-  // 1. Créer l'utilisateur dans Supabase Auth
-  const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-    email, password,
-    options: { data: { name, role: 'store' } }
-  });
-
-  if (authError) {
-    showToast('❌ Erreur: ' + authError.message);
+  
+  // 2. Vérification du double mot de passe
+  if (pass !== passConfirm) {
+    showToast('❌ Les mots de passe ne correspondent pas');
     return;
   }
-
-  // 2. Créer le profil du commerce dans la table 'profiles'
-  await supabaseClient.from('profiles').insert({
-    id: authData.user.id,
-    role: 'store',
-    name,
-    phone,
-    address: addressInput.value,
-    lat: addressInput._lat || userPosition?.lat,
-    lng: addressInput._lng || userPosition?.lng,
-    status: 'pending',
-    store_type: type,
-    store_forfait: document.getElementById('rs-forfait').value,
-    created_at: new Date().toISOString()
-  });
-
-  // 3. Créer aussi une entrée dans la table 'stores' (pour que le commerce apparaisse)
-  await supabaseClient.from('stores').insert({
-    name: name,
-    type: type,
-    address: addressInput.value,
-    phone: phone,
-    icon: '🏪',
-    status: 'inactive', // Inactif jusqu'à approbation
-    lat: addressInput._lat || null,
-    lng: addressInput._lng || null,
-    owner_id: authData.user.id,
-    forfait: document.getElementById('rs-forfait').value
-  });
-
-  // 4. Envoyer une notification à l'admin
-  await addNotification('admin', '🏪 Nouveau commerce inscrit', `${name} (${type}) - Forfait: ${document.getElementById('rs-forfait').value}`);
-
-  closeModal('register-store-modal');
-  showToast('📨 Demande envoyée ! Votre commerce sera examiné par notre équipe.');
   
-  // Réinitialiser le forfait sélectionné
-  window.selectedForfait = null;
+  if (pass.length < 6) {
+    showToast('❌ Le mot de passe doit contenir au moins 6 caractères');
+    return;
+  }
+  
+  // 3. Vérification que tous les champs sont remplis
+  if (!name || !type || !owner || !email || !phone || !address || !forfait) {
+    showToast('❌ Veuillez remplir tous les champs obligatoires');
+    return;
+  }
+  
+  // 4. Créer le compte dans Supabase Auth
+  try {
+    showToast('📨 Création du compte en cours...');
+    
+    const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+      email: email,
+      password: pass,
+      options: {
+        data: {
+          role: 'store',
+          name: owner,
+          commerce_name: name,
+          commerce_type: type,
+          phone: phone,
+          province: province,
+          address: address,
+          forfait: forfait,
+          status: 'pending'
+        }
+      }
+    });
+    
+    if (authError) throw authError;
+    
+    // 5. Créer le profil dans la table profiles
+    const { error: profileError } = await supabaseClient.from('profiles').insert({
+      id: authData.user.id,
+      email: email,
+      role: 'store',
+      name: owner,
+      commerce_name: name,
+      commerce_type: type,
+      phone: phone,
+      province: province,
+      address: address,
+      forfait: forfait,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    });
+    
+    if (profileError) throw profileError;
+    
+    // 6. Créer l'entrée dans la table stores
+    const { error: storeError } = await supabaseClient.from('stores').insert({
+      owner_id: authData.user.id,
+      name: name,
+      type: type,
+      address: address,
+      phone: phone,
+      forfait: forfait,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    });
+    
+    if (storeError) {
+      console.warn('Erreur stores:', storeError);
+    }
+    
+    // 7. Fermer le modal et afficher le message de succès
+    closeModal('register-store-modal');
+    showToast('✅ Demande envoyée ! Votre commerce sera examiné sous peu.');
+    
+    // 8. Réinitialiser le formulaire
+    event.target.reset();
+    
+  } catch (error) {
+    console.error('Erreur registerStore:', error);
+    
+    if (error.message.includes('already registered')) {
+      showToast('❌ Cet email est déjà utilisé');
+    } else {
+      showToast('❌ Erreur : ' + error.message);
+    }
+  }
 }
 
 async function registerDriver(e) {
