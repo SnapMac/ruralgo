@@ -1617,35 +1617,49 @@ function showDriverHistory() {
 }
 
 // ============ ADMIN - DASHBOARD ET ONGLETS ============
-function adminTab(tab, btn) {
-  document.querySelectorAll('.admin-side li').forEach(l => l.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  ['dashboard','orders','stores','categories','products','drivers','clients','settings'].forEach(t => {
-    const el = document.getElementById('admin-' + t);
-    if (el) el.style.display = t === tab ? 'block' : 'none';
+// ============ GESTION DES ONGLETS ADMIN (VERSION FINALE ET COMPLÈTE) ============
+function adminTab(tabName, btnElement) {
+  // 1. Enlever la classe "active" de tous les boutons du menu de gauche
+  document.querySelectorAll('.admin-side li').forEach(li => {
+    li.classList.remove('active');
   });
-  if (tab === 'dashboard') renderAdminDashboard();
-  if (tab === 'orders') renderAdminOrders();
-  if (tab === 'stores') renderAdminStores();
-  if (tab === 'categories') renderAdminCategories();
-  if (tab === 'products') renderAdminProducts();
-  if (tab === 'drivers') renderAdminDrivers();
-  if (tab === 'clients') renderAdminClients();
-  if (tab === 'settings') renderAdminSettings();
+
+  // 2. Ajouter la classe "active" au bouton sur lequel on vient de cliquer
+  if (btnElement) {
+    btnElement.classList.add('active');
+  }
+
+  // 3. Cacher TOUTES les sections de contenu de l'administration
+  const allSections = document.querySelectorAll('.admin-main > div');
+  allSections.forEach(section => {
+    section.style.display = 'none';
+  });
+
+  // 4. Définir la section à afficher (ex: si tabName = 'stores', on cherche 'admin-stores')
+  const targetSection = document.getElementById('admin-' + tabName);
+
+  // 5. Afficher la section et charger les données si nécessaire
   if (targetSection) {
     targetSection.style.display = 'block';
     
-    // ✅ AJOUTE CES LIGNES
+    // Charger les données spécifiques à chaque onglet
     if (tabName === 'pending-stores') {
-      renderPendingStores();
-    } else if (tabName === 'drivers') {
-      if (typeof renderAdminDrivers === 'function') renderAdminDrivers();
+      if (typeof renderPendingStores === 'function') {
+        renderPendingStores();
+      }
     } else if (tabName === 'stores') {
-      if (typeof renderAdminStores === 'function') renderAdminStores();
+      if (typeof renderAdminStores === 'function') {
+        renderAdminStores();
+      }
+    } else if (tabName === 'drivers') {
+      if (typeof renderAdminDrivers === 'function') {
+        renderAdminDrivers();
+      }
     }
+  } else {
+    console.warn("⚠️ Section non trouvée : admin-" + tabName);
   }
 }
-
 
 function renderAllAdmin() {
   renderAdminDashboard();
