@@ -1373,11 +1373,17 @@ async function saveProfile(e) {
 }
 
 // ============ LIVREUR ============
-function showDriverDashboard() {
+async function showDriverDashboard() {
   switchView('view-driver');
   document.getElementById('driver-dashboard-section').style.display = 'block';
   document.getElementById('driver-order-detail-section').style.display = 'none';
   document.getElementById('driver-history-section').style.display = 'none';
+  
+  // ✅ AJOUT : Charger les derniers paramètres depuis Supabase AVANT d'afficher
+  if (typeof loadPlatformSettings === 'function') {
+    await loadPlatformSettings();
+  }
+  
   renderDriverDashboard();
 }
 
