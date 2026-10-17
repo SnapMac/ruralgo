@@ -550,6 +550,7 @@ function correctPassword(pass) {
 }
 
 // ============ INSCRIPTION COMMERCE ============
+// ============ INSCRIPTION COMMERCE (VERSION CORRIGÉE) ============
 async function registerStore(event) {
   event.preventDefault();
   
@@ -592,52 +593,41 @@ async function registerStore(event) {
       options: {
         data: {
           role: 'store',
-          name: owner,
-          commerce_name: name,
-          commerce_type: type,
-          phone: phone,
-          province: province,
-          address: address,
-          forfait: forfait,
-          status: 'pending'
+          name: owner
         }
       }
     });
     
     if (authError) throw authError;
     
-    // 5. Créer le profil dans la table profiles
+    // 5. ✅ VERSION CORRIGÉE : Créer le profil dans la table profiles (seulement les infos de base)
     const { error: profileError } = await supabaseClient.from('profiles').insert({
       id: authData.user.id,
       email: email,
       role: 'store',
       name: owner,
-      commerce_name: name,
-      commerce_type: type,
       phone: phone,
-      province: province,
-      address: address,
-      forfait: forfait,
-      status: 'pending',
-      created_at: new Date().toISOString()
+      status: 'pending'
     });
     
     if (profileError) throw profileError;
     
-    // 6. Créer l'entrée dans la table stores
+    // 6. ✅ Créer l'entrée COMPLÈTE dans la table stores (toutes les infos du commerce)
     const { error: storeError } = await supabaseClient.from('stores').insert({
       owner_id: authData.user.id,
       name: name,
       type: type,
       address: address,
       phone: phone,
+      email: email,
+      province: province,
       forfait: forfait,
-      status: 'pending',
-      created_at: new Date().toISOString()
+      status: 'pending'
     });
     
     if (storeError) {
-      console.warn('Erreur stores:', storeError);
+      console.error('Erreur stores:', storeError);
+      throw storeError;
     }
     
     // 7. Fermer le modal et afficher le message de succès
@@ -650,10 +640,13 @@ async function registerStore(event) {
   } catch (error) {
     console.error('Erreur registerStore:', error);
     
-    if (error.message.includes('already registered')) {
+    if (error.message && error.message.includes('already registered')) {
       showToast('❌ Cet email est déjà utilisé');
+    } else if (error.message && error.message.includes('Could not find')) {
+      showToast('❌ Erreur de base de données : ' + error.message);
+      console.error('Détail de l\'erreur base de données :', error);
     } else {
-      showToast('❌ Erreur : ' + error.message);
+      showToast('❌ Erreur : ' + (error.message || 'Erreur inconnue'));
     }
   }
 }
