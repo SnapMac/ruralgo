@@ -1796,7 +1796,9 @@ function renderAdminStores() {
     <tbody>
       ${activeStores.map(s => {
         const prodCount = products.filter(p => p.storeId === s.id).length;
-        return `<tr>
+        
+        // ✅ MODIFICATION ICI : on ajoute onclick et cursor:pointer sur le <tr>
+        return `<tr onclick="viewStoreDetails(${s.id})" style="cursor:pointer">
           <td style="font-size:2rem;text-align:center">${s.icon}</td>
           <td><strong>${s.name}</strong></td>
           <td>${s.type}</td>
@@ -1804,8 +1806,8 @@ function renderAdminStores() {
           <td><span class="badge badge-green">✅ Actif</span></td>
           <td>
             <div class="action-btns">
-              <button class="action-btn btn-blue" onclick="editStore(${s.id})">✏️</button>
-              <button class="action-btn btn-red" onclick="confirmDelete('store',${s.id})">🗑️</button>
+              <button class="action-btn btn-blue" onclick="event.stopPropagation(); editStore(${s.id})">✏️</button>
+              <button class="action-btn btn-red" onclick="event.stopPropagation(); confirmDelete('store',${s.id})">🗑️</button>
             </div>
           </td>
         </tr>`;
@@ -2646,4 +2648,184 @@ function openStoreRegisterModal(forfait) {
       initAutocomplete('rs-address', 'rs-address-suggestions');
     }
   }, 100);
+}
+function viewStoreDetails(id) {
+  const store = stores.find(s => String(s.id) === String(id));
+  if (!store) {
+    showToast('❌ Commerce introuvable');
+    return;
+  }
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg show';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:600px">
+      <h2 style="color:#0a1929;margin-bottom:1.5rem">🏪 Détails du commerce</h2>
+      <div style="background:#f5f1e8;padding:1.5rem;border-radius:12px">
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+          <div style="font-size:4rem">${store.icon || '🏪'}</div>
+          <div>
+            <h3 style="margin:0;color:#0a1929">${store.name}</h3>
+            <p style="margin:0.3rem 0;color:#666">${store.type || 'Non spécifié'}</p>
+          </div>
+        </div>
+        <div style="display:grid;gap:1rem">
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📍 Adresse :</strong>
+            <p style="margin:0.3rem 0;color:#666">${store.address || 'Non spécifiée'}</p>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📱 Téléphone :</strong>
+            <p style="margin:0.3rem 0;color:#666">${store.phone || 'Non spécifié'}</p>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📧 Email :</strong>
+            <p style="margin:0.3rem 0;color:#666">${store.email || 'Non spécifié'}</p>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>🎟️ Forfait :</strong>
+            <p style="margin:0.3rem 0;color:#666">${store.forfait || 'Non spécifié'}</p>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📊 Statut :</strong>
+            <span class="badge ${store.status === 'active' ? 'badge-green' : store.status === 'pending' ? 'badge-orange' : 'badge-red'}">
+              ${store.status === 'active' ? '✅ Actif' : store.status === 'pending' ? '⏳ En attente' : '❌ Inactif'}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;text-align:right">
+        <button class="btn-sm btn-gray" onclick="this.closest('.modal-bg').remove()">Fermer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+function viewDriverDetails(id) {
+  const driver = drivers.find(d => String(d.id) === String(id));
+  if (!driver) {
+    showToast('❌ Livreur introuvable');
+    return;
+  }
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg show';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:600px">
+      <h2 style="color:#0a1929;margin-bottom:1.5rem">🚗 Détails du livreur</h2>
+      <div style="background:#f5f1e8;padding:1.5rem;border-radius:12px">
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+          <div style="font-size:4rem">🚗</div>
+          <div>
+            <h3 style="margin:0;color:#0a1929">${driver.name}</h3>
+            <p style="margin:0.3rem 0;color:#666">${driver.vehicle || 'Véhicule non spécifié'}</p>
+          </div>
+        </div>
+        <div style="display:grid;gap:1rem">
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📧 Email :</strong>
+            <p style="margin:0.3rem 0;color:#666">${driver.email || 'Non spécifié'}</p>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📱 Téléphone :</strong>
+            <p style="margin:0.3rem 0;color:#666">${driver.phone || 'Non spécifié'}</p>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>🚙 Véhicule :</strong>
+            <p style="margin:0.3rem 0;color:#666">${driver.vehicle || 'Non spécifié'}</p>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📊 Statut :</strong>
+            <span class="badge ${driver.status === 'approved' ? 'badge-green' : driver.status === 'pending' ? 'badge-orange' : 'badge-red'}">
+              ${driver.status === 'approved' ? '✅ Approuvé' : driver.status === 'pending' ? '⏳ En attente' : '❌ Refusé'}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;text-align:right">
+        <button class="btn-sm btn-gray" onclick="this.closest('.modal-bg').remove()">Fermer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function viewClientDetails(id) {
+  const client = clients.find(c => String(c.id) === String(id));
+  if (!client) {
+    showToast('❌ Client introuvable');
+    return;
+  }
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg show';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:600px">
+      <h2 style="color:#0a1929;margin-bottom:1.5rem">👤 Détails du client</h2>
+      <div style="background:#f5f1e8;padding:1.5rem;border-radius:12px">
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+          <div style="font-size:4rem">👤</div>
+          <div>
+            <h3 style="margin:0;color:#0a1929">${client.name}</h3>
+          </div>
+        </div>
+        <div style="display:grid;gap:1rem">
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📧 Email :</strong>
+            <p style="margin:0.3rem 0;color:#666">${client.email || 'Non spécifié'}</p>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📱 Téléphone :</strong>
+            <p style="margin:0.3rem 0;color:#666">${client.phone || 'Non spécifié'}</p>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📍 Adresse :</strong>
+            <p style="margin:0.3rem 0;color:#666">${client.address || 'Non spécifiée'}</p>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;text-align:right">
+        <button class="btn-sm btn-gray" onclick="this.closest('.modal-bg').remove()">Fermer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function viewOrderDetails(id) {
+  const order = orders.find(o => String(o.id) === String(id));
+  if (!order) {
+    showToast('❌ Commande introuvable');
+    return;
+  }
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg show';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:700px">
+      <h2 style="color:#0a1929;margin-bottom:1.5rem">📦 Détails de la commande #${order.id}</h2>
+      <div style="background:#f5f1e8;padding:1.5rem;border-radius:12px">
+        <div style="display:grid;gap:1rem">
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📊 Statut :</strong>
+            <span class="badge ${order.status === 'delivered' ? 'badge-green' : order.status === 'pending' ? 'badge-orange' : 'badge-red'}">
+              ${order.status === 'delivered' ? '✅ Livrée' : order.status === 'pending' ? '⏳ En attente' : '❌ Annulée'}
+            </span>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>💰 Total :</strong>
+            <p style="margin:0.3rem 0;color:#666;font-size:1.2rem;font-weight:bold">${(order.total || 0).toFixed(2)} $</p>
+          </div>
+          <div style="background:white;padding:1rem;border-radius:8px">
+            <strong>📍 Adresse de livraison :</strong>
+            <p style="margin:0.3rem 0;color:#666">${order.deliveryAddress || 'Non spécifiée'}</p>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;text-align:right">
+        <button class="btn-sm btn-gray" onclick="this.closest('.modal-bg').remove()">Fermer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
