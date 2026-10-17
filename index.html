@@ -50,7 +50,7 @@
       </div>
     </div>
     <nav id="nav-client" style="display:none"><ul>
-      <li><a onclick="showClientStores()">Magasins</a></li>
+      <li><a onclick="showClientStores()">Commerces</a></li>
       <li><a onclick="showClientOrders()">Mes commandes</a></li>
       <li><a onclick="scrollToCart()">🛒 (<span id="cart-count">0</span>)</a></li>
     </ul></nav>
@@ -214,7 +214,7 @@
     </div>
     <div class="steps-visual">
       <div class="step-card"><div class="step-number">1</div><div class="step-icon">📝</div><h3>Créez votre compte</h3><p>Inscription gratuite</p></div>
-      <div class="step-card"><div class="step-number">2</div><div class="step-icon">🏪</div><h3>Choisissez votre magasin</h3><p>Visualisez-les sur la carte</p></div>
+      <div class="step-card"><div class="step-number">2</div><div class="step-icon">🏪</div><h3>Choisissez votre commerce</h3><p>Visualisez-les sur la carte</p></div>
       <div class="step-card"><div class="step-number">3</div><div class="step-icon">🛒</div><h3>Ajoutez au panier</h3><p>Sélectionnez vos produits</p></div>
       <div class="step-card"><div class="step-number">4</div><div class="step-icon">💰</div><h3>Payez selon la distance</h3><p>7$ + 1$/km calculé automatiquement</p></div>
     </div>
@@ -235,7 +235,7 @@
   <section class="stores-preview">
     <div class="section-header">
       <span class="section-tag">NOS PARTENAIRES</span>
-      <h2 class="section-title">Magasins à Maniwaki</h2>
+      <h2 class="section-title">Commerces à Maniwaki</h2>
     </div>
     <div class="stores-grid" id="landing-stores-grid"></div>
     <div style="text-align:center;margin-top:2rem"><button class="btn-primary" onclick="openChooseTypeModal()">🛍️ Commencer mes achats</button></div>
@@ -348,11 +348,11 @@
   <section class="hero">
     <h1>Bonjour <span id="client-firstname">!</span> 👋</h1>
     <p>Vos essentiels livrés directement chez vous</p>
-    <button class="btn" onclick="showClientStores()">🛍️ Voir les magasins</button>
+    <button class="btn" onclick="showClientStores()">🛍️ Voir les commerces</button>
   </section>
   <section id="stores-section" style="background:white">
     <div class="container">
-      <h2 class="title">🏪 Nos Magasins</h2>
+      <h2 class="title">🏪 Nos Commerces</h2>
       <div class="stores-grid" id="stores-grid"></div>
     </div>
   </section>
@@ -443,7 +443,8 @@
         <div class="admin-side"><ul>
           <li class="active" onclick="adminTab('dashboard',this)">📊 Tableau de bord</li>
           <li onclick="adminTab('orders',this)">📦 Commandes</li>
-          <li onclick="adminTab('stores',this)">🏪 Magasins</li>
+          <li onclick="adminTab('stores',this)">🏪 Commerces</li>
+          <li onclick="adminTab('pending-stores',this)">📨 Demandes commerces</li>
           <li onclick="adminTab('categories',this)">📂 Catégories</li>
           <li onclick="adminTab('products',this)">🛍️ Produits</li>
           <li onclick="adminTab('drivers',this)">🚗 Livreurs</li>
@@ -456,7 +457,7 @@
             <div class="admin-stats">
               <div class="stat"><div class="stat-val" id="stat-clients">0</div><div class="stat-lbl">Clients</div></div>
               <div class="stat"><div class="stat-val" id="stat-drivers">0</div><div class="stat-lbl">Livreurs</div></div>
-              <div class="stat"><div class="stat-val" id="stat-stores">0</div><div class="stat-lbl">Magasins</div></div>
+              <div class="stat"><div class="stat-val" id="stat-stores">0</div><div class="stat-lbl">Commerces</div></div>
               <div class="stat"><div class="stat-val" id="stat-orders">0</div><div class="stat-lbl">Commandes</div></div>
               <div class="stat"><div class="stat-val" id="stat-revenue">0 $</div><div class="stat-lbl">Revenus totaux</div></div>
               <div class="stat"><div class="stat-val" id="stat-pending">0</div><div class="stat-lbl">En attente</div></div>
@@ -475,8 +476,13 @@
             </div>
             <div id="admin-orders-list"></div>
           </div>
+          <div id="admin-pending-stores" style="display:none">
+  <h3 style="color:#0a1929;margin-bottom:1rem">📨 Demandes de commerces en attente</h3>
+  <div class="info-box">💡 Ces commerces ont soumis une demande pour vendre sur RuralGo. Approuvez ou refusez leur demande.</div>
+  <div id="pending-stores-container"></div>
+</div>
           <div id="admin-stores" style="display:none">
-            <div class="admin-header"><h3>🏪 Magasins</h3><button class="btn-add" onclick="openStoreModal()">➕ Ajouter</button></div>
+            <div class="admin-header"><h3>🏪 Commerces</h3><button class="btn-add" onclick="openStoreModal()">➕ Ajouter</button></div>
             <div id="stores-table-container"></div>
           </div>
           <div id="admin-categories" style="display:none">
@@ -659,7 +665,7 @@
 </div></div>
 
 <div class="modal-bg" id="store-modal"><div class="modal">
-  <h2 id="store-modal-title">➕ Ajouter un magasin</h2>
+  <h2 id="store-modal-title">➕ Ajouter un Commerce</h2>
   <form onsubmit="saveStore(event)">
     <input type="hidden" id="store-id">
     <div class="form-group"><label>Nom *</label><input type="text" id="store-name" required></div>
@@ -702,7 +708,7 @@
   <h2 id="prod-modal-title">➕ Produit</h2>
   <form onsubmit="saveProduct(event)">
     <input type="hidden" id="prod-id">
-    <div class="form-group"><label>Magasin *</label><select id="prod-store" required></select></div>
+    <div class="form-group"><label>Commerce *</label><select id="prod-store" required></select></div>
     <div class="form-group"><label>Catégorie *</label><select id="prod-category" required></select></div>
     <div class="form-group"><label>Nom *</label><input type="text" id="prod-name" required></div>
     <div class="form-group"><label>Description</label><input type="text" id="prod-desc"></div>

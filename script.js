@@ -2418,3 +2418,7 @@ function openStoreRegisterModal(forfait) {
     setTimeout(()=>initAutocomplete('rs-address','rs-address-suggestions'),100);
   }
 }
+function adminTab(tab, btn) {
+  document.querySelectorAll('.admin-side li').forEach(l => l.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
