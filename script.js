@@ -463,11 +463,33 @@ function openChooseTypeModal() {
   openModal('choose-type-modal');
 }
 
-function selectAccountType(type, el) {
+// ============ SÉLECTION DU TYPE DE COMPTE ============
+
+
+// ============ SÉLECTION DU TYPE DE COMPTE ============
+selectedAccountType = null;
+
+function selectAccountType(type, element) {
+  // 1. Sauvegarder le type choisi
   selectedAccountType = type;
-  document.querySelectorAll('.account-type').forEach(t => t.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('continue-type-btn').disabled = false;
+  
+  // 2. Enlever la classe "selected" de tous les types de compte
+  document.querySelectorAll('.account-type').forEach(el => {
+    el.classList.remove('selected');
+  });
+  
+  // 3. Ajouter la classe "selected" à l'élément cliqué
+  if (element) {
+    element.classList.add('selected');
+  }
+  
+  // 4. Activer le bouton "Continuer"
+  const continueBtn = document.getElementById('continue-type-btn');
+  if (continueBtn) {
+    continueBtn.disabled = false;
+  }
+  
+  console.log('Type de compte sélectionné :', type);
 }
 
 function continueToRegister() {
@@ -2384,11 +2406,7 @@ function closeFeatureDetailModal() {
 }
 // ============ FONCTION POUR LES FORFAITS COMMERCES ============
 
-function selectAccountType(type) {
-  selectedAccountType = type;
-  document.querySelectorAll('.account-type-option').forEach(el => el.classList.remove('selected'));
-  document.getElementById(`account-type-${type}`).classList.add('selected');  
-}
+
 
 function continueToRegister(){
   closeModal('choose-type-modal');
