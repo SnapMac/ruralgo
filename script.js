@@ -2388,7 +2388,9 @@ function selectAccountType(type) {
   selectedAccountType = type;
   document.querySelectorAll('.account-type-option').forEach(el => el.classList.remove('selected'));
   document.getElementById(`account-type-${type}`).classList.add('selected');  
-}function continueToRegister(){
+}
+
+function continueToRegister(){
   closeModal('choose-type-modal');
   if(selectedAccountType==='client'){
     openModal('register-client-modal');
@@ -2400,10 +2402,13 @@ function selectAccountType(type) {
     setTimeout(()=>initAutocomplete('rs-address','rs-address-suggestions'),100);
   }
 }
+
 function adminTab(tab, btn) {
   document.querySelectorAll('.admin-side li').forEach(l => l.classList.remove('active'));
   if (btn) btn.classList.add('active');
-}// ============ FONCTION POUR LES FORFAITS COMMERCES ============
+}
+
+// ============ FONCTION POUR LES FORFAITS COMMERCES ============
 function openStoreRegisterModal(forfait) {
   // 1. On sauvegarde le forfait choisi pour s'en souvenir
   window.selectedForfait = forfait;
