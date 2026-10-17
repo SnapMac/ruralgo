@@ -288,12 +288,6 @@ function updateNotifBadge() {
   }
 }
 
-function toggleNotifPanel() {
-  const panel = document.getElementById('notif-panel');
-  panel.classList.toggle('show');
-  if (panel.classList.contains('show')) renderNotifications();
-}
-
 async function renderNotifications() {
   const list = document.getElementById('notif-list');
   if (!currentUser) {
@@ -2430,11 +2424,19 @@ async function markAllRead() {
   }
 }
 
+// ============ OUVRIR/FERMER LE PANNEAU DE NOTIFICATIONS ============
 function toggleNotifPanel() {
   const panel = document.getElementById('notif-panel');
   if (panel) {
-    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-  } 
+    // Si le panneau est visible, on le cache. Sinon, on l'affiche.
+    if (panel.style.display === 'block') {
+      panel.style.display = 'none';
+    } else {
+      panel.style.display = 'block';
+      // Quand on ouvre le panneau, on recharge les notifications
+      loadNotifications();
+    }
+  }
 }
 
 // ===== DÉTAILS DES FONCTIONNALITÉS =====
