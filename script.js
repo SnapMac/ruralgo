@@ -2403,11 +2403,6 @@ function continueToRegister(){
   }
 }
 
-function adminTab(tab, btn) {
-  document.querySelectorAll('.admin-side li').forEach(l => l.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-}
-
 // ============ FONCTION POUR LES FORFAITS COMMERCES ============
 function openStoreRegisterModal(forfait) {
   // 1. On sauvegarde le forfait choisi pour s'en souvenir
