@@ -2426,16 +2426,19 @@ async function markAllRead() {
 
 // ============ OUVRIR/FERMER LE PANNEAU DE NOTIFICATIONS ============
 function toggleNotifPanel() {
+  console.log("🔔 CLIC DÉTECTÉ SUR LA CLOCHE !");
+  alert("Le clic fonctionne !"); // <-- On ajoute ça pour tester
+  
   const panel = document.getElementById('notif-panel');
   if (panel) {
-    // Si le panneau est visible, on le cache. Sinon, on l'affiche.
     if (panel.style.display === 'block') {
       panel.style.display = 'none';
     } else {
       panel.style.display = 'block';
-      // Quand on ouvre le panneau, on recharge les notifications
       loadNotifications();
     }
+  } else {
+    console.error("❌ Le panneau #notif-panel n'a pas été trouvé dans le HTML !");
   }
 }
 
