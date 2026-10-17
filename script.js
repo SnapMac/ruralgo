@@ -1760,13 +1760,48 @@ async function adminCancelOrder(orderId) {
 }
 
 // ============ ADMIN - Commerces ============
+// ============ ADMIN - Commerces (VERSION CORRIGÉE) ============
 function renderAdminStores() {
   const c = document.getElementById('stores-table-container');
-  if (!stores.length) { c.innerHTML = '<div class="empty-state"><p>Aucun commerce</p></div>'; return; }
-  c.innerHTML = `<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Type</th><th>Adresse</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${stores.map(s => {
-    const prodCount = products.filter(p => p.storeId === s.id).length;
-    return `<tr><td style="font-size:2rem;text-align:center">${s.icon}</td><td><strong>${s.name}</strong></td><td>${s.type}</td><td style="font-size:0.9rem">${s.address}</td><td><span class="badge ${s.status === 'active' ? 'badge-green' : 'badge-red'}">${s.status === 'active' ? '✅ Actif' : '❌ Inactif'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editStore(${s.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('store',${s.id})">🗑️</button></div></td></tr>`;
-  }).join('')}</tbody></table>`;
+  
+  // ✅ FILTRE : On ne garde QUE les commerces dont le statut est 'active'
+  const activeStores = stores.filter(s => s.status === 'active');
+  
+  if (!activeStores.length) { 
+    c.innerHTML = '<div class="empty-state"><p>Aucun commerce actif pour le moment.</p></div>'; 
+    return; 
+  }
+  
+  c.innerHTML = `<table class="admin-table">
+    <thead>
+      <tr>
+        <th>Icon</th>
+        <th>Nom</th>
+        <th>Type</th>
+        <th>Adresse</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${activeStores.map(s => {
+        const prodCount = products.filter(p => p.storeId === s.id).length;
+        return `<tr>
+          <td style="font-size:2rem;text-align:center">${s.icon}</td>
+          <td><strong>${s.name}</strong></td>
+          <td>${s.type}</td>
+          <td style="font-size:0.9rem">${s.address}</td>
+          <td><span class="badge badge-green">✅ Actif</span></td>
+          <td>
+            <div class="action-btns">
+              <button class="action-btn btn-blue" onclick="editStore(${s.id})">✏️</button>
+              <button class="action-btn btn-red" onclick="confirmDelete('store',${s.id})">🗑️</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
 }
 
 function openStoreModal() {
