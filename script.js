@@ -1632,7 +1632,20 @@ function adminTab(tab, btn) {
   if (tab === 'drivers') renderAdminDrivers();
   if (tab === 'clients') renderAdminClients();
   if (tab === 'settings') renderAdminSettings();
+  if (targetSection) {
+    targetSection.style.display = 'block';
+    
+    // ✅ AJOUTE CES LIGNES
+    if (tabName === 'pending-stores') {
+      renderPendingStores();
+    } else if (tabName === 'drivers') {
+      if (typeof renderAdminDrivers === 'function') renderAdminDrivers();
+    } else if (tabName === 'stores') {
+      if (typeof renderAdminStores === 'function') renderAdminStores();
+    }
+  }
 }
+
 
 function renderAllAdmin() {
   renderAdminDashboard();
@@ -2016,6 +2029,94 @@ function renderAdminSettings() {
   `;
 }
 
+// ============ GESTION DES DEMANDES DE COMMERCES ============
+
+// Afficher les demandes de commerces en attente
+async function renderPendingStores() {
+  const container = document.getElementById('pending-stores-container');
+  if (!container) return;
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('stores')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    if (data.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:2rem;color:#666">Aucune demande en attente</div>';
+      return;
+    }
+    
+    container.innerHTML = data.map(store => `
+      <div style="background:white;padding:1.5rem;border-radius:12px;margin-bottom:1rem;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap">
+          <div style="flex:1;min-width:250px">
+            <h4 style="color:#0a1929;margin:0 0 0.5rem">${store.name}</h4>
+            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Type :</strong> ${store.type || 'Non spécifié'}</p>
+            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
+            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
+            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Email :</strong> ${store.email || 'Non spécifié'}</p>
+            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Forfait :</strong> ${store.forfait || 'Non spécifié'}</p>
+            <p style="margin:0.3rem 0;color:#999;font-size:0.85rem">Demandé le : ${new Date(store.created_at).toLocaleDateString('fr-CA')}</p>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button class="btn-sm btn-green" onclick="approveStore('${store.id}')">✅ Approuver</button>
+            <button class="btn-sm btn-red" onclick="rejectStore('${store.id}')">❌ Refuser</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    
+  } catch (error) {
+    console.error('Erreur renderPendingStores:', error);
+    container.innerHTML = '<div style="text-align:center;padding:2rem;color:red">Erreur de chargement</div>';
+  }
+}
+
+// Approuver un commerce
+async function approveStore(id) {
+  try {
+    // Mettre à jour le statut dans la table stores
+    const { error } = await supabaseClient
+      .from('stores')
+      .update({ status: 'active' })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    showToast('✅ Commerce approuvé !');
+    renderPendingStores(); // Rafraîchir la liste
+    
+  } catch (error) {
+    console.error('Erreur approveStore:', error);
+    showToast('❌ Erreur : ' + error.message);
+  }
+}
+
+// Refuser un commerce
+async function rejectStore(id) {
+  if (!confirm('Êtes-vous sûr de vouloir refuser cette demande ?')) return;
+  
+  try {
+    // Mettre à jour le statut dans la table stores
+    const { error } = await supabaseClient
+      .from('stores')
+      .update({ status: 'rejected' })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    showToast('❌ Commerce refusé');
+    renderPendingStores(); // Rafraîchir la liste
+    
+  } catch (error) {
+    console.error('Erreur rejectStore:', error);
+    showToast('❌ Erreur : ' + error.message);
+  }
+}
 async function saveSettings() {
   platformSettings.deliveryBaseFee = parseFloat(document.getElementById('set-base-fee').value) || 7.00;
   platformSettings.deliveryPerKm = parseFloat(document.getElementById('set-per-km').value) || 1.00;
