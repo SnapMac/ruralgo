@@ -410,3 +410,44 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
 .notif-item:hover { background: #f9f9f9; }
 .notif-item.unread { background: #fff8e1; }
 .notif-item.unread:hover { background: #fff3c4; }
+/* Le conteneur de la cloche doit être en position relative pour que le panneau se place par rapport à lui */
+#notif-bell-container {
+  position: relative;
+  display: block; /* ou flex, selon ton header */
+}
+
+/* La cloche elle-même */
+.notif-bell {
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 0.5rem;
+}
+
+/* Le panneau de notifications (caché par défaut) */
+.notif-panel {
+  display: none; /* Caché au départ */
+  position: absolute;
+  top: 100%; /* Juste en dessous de la cloche */
+  right: 0; /* Aligné à droite */
+  width: 300px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 9999; /* Très important : pour qu'il soit AU-DESSUS de tout le reste */
+  margin-top: 10px;
+}
+
+.notif-panel-header {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+}
+
+#notif-list {
+  max-height: 300px;
+  overflow-y: auto;
+}

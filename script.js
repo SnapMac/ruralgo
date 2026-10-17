@@ -1608,6 +1608,7 @@ function showDriverHistory() {
 
 // ============ ADMIN - DASHBOARD ET ONGLETS ============
 // ============ GESTION DES ONGLETS ADMIN (VERSION FINALE ET COMPLÈTE) ============
+// ============ GESTION DES ONGLETS ADMIN (VERSION FINALE COMPLÈTE) ============
 function adminTab(tabName, btnElement) {
   // 1. Enlever la classe "active" de tous les boutons du menu de gauche
   document.querySelectorAll('.admin-side li').forEach(li => {
@@ -1625,25 +1626,35 @@ function adminTab(tabName, btnElement) {
     section.style.display = 'none';
   });
 
-  // 4. Définir la section à afficher (ex: si tabName = 'stores', on cherche 'admin-stores')
+  // 4. Définir la section à afficher (ex: si tabName = 'settings', on cherche 'admin-settings')
   const targetSection = document.getElementById('admin-' + tabName);
 
-  // 5. Afficher la section et charger les données si nécessaire
+  // 5. Afficher la section et charger les données spécifiques à chaque onglet
   if (targetSection) {
     targetSection.style.display = 'block';
     
-    // Charger les données spécifiques à chaque onglet
-    if (tabName === 'pending-stores') {
-      if (typeof renderPendingStores === 'function') {
-        renderPendingStores();
-      }
-    } else if (tabName === 'stores') {
-      if (typeof renderAdminStores === 'function') {
-        renderAdminStores();
-      }
-    } else if (tabName === 'drivers') {
-      if (typeof renderAdminDrivers === 'function') {
-        renderAdminDrivers();
+    if (tabName === 'dashboard') {
+      // Rien de spécial à charger pour l'instant
+    } 
+    else if (tabName === 'pending-stores') {
+      if (typeof renderPendingStores === 'function') renderPendingStores();
+    } 
+    else if (tabName === 'stores') {
+      if (typeof renderAdminStores === 'function') renderAdminStores();
+    } 
+    else if (tabName === 'drivers') {
+      if (typeof renderAdminDrivers === 'function') renderAdminDrivers();
+    } 
+    else if (tabName === 'clients') {
+      if (typeof renderAdminClients === 'function') renderAdminClients();
+    } 
+    else if (tabName === 'orders') {
+      if (typeof renderAdminOrders === 'function') renderAdminOrders();
+    } 
+    else if (tabName === 'settings') {
+      // ✅ C'EST ICI QUE LA MAGIE OPÈRE POUR LES PARAMÈTRES !
+      if (typeof loadPlatformSettings === 'function') {
+        loadPlatformSettings(); 
       }
     }
   } else {
@@ -2170,24 +2181,63 @@ async function rejectStore(id) {
     showToast('❌ Erreur : ' + error.message);
   }
 }
+async function loadPlatformSettings() {
+  try {
+    // 1. Récupérer les paramètres depuis la table 'platform_settings'
+    const { data, error } = await supabaseClient
+      .from('platform_settings')
+      .select('*')
+      .eq('id', 1)
+      .single(); // .single() car on ne veut qu'une seule ligne
+
+    if (error && error.code !== 'PGRST116') { 
+      // PGRST116 signifie "aucune ligne trouvée", ce n'est pas grave, on utilisera les valeurs par défaut
+      throw error;
+    }
+
+    if (data) {
+      // 2. Mettre à jour l'objet local avec les vraies données de la base
+      platformSettings.deliveryBaseFee = data.delivery_base_fee || 7.00;
+      platformSettings.deliveryPerKm = data.delivery_per_km || 1.00;
+      platformSettings.taxRate = data.tax_rate || 0.14975;
+      platformSettings.driverCommission = data.driver_commission || 0.20;
+      platformSettings.radius = data.radius || 40;
+    }
+
+    // 3. Mettre à jour l'affichage des champs dans l'admin
+    renderAdminSettings();
+    
+  } catch (err) {
+    console.error('Erreur loadPlatformSettings:', err);
+  }
+}
+
 async function saveSettings() {
+  // 1. Mettre à jour l'objet local
   platformSettings.deliveryBaseFee = parseFloat(document.getElementById('set-base-fee').value) || 7.00;
   platformSettings.deliveryPerKm = parseFloat(document.getElementById('set-per-km').value) || 1.00;
   platformSettings.taxRate = parseFloat(document.getElementById('set-tax-rate').value) || 0.14975;
   platformSettings.driverCommission = parseFloat(document.getElementById('set-commission').value) || 0.20;
-  platformSettings.radius = parseInt(document.getElementById('set-radius').value) || 40;
+  platformSettings.radius = parseInt(document.getElementById('set-radius').value) || 40;                  
 
   try {
-    await supabaseClient.from('settings').upsert({
-      id: 1,
+    // 2. Sauvegarder dans la BONNE table : 'platform_settings'
+    const { error } = await supabaseClient.from('platform_settings').upsert({
+      id: 1, // On suppose qu'il n'y a qu'une seule ligne de paramètres avec l'ID 1
       delivery_base_fee: platformSettings.deliveryBaseFee,
       delivery_per_km: platformSettings.deliveryPerKm,
       tax_rate: platformSettings.taxRate,
       driver_commission: platformSettings.driverCommission,
       radius: platformSettings.radius
-    });
-    showToast('✅ Paramètres enregistrés !');
-    renderAdminSettings();
+    }, { onConflict: 'id' }); // Indispensable pour que l'upsert fonctionne
+
+    if (error) throw error;
+
+    showToast('✅ Paramètres enregistrés et synchronisés avec Supabase !');
+    
+    // Optionnel : recharger pour être sûr que tout est à jour
+    loadPlatformSettings(); 
+    
     if (currentUser && currentUser.role === 'client') updateCart();
   } catch (err) {
     console.error('Erreur saveSettings:', err);
