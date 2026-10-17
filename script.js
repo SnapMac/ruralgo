@@ -2046,12 +2046,6 @@ function showToast(msg) {
 
 
 // ============ FONCTION POUR LES FORFAITS COMMERCES ============
-function openStoreRegisterModal(forfait) {
-  // Stocker le forfait choisi pour l'utiliser plus tard
-  window.selectedForfait = forfait;
-  // Ouvrir la modal de choix de type de compte
-  openChooseTypeModal();
-}
 
 // ============ ANIMATIONS ============
 function initScrollAnimations() {
@@ -2065,16 +2059,7 @@ function initScrollAnimations() {
 }
 setTimeout(initScrollAnimations, 500);
 
-// ============ FONCTION POUR LES FORFAITS COMMERCES ============
-function openStoreRegisterModal(forfait) {
-  const noms = {
-    'essai': 'Essai (0$/mois)',
-    'base': 'Base (7,99$/mois)',
-    'croissance': 'Croissance (29,99$/mois)',
-    'partenaire': 'Partenaire Plus (89,99$/mois)'
-  };
-  showToast('🏪 Forfait choisi : ' + noms[forfait] + ' — Formulaire à venir !');
-}
+
 // ============ DÉMARRAGE ============
 window.addEventListener('load', async function() {
   await load();
@@ -2398,14 +2383,11 @@ function closeFeatureDetailModal() {
   }
 }
 // ============ FONCTION POUR LES FORFAITS COMMERCES ============
-function openStoreRegisterModal(forfait) {
-  const noms = {
-    'essai': 'Essai (0$/mois)',
-    'base': 'Base (7,99$/mois)',
-    'croissance': 'Croissance (29,99$/mois)',
-    'partenaire': 'Partenaire Plus (89,99$/mois)'
-  };
-  showToast('🏪 Forfait choisi : ' + noms[forfait] + ' — Formulaire à venir !');
+
+function selectAccountType(type) {
+  selectedAccountType = type;
+  document.querySelectorAll('.account-type-option').forEach(el => el.classList.remove('selected'));
+  document.getElementById(`account-type-${type}`).classList.add('selected');  
 }function continueToRegister(){
   closeModal('choose-type-modal');
   if(selectedAccountType==='client'){
@@ -2421,4 +2403,27 @@ function openStoreRegisterModal(forfait) {
 function adminTab(tab, btn) {
   document.querySelectorAll('.admin-side li').forEach(l => l.classList.remove('active'));
   if (btn) btn.classList.add('active');
+}// ============ FONCTION POUR LES FORFAITS COMMERCES ============
+function openStoreRegisterModal(forfait) {
+  // 1. On sauvegarde le forfait choisi pour s'en souvenir
+  window.selectedForfait = forfait;
+  
+  // 2. Petit message de confirmation
+  const noms = {
+    'essai': 'Essai (0$/mois)',
+    'base': 'Base (7,99$/mois)',
+    'croissance': 'Croissance (29,99$/mois)',
+    'partenaire': 'Partenaire Plus (89,99$/mois)'
+  };
+  showToast('🏪 Forfait choisi : ' + noms[forfait]);
+
+  // 3. On ouvre DIRECTEMENT le formulaire d'inscription commerce
+  openModal('register-store-modal');
+  
+  // 4. On active l'autocomplétion d'adresse du formulaire commerce (comme dans continueToRegister)
+  setTimeout(() => {
+    if (typeof initAutocomplete === 'function') {
+      initAutocomplete('rs-address', 'rs-address-suggestions');
+    }
+  }, 100);
 }
