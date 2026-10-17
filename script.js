@@ -146,8 +146,8 @@ const STATUS_LABELS = {
   'confirmed': {label:'Confirmée', class:'status-confirmed'},
   'searching_driver': {label:'Recherche livreur', class:'status-searching'},
   'driver_assigned': {label:'Livreur assigné', class:'status-assigned'},
-  'driver_to_store': {label:'En route vers magasin', class:'status-pickup'},
-  'at_store': {label:'Au magasin', class:'status-pickup'},
+  'driver_to_store': {label:'En route vers Commerce', class:'status-pickup'},
+  'at_store': {label:'Au commerce', class:'status-pickup'},
   'picked_up': {label:'Commande récupérée', class:'status-delivering'},
   'driver_to_client': {label:'En route vers vous', class:'status-delivering'},
   'delivered': {label:'Livrée', class:'status-delivered'},
@@ -749,14 +749,14 @@ function renderLandingStores() {
 
 function openStoreFromLanding(storeId) {
   if (!currentUser) {
-    showToast('🔑 Connectez-vous pour voir les magasins');
+    showToast('🔑 Connectez-vous pour voir les Commerces');
     setTimeout(() => openChooseTypeModal(), 1000);
     return;
   }
   openStoreDetail(storeId);
 }
 
-// ============ CLIENT - MAGASINS ============
+// ============ CLIENT - COMMERCE ============
 function showClientStores() {
   switchView('view-client');
   document.getElementById('stores-section').style.display = 'block';
@@ -772,7 +772,7 @@ function renderClientStores() {
   const g = document.getElementById('stores-grid');
   const active = stores.filter(s => s.status === 'active');
   if (!active.length) {
-    g.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏪</div><p>Aucun magasin</p></div>';
+    g.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏪</div><p>Aucun commerce</p></div>';
     return;
   }
   g.innerHTML = active.map(s => {
@@ -914,7 +914,7 @@ function updateCart() {
     feeDetails.innerHTML = `
       <div class="delivery-fee-breakdown">
         <h4>🚗 Détail des frais de livraison</h4>
-        <div class="delivery-fee-line"><span>🏪 Magasin :</span><strong>${store.name}</strong></div>
+        <div class="delivery-fee-line"><span>🏪 Commerce :</span><strong>${store.name}</strong></div>
         <div class="delivery-fee-line"><span>📍 Distance :</span><strong>${deliveryInfo.distanceKm.toFixed(1)} km</strong></div>
         <div class="delivery-fee-line"><span>💰 Frais de base :</span><span>${deliveryInfo.baseFee.toFixed(2)} $</span></div>
         <div class="delivery-fee-line"><span>📏 ${deliveryInfo.distanceKm.toFixed(1)} km × ${perKm.toFixed(2)} $/km :</span><span>${deliveryInfo.perKmFee.toFixed(2)} $</span></div>
@@ -1022,7 +1022,7 @@ async function renderClientOrders() {
           <span class="status-badge ${st.class}">${st.label}</span>
         </div>
         <div class="order-card-details">
-          <div>🏪 ${o.storeName || 'Magasin'}</div>
+          <div>🏪 ${o.storeName || 'Commerce'}</div>
           <div>📦 ${o.items.length} article(s)</div>
           <div>💰 <strong>${o.total.toFixed(2)} $</strong></div>
           <div>🚗 Livraison : ${o.deliveryFee.toFixed(2)} $</div>
@@ -1066,8 +1066,8 @@ function showClientOrderDetail(orderId) {
     { status: 'confirmed', icon: '✅', title: 'Paiement confirmé' },
     { status: 'searching_driver', icon: '🔍', title: 'Recherche livreur' },
     { status: 'driver_assigned', icon: '🚗', title: 'Livreur assigné' },
-    { status: 'driver_to_store', icon: '🛣️', title: 'En route vers magasin' },
-    { status: 'at_store', icon: '🏪', title: 'Au magasin' },
+    { status: 'driver_to_store', icon: '🛣️', title: 'En route vers commerce' },
+    { status: 'at_store', icon: '🏪', title: 'Au commerce' },
     { status: 'picked_up', icon: '📦', title: 'Commande récupérée' },
     { status: 'driver_to_client', icon: '🚗', title: 'En route vers vous' },
     { status: 'delivered', icon: '🏠', title: 'Livrée !' }
@@ -1087,7 +1087,7 @@ function showClientOrderDetail(orderId) {
   html += `<div class="profile-section">
     <h3 style="color:#0a1929;margin-bottom:1rem">📋 Détails</h3>
     <div class="profile-grid">
-      <div class="profile-field"><label>Magasin</label><div class="value">${order.storeName || '-'}</div></div>
+      <div class="profile-field"><label>Commerce</label><div class="value">${order.storeName || '-'}</div></div>
       <div class="profile-field"><label>Livreur</label><div class="value">${order.driverName || 'En attente'}</div></div>
       <div class="profile-field"><label>Adresse</label><div class="value">${order.clientAddress}</div></div>
       <div class="profile-field"><label>Téléphone</label><div class="value">${order.clientPhone}</div></div>
@@ -1135,7 +1135,7 @@ async function placeOrder() {
 
   const store = getCurrentStore();
   if (!store) {
-    showToast('❌ Magasin introuvable');
+    showToast('❌ Commerce introuvable');
     return;
   }
 
@@ -1346,7 +1346,7 @@ function renderDriverDashboard() {
       const dist = (o.deliveryDistanceKm || 0).toFixed(1);
       return `<div class="driver-order">
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
-          <div><h4>Commande #${o.orderNumber}</h4><p style="color:#666">${o.storeName || 'Magasin'}</p></div>
+          <div><h4>Commande #${o.orderNumber}</h4><p style="color:#666">${o.storeName || 'Commerce'}</p></div>
           <span style="background:#f5f1e8;padding:0.3rem 0.8rem;border-radius:20px;color:#0a1929;font-weight:bold">+ ${earning} $</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:1rem 0;font-size:0.9rem">
@@ -1438,8 +1438,8 @@ async function updateOrderStatus(orderId, newStatus) {
     }).eq('id', orderId);
 
     const messages = {
-      'driver_to_store': '🛣️ En route vers le magasin',
-      'at_store': '🏪 Arrivé au magasin',
+      'driver_to_store': '🛣️ En route vers le commerce',
+      'at_store': '🏪 Arrivé au commerce',
       'picked_up': '📦 Commande récupérée',
       'driver_to_client': '🚗 En route vers vous',
       'delivered': '🏠 Livraison complétée !'
@@ -1593,7 +1593,7 @@ function renderAdminDashboard() {
   if (recent.length === 0) {
     recentDiv.innerHTML = '<div class="empty-state"><p>Aucune commande</p></div>';
   } else {
-    recentDiv.innerHTML = `<table class="admin-table"><thead><tr><th>#</th><th>Client</th><th>Magasin</th><th>Livraison</th><th>Statut</th><th>Total</th></tr></thead><tbody>${recent.map(o => {
+    recentDiv.innerHTML = `<table class="admin-table"><thead><tr><th>#</th><th>Client</th><th>Commerce</th><th>Livraison</th><th>Statut</th><th>Total</th></tr></thead><tbody>${recent.map(o => {
       const st = STATUS_LABELS[o.status];
       return `<tr><td>${o.orderNumber}</td><td>${o.clientName}</td><td>${o.storeName || '-'}</td><td>${o.deliveryFee.toFixed(2)}$ (${(o.deliveryDistanceKm || 0).toFixed(1)}km)</td><td><span class="status-badge ${st.class}">${st.label}</span></td><td><strong>${o.total.toFixed(2)} $</strong></td></tr>`;
     }).join('')}</tbody></table>`;
@@ -1618,7 +1618,7 @@ function renderAdminOrders() {
     list.innerHTML = '<div class="empty-state"><p>Aucune commande</p></div>';
     return;
   }
-  list.innerHTML = `<table class="admin-table"><thead><tr><th>#</th><th>Client</th><th>Magasin</th><th>Livraison</th><th>Statut</th><th>Total</th><th>Actions</th></tr></thead><tbody>${filtered.map(o => {
+  list.innerHTML = `<table class="admin-table"><thead><tr><th>#</th><th>Client</th><th>Commerce</th><th>Livraison</th><th>Statut</th><th>Total</th><th>Actions</th></tr></thead><tbody>${filtered.map(o => {
     const st = STATUS_LABELS[o.status];
     return `<tr><td><strong>${o.orderNumber}</strong><br><span style="font-size:0.75rem;color:#999">${new Date(o.createdAt).toLocaleString('fr-CA')}</span></td><td>${o.clientName}<br><span style="font-size:0.8rem;color:#666">${o.clientPhone}</span></td><td>${o.storeName || '-'}</td><td><strong>${o.deliveryFee.toFixed(2)} $</strong><br><span style="font-size:0.75rem;color:#666">${(o.deliveryDistanceKm || 0).toFixed(1)} km</span></td><td><span class="status-badge ${st.class}">${st.label}</span></td><td><strong>${o.total.toFixed(2)} $</strong></td><td><div class="action-btns">${!o.driverId && o.status !== 'cancelled' && o.status !== 'delivered' ? `<button class="action-btn btn-blue" onclick="assignDriverModal(${o.id})">🚗 Assigner</button>` : ''}${!['cancelled','delivered'].includes(o.status) ? `<button class="action-btn btn-red" onclick="adminCancelOrder(${o.id})">❌</button>` : ''}</div></td></tr>`;
   }).join('')}</tbody></table>`;
@@ -1680,10 +1680,10 @@ async function adminCancelOrder(orderId) {
   }
 }
 
-// ============ ADMIN - MAGASINS ============
+// ============ ADMIN - Commerces ============
 function renderAdminStores() {
   const c = document.getElementById('stores-table-container');
-  if (!stores.length) { c.innerHTML = '<div class="empty-state"><p>Aucun magasin</p></div>'; return; }
+  if (!stores.length) { c.innerHTML = '<div class="empty-state"><p>Aucun commerce</p></div>'; return; }
   c.innerHTML = `<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Type</th><th>Adresse</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${stores.map(s => {
     const prodCount = products.filter(p => p.storeId === s.id).length;
     return `<tr><td style="font-size:2rem;text-align:center">${s.icon}</td><td><strong>${s.name}</strong></td><td>${s.type}</td><td style="font-size:0.9rem">${s.address}</td><td><span class="badge ${s.status === 'active' ? 'badge-green' : 'badge-red'}">${s.status === 'active' ? '✅ Actif' : '❌ Inactif'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editStore(${s.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('store',${s.id})">🗑️</button></div></td></tr>`;
@@ -1691,7 +1691,7 @@ function renderAdminStores() {
 }
 
 function openStoreModal() {
-  document.getElementById('store-modal-title').textContent = '➕ Ajouter un magasin';
+  document.getElementById('store-modal-title').textContent = '➕ Ajouter un commerce';
   document.getElementById('store-id').value = '';
   document.getElementById('store-name').value = '';
   document.getElementById('store-type').value = '';
@@ -1748,12 +1748,12 @@ async function saveStore(e) {
       await supabaseClient.from('stores').update(storeData).eq('id', parseInt(id));
       const idx = stores.findIndex(s => s.id === parseInt(id));
       stores[idx] = { ...stores[idx], ...storeData };
-      showToast('✅ Magasin modifié !');
+      showToast('✅ Commerce modifié !');
     } else {
       const { data: newStore, error } = await supabaseClient.from('stores').insert(storeData).select().single();
       if (error) throw error;
       stores.push(newStore);
-      showToast('✅ Magasin ajouté !');
+      showToast('✅ Commerce ajouté !');
     }
     closeModal('store-modal');
     renderAdminStores();
@@ -1834,7 +1834,7 @@ async function saveCategory(e) {
 function renderAdminProducts() {
   const c = document.getElementById('products-table-container');
   if (!products.length) { c.innerHTML = '<div class="empty-state"><p>Aucun produit</p></div>'; return; }
-  c.innerHTML = `<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Magasin</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr></thead><tbody>${products.map(p => {
+  c.innerHTML = `<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Commerce</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr></thead><tbody>${products.map(p => {
     const s = stores.find(x => x.id === p.storeId);
     const cat = categories.find(x => x.id === p.categoryId);
     return `<tr><td style="font-size:1.5rem;text-align:center">${p.icon}</td><td><strong>${p.name}</strong></td><td>${s ? s.name : '-'}</td><td>${cat ? cat.icon + ' ' + cat.name : '-'}</td><td><strong>${p.price.toFixed(2)} $</strong></td><td><span class="badge ${p.available ? 'badge-green' : 'badge-red'}">${p.available ? '✅' : '❌'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editProduct(${p.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('product',${p.id})">🗑️</button></div></td></tr>`;
@@ -1983,7 +1983,7 @@ function confirmDelete(type, id) {
       if (type === 'store') {
         await supabaseClient.from('stores').delete().eq('id', id);
         stores = stores.filter(s => s.id !== id);
-        showToast('✅ Magasin supprimé');
+        showToast('✅ Commerce supprimé');
       } else if (type === 'category') {
         await supabaseClient.from('categories').delete().eq('id', id);
         categories = categories.filter(c => c.id !== id);
@@ -2243,7 +2243,7 @@ function showFeatureDetail(type) {
         <li>✅ Dès que votre commande est confirmée, un livreur est assigné</li>
         <li>✅ Vous recevez une notification avec les détails du livreur</li>
         <li>✅ Ouvrez la carte pour voir la position en temps réel</li>
-        <li>✅ Suivez le parcours du magasin jusqu'à chez vous</li>
+        <li>✅ Suivez le parcours du commerce jusqu'à chez vous</li>
         <li>✅ Estimation précise de l'heure d'arrivée</li>
       </ul>
       <div style="margin-top:1.5rem;padding:1rem;background:#e8f5e9;border-radius:8px;border-left:4px solid #4caf50">
