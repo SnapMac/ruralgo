@@ -2067,24 +2067,36 @@ function renderAdminSettings() {
 // ============ GESTION DES DEMANDES DE COMMERCES ============
 
 // Afficher les demandes de commerces en attente
+// ============ ADMIN - Demandes de commerces en attente ============
 async function renderPendingStores() {
   const container = document.getElementById('pending-stores-container');
-  if (!container) return;
-  
+  if (!container) {
+    console.log("⚠️ Erreur : Le conteneur 'pending-stores-container' est introuvable dans le HTML.");
+    return;
+  }
+
+  console.log("🔄 Chargement des demandes de commerces en attente...");
+
   try {
     const { data, error } = await supabaseClient
       .from('stores')
       .select('*')
-      .eq('status', 'pending')
+      .eq('status', 'pending') // On cherche uniquement les commerces en attente
       .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    if (data.length === 0) {
-      container.innerHTML = '<div style="text-align:center;padding:2rem;color:#666">Aucune demande en attente</div>';
+
+    if (error) {
+      console.error("❌ Erreur Supabase :", error);
+      throw error;
+    }
+
+    // 🕵️‍♂️ C'est la ligne magique : elle nous dira combien de commerces elle a trouvés
+    console.log("✅ Données reçues de Supabase :", data); 
+
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:2rem;color:#666">Aucune demande en attente pour le moment.</div>';
       return;
     }
-    
+
     container.innerHTML = data.map(store => `
       <div style="background:white;padding:1.5rem;border-radius:12px;margin-bottom:1rem;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
         <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap">
@@ -2107,7 +2119,7 @@ async function renderPendingStores() {
     
   } catch (error) {
     console.error('Erreur renderPendingStores:', error);
-    container.innerHTML = '<div style="text-align:center;padding:2rem;color:red">Erreur de chargement</div>';
+    container.innerHTML = '<div style="text-align:center;padding:2rem;color:red">Erreur de chargement des données</div>';
   }
 }
 
