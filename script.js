@@ -551,6 +551,7 @@ function correctPassword(pass) {
 
 // ============ INSCRIPTION COMMERCE ============
 // ============ INSCRIPTION COMMERCE (VERSION CORRIGÉE) ============
+// ============ INSCRIPTION COMMERCE (VERSION AVEC TOAST AMÉLIORÉ) ============
 async function registerStore(event) {
   event.preventDefault();
   
@@ -585,7 +586,7 @@ async function registerStore(event) {
   
   // 4. Créer le compte dans Supabase Auth
   try {
-    showToast('📨 Création du compte en cours...');
+    showToast('📨 Envoi de votre demande en cours...');
     
     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
       email: email,
@@ -600,7 +601,7 @@ async function registerStore(event) {
     
     if (authError) throw authError;
     
-    // 5. ✅ VERSION CORRIGÉE : Créer le profil dans la table profiles (seulement les infos de base)
+    // 5. Créer le profil dans la table profiles
     const { error: profileError } = await supabaseClient.from('profiles').insert({
       id: authData.user.id,
       email: email,
@@ -612,7 +613,7 @@ async function registerStore(event) {
     
     if (profileError) throw profileError;
     
-    // 6. ✅ Créer l'entrée COMPLÈTE dans la table stores (toutes les infos du commerce)
+    // 6. Créer l'entrée dans la table stores
     const { error: storeError } = await supabaseClient.from('stores').insert({
       owner_id: authData.user.id,
       name: name,
@@ -625,26 +626,28 @@ async function registerStore(event) {
       status: 'pending'
     });
     
-    if (storeError) {
-      console.error('Erreur stores:', storeError);
-      throw storeError;
-    }
+    if (storeError) throw storeError;
     
-    // 7. Fermer le modal et afficher le message de succès
+    // 7. ✅ FERMER LE MODAL ET AFFICHER LE TOAST DE SUCCÈS
     closeModal('register-store-modal');
-    showToast('✅ Demande envoyée ! Votre commerce sera examiné sous peu.');
+    
+    // Toast bien visible avec message clair
+    showToast('✅ Demande envoyée avec succès ! Votre commerce sera examiné par un administrateur. Vous recevrez une confirmation par courriel.');
     
     // 8. Réinitialiser le formulaire
     event.target.reset();
+    
+    // 9. Optionnel : Rediriger vers la page d'accueil après 3 secondes
+    setTimeout(() => {
+      showToast('🏠 Retour à la page d\'accueil...');
+      goHome();
+    }, 3000);
     
   } catch (error) {
     console.error('Erreur registerStore:', error);
     
     if (error.message && error.message.includes('already registered')) {
       showToast('❌ Cet email est déjà utilisé');
-    } else if (error.message && error.message.includes('Could not find')) {
-      showToast('❌ Erreur de base de données : ' + error.message);
-      console.error('Détail de l\'erreur base de données :', error);
     } else {
       showToast('❌ Erreur : ' + (error.message || 'Erreur inconnue'));
     }
