@@ -2748,7 +2748,17 @@ async function addNotification(userId, title, message, type = 'info') {
     console.error('Erreur addNotification:', err);
   }
 }
-
+function updateNotifBadge() {
+  if (!currentUser) return;
+  const userNotifs = notifications.filter(n => String(n.userId) === String(currentUser.id) && !n.read);
+  const badge = document.getElementById('notif-badge');
+  if (userNotifs.length > 0) {
+    badge.style.display = 'flex';
+    badge.textContent = userNotifs.length;
+  } else {
+    badge.style.display = 'none';
+  }
+}
 async function loadNotifications() {
   if (!currentUser) return;
   try {
