@@ -2007,12 +2007,44 @@ async function saveProduct(e) {
 // ============ ADMIN - CLIENTS ET LIVREURS ============
 function renderAdminClients() {
   const c = document.getElementById('clients-table-container');
-  if (!clients.length) { c.innerHTML = '<div class="empty-state"><p>Aucun client</p></div>'; return; }
-  c.innerHTML = `<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Adresse</th><th>Commandes</th><th>Total</th></tr></thead><tbody>${clients.map(cl => {
-    const myOrders = orders.filter(o => o.clientId === cl.id);
-    const total = myOrders.reduce((s, o) => s + o.total, 0);
-    return `<tr><td><strong>${cl.name}</strong></td><td>${cl.email}</td><td>${cl.phone}</td><td style="font-size:0.85rem">${cl.address}</td><td>${myOrders.length}</td><td><strong>${total.toFixed(2)} $</strong></td></tr>`;
-  }).join('')}</tbody></table>`;
+  if (!clients.length) { 
+    c.innerHTML = '<div class="empty-state"><p>Aucun client</p></div>'; 
+    return; 
+  }
+  c.innerHTML = `<table class="admin-table">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Email</th>
+        <th>Téléphone</th>
+        <th>Adresse</th>
+        <th>Commandes</th>
+        <th>Total</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    ${clients.map(cl => {
+      const myOrders = orders.filter(o => o.clientId === cl.id);
+      const total = myOrders.reduce((s, o) => s + o.total, 0);
+      return `
+        <tr onclick="viewClientDetails('${cl.id}')" style="cursor:pointer">
+          <td><strong>${cl.name}</strong></td>
+          <td>${cl.email}</td>
+          <td>${cl.phone}</td>
+          <td style="font-size:0.85rem">${cl.address}</td>
+          <td>${myOrders.length}</td>
+          <td><strong>${total.toFixed(2)} $</strong></td>
+          <td>
+            <div class="action-btns">
+              <button class="action-btn btn-blue" onclick="event.stopPropagation(); editClient('${cl.id}')">✏️</button>
+              <button class="action-btn btn-red" onclick="event.stopPropagation(); confirmDeleteClient('${cl.id}')">🗑️</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
 }
 
 function renderAdminDrivers() {
@@ -3057,3 +3089,104 @@ setInterval(() => {
   }
 }, 30000);
 
+// ============ MODIFIER UN CLIENT ============
+function editClient(id) {
+  const client = clients.find(c => String(c.id) === String(id));
+  if (!client) {
+    showToast('❌ Client introuvable');
+    return;
+  }
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg show';
+  modal.id = 'edit-client-modal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:600px">
+      <h2 style="color:#0a1929;margin-bottom:1.5rem">✏️ Modifier le client</h2>
+      <form onsubmit="saveClientEdit(event, '${id}')">
+        <div class="form-group">
+          <label>👤 Nom complet</label>
+          <input type="text" id="ec-name" value="${client.name}" required>
+        </div>
+        <div class="form-group">
+          <label>📧 Email</label>
+          <input type="email" id="ec-email" value="${client.email || ''}" required>
+        </div>
+        <div class="form-group">
+          <label>📱 Téléphone</label>
+          <input type="tel" id="ec-phone" value="${client.phone || ''}" required>
+        </div>
+        <div class="form-group">
+          <label>📍 Adresse</label>
+          <input type="text" id="ec-address" value="${client.address || ''}" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-sm btn-gray" onclick="document.getElementById('edit-client-modal').remove()">Annuler</button>
+          <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function saveClientEdit(event, id) {
+  event.preventDefault();
+  try {
+    const updateData = {
+      name: document.getElementById('ec-name').value,
+      email: document.getElementById('ec-email').value,
+      phone: document.getElementById('ec-phone').value,
+      address: document.getElementById('ec-address').value
+    };
+    
+    const { error } = await supabaseClient
+      .from('profiles')
+      .update(updateData)
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    // Mettre à jour le tableau local
+    const idx = clients.findIndex(c => String(c.id) === String(id));
+    if (idx >= 0) {
+      clients[idx] = { ...clients[idx], ...updateData };
+    }
+    
+    document.getElementById('edit-client-modal').remove();
+    showToast('✅ Client modifié !');
+    renderAdminClients();
+  } catch (err) {
+    console.error('Erreur saveClientEdit:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ============ SUPPRIMER UN CLIENT ============
+async function confirmDeleteClient(id) {
+  if (!confirm('⚠️ Voulez-vous vraiment supprimer ce client ?\n\nCette action supprimera aussi :\n- Ses commandes\n- Ses notifications\n- Son profil\n\nCette action est IRRÉVERSIBLE !')) {
+    return;
+  }
+  
+  try {
+    // 1. Supprimer les commandes du client
+    await supabaseClient.from('orders').delete().eq('client_id', id);
+    
+    // 2. Supprimer les notifications du client
+    await supabaseClient.from('notifications').delete().eq('user_id', id);
+    
+    // 3. Supprimer le profil du client
+    const { error } = await supabaseClient.from('profiles').delete().eq('id', id);
+    if (error) throw error;
+    
+    // 4. Mettre à jour le tableau local
+    clients = clients.filter(c => String(c.id) !== String(id));
+    
+    showToast('✅ Client supprimé !');
+    renderAdminClients();
+    renderAdminDashboard();
+  } catch (err) {
+    console.error('Erreur confirmDeleteClient:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
