@@ -657,15 +657,22 @@ function showUserInterface() {
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('user-section').style.display = 'flex';
   document.getElementById('notif-bell-container').style.display = 'block';
+  
   const ini = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('user-avatar').textContent = ini;
   document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
+  
+  // ✅ CORRECTION 1 : Ajout de 'store' dans les labels
   const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
   document.getElementById('user-role').textContent = labels[currentUser.role];
+  
   document.getElementById('nav-client').style.display = 'none';
   document.getElementById('nav-driver').style.display = 'none';
   document.getElementById('nav-admin').style.display = 'none';
-  document.getElementById('nav-store').style.display = 'none';
+  
+  const navStore = document.getElementById('nav-store');
+  if (navStore) navStore.style.display = 'none';
+
   if (currentUser.role === 'client') {
     document.getElementById('nav-client').style.display = 'block';
     document.getElementById('client-firstname').textContent = currentUser.name.split(' ')[0];
@@ -681,7 +688,10 @@ function showUserInterface() {
     document.getElementById('nav-admin').style.display = 'block';
     switchView('view-admin');
     renderAllAdmin();
-  } else if (currentUser.role === 'store') {
+  } else if (currentUser.role === 'store') { 
+    // ✅ CORRECTION 2 : Le bloc qui manquait totalement pour les commerces !
+    if (navStore) navStore.style.display = 'block';
+    
     if (currentUser.status === 'pending') {
       switchView('view-landing');
       showToast('⏳ Votre commerce est en attente d\'approbation.');
@@ -689,9 +699,10 @@ function showUserInterface() {
       switchView('view-landing');
       showToast('❌ Votre demande a été refusée.');
     } else {
-      document.getElementById('nav-store').style.display = 'block';
       switchView('view-store');
-      showStoreDashboard();
+      if (typeof showStoreDashboard === 'function') {
+        showStoreDashboard();
+      }
     }
   }
   updateNotifBadge();
