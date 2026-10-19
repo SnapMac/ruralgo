@@ -185,6 +185,7 @@
         </div>
       </div>
     </div>
+
   </section>
 
   <section class="why-section">
@@ -239,6 +240,7 @@
       <div class="step-card"><div class="step-number">3</div><div class="step-icon">🛒</div><h3>Ajoutez au panier</h3><p>Sélectionnez vos produits</p></div>
       <div class="step-card"><div class="step-number">4</div><div class="step-icon">💰</div><h3>Payez selon la distance</h3><p>7$ + 1$/km calculé automatiquement</p></div>
     </div>
+    
   </section>
 
   <section class="testimonials-section">
@@ -737,6 +739,11 @@
       <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('store-addr')">📍 Utiliser ma position GPS</button>
     </div>
     <div class="form-group"><label>Téléphone</label><input type="tel" id="store-phone"></div>
+    <div class="form-group">
+  <label>🖼️ Logo du commerce (URL)</label>
+  <input type="url" id="store-logo" placeholder="https://exemple.com/logo.png">
+  <small style="color:#666;font-size:0.8rem">💡 Laissez vide pour utiliser l'icône par défaut. Vous pouvez héberger votre logo sur <a href="https://imgur.com" target="_blank" style="color:#0a1929">Imgur</a> ou <a href="https://cloudinary.com" target="_blank" style="color:#0a1929">Cloudinary</a> gratuitement.</small>
+</div>
     <div class="form-group"><label>Icône *</label><div class="icon-picker" id="store-icon-picker"></div><input type="hidden" id="store-icon"></div>
     <div class="form-group"><label>Statut</label><select id="store-status"><option value="active">✅ Actif</option><option value="inactive">❌ Inactif</option></select></div>
     <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('store-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">💾 Enregistrer</button></div>

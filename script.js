@@ -183,7 +183,12 @@ function getCurrentStore() {
 async function load() {
   try {
     const { data: storesData } = await supabaseClient.from('stores').select('*');
-    if (storesData && storesData.length > 0) stores = storesData;
+if (storesData && storesData.length > 0) {
+  stores = storesData.map(s => ({
+    ...s,
+    logo: s.logo || null
+  }));
+}
 
     const { data: catsData } = await supabaseClient.from('categories').select('*');
     if (catsData && catsData.length > 0) categories = catsData;
@@ -791,8 +796,8 @@ function renderLandingStores() {
   const active = stores.filter(s => s.status === 'active').slice(0, 6);
   g.innerHTML = active.map(s => {
     const count = products.filter(p => p.storeId === s.id && p.available).length;
-    return `<div class="store" onclick="openStoreFromLanding(${s.id})">
-      <div class="store-img">${s.icon}</div>
+    return`<div class="store" onclick="openStoreFromLanding(${s.id})">
+<div class="store-img">${s.logo ? `<img src="${s.logo}" alt="${s.name}">` : `<span class="emoji-fallback">${s.icon}</span>`}</div>
       <div class="store-info">
         <h3>${s.name}</h3>
         <p style="color:#666;font-size:0.9rem">${s.type}</p>
@@ -834,8 +839,7 @@ function renderClientStores() {
   g.innerHTML = active.map(s => {
     const count = products.filter(p => p.storeId === s.id && p.available).length;
     const dist = userPosition ? calculateDistance(userPosition.lat, userPosition.lng, s.lat, s.lng) : null;
-    return `<div class="store" onclick="openStoreDetail(${s.id})">
-      <div class="store-img">${s.icon}</div>
+   return`<div class="store" onclick="openStoreDetail(${s.id})"><div class="store-img">${s.logo ? `<img src="${s.logo}" alt="${s.name}">` : `<span class="emoji-fallback">${s.icon}</span>`}</div>
       <div class="store-info">
         <h3>${s.name}</h3>
         <p style="color:#666;font-size:0.9rem">${s.type}</p>
@@ -856,8 +860,7 @@ function openStoreDetail(storeId) {
   const storeProducts = products.filter(p => p.storeId === storeId && p.available);
   const storeCats = [...new Set(storeProducts.map(p => p.categoryId))].map(cid => categories.find(c => c.id === cid)).filter(Boolean);
   let html = `<button class="back-btn" onclick="showClientStores()">← Retour</button>`;
-  html += `<div class="store-detail-header">
-    <div class="store-detail-icon">${store.icon}</div>
+  html+=`<div class="store-detail-header"><div class="store-detail-icon">${store.logo ? `<img src="${store.logo}" alt="${store.name}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">` : store.icon}</div>
     <div class="store-detail-info">
       <h2>${store.name}</h2>
       <p>${store.type} • ${store.address}</p>
@@ -1827,40 +1830,33 @@ function renderAdminStores() {
   </table>`;
 }
 
-function openStoreModal() {
-  document.getElementById('store-modal-title').textContent = '➕ Ajouter un commerce';
-  document.getElementById('store-id').value = '';
-  document.getElementById('store-name').value = '';
-  document.getElementById('store-type').value = '';
-  document.getElementById('store-addr').value = '';
-  document.getElementById('store-phone').value = '';
-  document.getElementById('store-status').value = 'active';
-  selectedStoreIcon = '';
-  buildIconPicker('store-icon-picker', 'store-icon');
+function openStoreModal(){
+  document.getElementById('store-modal-title').textContent='➕ Ajouter un magasin';
+  document.getElementById('store-id').value='';
+  document.getElementById('store-name').value='';
+  document.getElementById('store-type').value='';
+  document.getElementById('store-addr').value='';
+  document.getElementById('store-phone').value='';
+  document.getElementById('store-logo').value='';
+  document.getElementById('store-status').value='active';
+  selectedStoreIcon='';
+  buildIconPicker('store-icon-picker','store-icon');
   openModal('store-modal');
-  setTimeout(() => initAutocomplete('store-addr', 'store-addr-suggestions'), 100);
+  setTimeout(()=>initAutocomplete('store-addr','store-addr-suggestions'),100);
 }
 
-function editStore(id) {
-  const s = stores.find(x => x.id === id);
-  if (!s) return;
-  document.getElementById('store-modal-title').textContent = '✏️ Modifier';
-  document.getElementById('store-id').value = s.id;
-  document.getElementById('store-name').value = s.name;
-  document.getElementById('store-type').value = s.type;
-  document.getElementById('store-addr').value = s.address;
-  document.getElementById('store-phone').value = s.phone || '';
-  document.getElementById('store-status').value = s.status;
-  selectedStoreIcon = s.icon;
-  buildIconPicker('store-icon-picker', 'store-icon');
-  setTimeout(() => {
-    document.querySelectorAll('#store-icon-picker .icon-option').forEach(o => {
-      if (o.dataset.icon === s.icon) o.classList.add('selected');
-    });
-    initAutocomplete('store-addr', 'store-addr-suggestions');
-  }, 50);
-  openModal('store-modal');
-}
+function editStore(id){
+  const s=stores.find(x=>x.id===id);
+  if(!s)return;
+  document.getElementById('store-modal-title').textContent='✏️ Modifier';
+  document.getElementById('store-id').value=s.id;
+  document.getElementById('store-name').value=s.name;
+  document.getElementById('store-type').value=s.type;
+  document.getElementById('store-addr').value=s.address;
+  document.getElementById('store-phone').value=s.phone||'';
+  document.getElementById('store-logo').value=s.logo||'';
+  document.getElementById('store-status').value=s.status;
+  selectedStoreIcon=s.icon;
 
 async function saveStore(e) {
   e.preventDefault();
@@ -1870,15 +1866,16 @@ async function saveStore(e) {
   const id = document.getElementById('store-id').value;
   const addrInput = document.getElementById('store-addr');
   const storeData = {
-    icon: document.getElementById('store-icon').value || selectedStoreIcon,
-    name: document.getElementById('store-name').value,
-    type: document.getElementById('store-type').value,
-    address: addrInput.value,
-    phone: document.getElementById('store-phone').value,
-    status: document.getElementById('store-status').value,
-    lat: addrInput._lat || null,
-    lng: addrInput._lng || null
-  };
+  icon: document.getElementById('store-icon').value || selectedStoreIcon,
+  name: document.getElementById('store-name').value,
+  type: document.getElementById('store-type').value,
+  address: addrInput.value,
+  phone: document.getElementById('store-phone').value,
+  logo: document.getElementById('store-logo').value || null,
+  status: document.getElementById('store-status').value,
+  lat: addrInput._lat || null,
+  lng: addrInput._lng || null
+};
 
   try {
     if (id) {
@@ -2661,6 +2658,8 @@ function showFeatureDetail(type) {
     </div>
   `;
   document.body.appendChild(modal);
+}
+
 }
 
 function closeFeatureDetailModal() {
