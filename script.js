@@ -657,19 +657,15 @@ function showUserInterface() {
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('user-section').style.display = 'flex';
   document.getElementById('notif-bell-container').style.display = 'block';
-  
   const ini = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('user-avatar').textContent = ini;
   document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
-  
   const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
   document.getElementById('user-role').textContent = labels[currentUser.role];
-  
   document.getElementById('nav-client').style.display = 'none';
   document.getElementById('nav-driver').style.display = 'none';
   document.getElementById('nav-admin').style.display = 'none';
   document.getElementById('nav-store').style.display = 'none';
-
   if (currentUser.role === 'client') {
     document.getElementById('nav-client').style.display = 'block';
     document.getElementById('client-firstname').textContent = currentUser.name.split(' ')[0];
@@ -688,10 +684,10 @@ function showUserInterface() {
   } else if (currentUser.role === 'store') {
     if (currentUser.status === 'pending') {
       switchView('view-landing');
-      showToast('⏳ Votre commerce est en attente d\'approbation par l\'administrateur.');
+      showToast('⏳ Votre commerce est en attente d\'approbation.');
     } else if (currentUser.status === 'rejected') {
       switchView('view-landing');
-      showToast('❌ Votre demande de commerce a été refusée. Contactez l\'administration.');
+      showToast('❌ Votre demande a été refusée.');
     } else {
       document.getElementById('nav-store').style.display = 'block';
       switchView('view-store');
@@ -1790,24 +1786,25 @@ function openStoreModal() {
   setTimeout(() => initAutocomplete('store-addr', 'store-addr-suggestions'), 100);
 }
 
-function editStore(id) {
-  const s = stores.find(x => x.id === id);
-  if (!s) return;
-  document.getElementById('store-modal-title').textContent = '✏️ Modifier';
-  document.getElementById('store-id').value = s.id;
-  document.getElementById('store-name').value = s.name;
-  document.getElementById('store-type').value = s.type;
-  document.getElementById('store-addr').value = s.address;
-  document.getElementById('store-phone').value = s.phone || '';
-  document.getElementById('store-status').value = s.status;
-  selectedStoreIcon = s.icon;
-  buildIconPicker('store-icon-picker', 'store-icon');
-  setTimeout(() => {
-    document.querySelectorAll('#store-icon-picker .icon-option').forEach(o => {
-      if (o.dataset.icon === s.icon) o.classList.add('selected');
+function editStore(id){
+  const s=stores.find(x=>x.id===id);
+  if(!s)return;
+  document.getElementById('store-modal-title').textContent='✏️ Modifier';
+  document.getElementById('store-id').value=s.id;
+  document.getElementById('store-name').value=s.name;
+  document.getElementById('store-type').value=s.type;
+  document.getElementById('store-addr').value=s.address;
+  document.getElementById('store-phone').value=s.phone||'';
+  document.getElementById('store-logo').value=s.logo||'';
+  document.getElementById('store-status').value=s.status;
+  selectedStoreIcon=s.icon;
+  buildIconPicker('store-icon-picker','store-icon');
+  setTimeout(()=>{
+    document.querySelectorAll('#store-icon-picker .icon-option').forEach(o=>{
+      if(o.dataset.icon===s.icon)o.classList.add('selected');
     });
-    initAutocomplete('store-addr', 'store-addr-suggestions');
-  }, 50);
+    initAutocomplete('store-addr','store-addr-suggestions');
+  },50);
   openModal('store-modal');
 }
 
@@ -1824,11 +1821,11 @@ async function saveStore(e) {
     type: document.getElementById('store-type').value,
     address: addrInput.value,
     phone: document.getElementById('store-phone').value,
+    logo: document.getElementById('store-logo').value || null,
     status: document.getElementById('store-status').value,
     lat: addrInput._lat || null,
     lng: addrInput._lng || null
   };
-
   try {
     if (id) {
       await supabaseClient.from('stores').update(storeData).eq('id', parseInt(id));
