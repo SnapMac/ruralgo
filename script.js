@@ -834,16 +834,16 @@ function openStoreDetail(storeId) {
   }
   html += `<div class="products-grid" id="products-grid-detail"></div>`;
   document.getElementById('store-detail-content').innerHTML = html;
-  renderStoreProducts(storeId, 'all');
+  renderClientProductGrid(storeId, 'all');
 }
 
 function filterProducts(storeId, catId, btn) {
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderStoreProducts(storeId, catId);
+  renderClientProductGrid(storeId, catId);
 }
 
-function renderStoreProducts(storeId, catId) {
+function renderClientProductGrid(storeId, catId) {
   // ✅ CORRECTION : Comparaison sécurisée avec String()
   let prods = products.filter(p => String(p.storeId) === String(storeId) && p.available);
   if (catId !== 'all') prods = prods.filter(p => String(p.categoryId) === String(catId));
