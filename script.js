@@ -1845,18 +1845,32 @@ function openStoreModal(){
   setTimeout(()=>initAutocomplete('store-addr','store-addr-suggestions'),100);
 }
 
-function editStore(id){
-  const s=stores.find(x=>x.id===id);
-  if(!s)return;
-  document.getElementById('store-modal-title').textContent='✏️ Modifier';
-  document.getElementById('store-id').value=s.id;
-  document.getElementById('store-name').value=s.name;
-  document.getElementById('store-type').value=s.type;
-  document.getElementById('store-addr').value=s.address;
-  document.getElementById('store-phone').value=s.phone||'';
-  document.getElementById('store-logo').value=s.logo||'';
-  document.getElementById('store-status').value=s.status;
-  selectedStoreIcon=s.icon;
+function editStore(id) {
+  const s = stores.find(x => x.id === id);
+  if (!s) return;
+  
+  document.getElementById('store-modal-title').textContent = '✏️ Modifier';
+  document.getElementById('store-id').value = s.id;
+  document.getElementById('store-name').value = s.name;
+  document.getElementById('store-type').value = s.type;
+  document.getElementById('store-addr').value = s.address;
+  document.getElementById('store-phone').value = s.phone || '';
+  document.getElementById('store-logo').value = s.logo || '';
+  document.getElementById('store-status').value = s.status;
+  selectedStoreIcon = s.icon;
+  
+  buildIconPicker('store-icon-picker', 'store-icon');
+  setTimeout(() => {
+    document.querySelectorAll('#store-icon-picker .icon-option').forEach(o => {
+      if (o.dataset.icon === s.icon) o.classList.add('selected');
+    });
+    initAutocomplete('store-addr', 'store-addr-suggestions');
+  }, 50);
+  
+  openModal('store-modal');
+}
+
+async function saveStore(e) {
 
 async function saveStore(e) {
   e.preventDefault();
