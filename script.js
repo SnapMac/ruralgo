@@ -260,82 +260,15 @@ if (prodsData && prodsData.length > 0) {
 }
 loadNotifications();
 // ============ NOTIFICATIONS ============
-async function addNotification(userId, title, message) {
-  try {
-    await supabaseClient.from('notifications').insert({
-      user_id: String(userId), title: title, message: message
-    });
-    const notif = {
-      id: Date.now() + Math.random(), userId, title, message,
-      time: new Date().toISOString(), read: false
-    };
-    notifications.push(notif);
-    updateNotifBadge();
-  } catch (e) {
-    console.error('Erreur notification:', e);
-  }
-}
 
-function updateNotifBadge() {
-  if (!currentUser) return;
-  const userNotifs = notifications.filter(n => n.userId === currentUser.id && !n.read);
-  const badge = document.getElementById('notif-badge');
-  if (userNotifs.length > 0) {
-    badge.style.display = 'flex';
-    badge.textContent = userNotifs.length;
-  } else {
-    badge.style.display = 'none';
-  }
-}
 
-async function renderNotifications() {
-  const list = document.getElementById('notif-list');
-  if (!currentUser) {
-    list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999">Connectez-vous</div>';
-    return;
-  }
-  try {
-    const { data: notifsData, error } = await supabaseClient
-      .from('notifications')
-      .select('*')
-      .eq('user_id', String(currentUser.id))
-      .order('created_at', { ascending: false })
-      .limit(10);
-    if (error) { list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999">Erreur</div>'; return; }
-    if (!notifsData || notifsData.length === 0) {
-      list.innerHTML = '<div style="padding:2rem;text-align:center;color:#999">Aucune notification</div>';
-      return;
-    }
-    list.innerHTML = notifsData.map(n => `
-      <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markNotifRead(${n.id})">
-        <div class="notif-item-title">${n.title}</div>
-        <div class="notif-item-msg">${n.message}</div>
-        <div class="notif-item-time">${formatTime(n.created_at || n.time)}</div>
-      </div>
-    `).join('');
-  } catch (e) {
-    console.error('Erreur renderNotifications:', e);
-  }
-}
 
-async function markNotifRead(id) {
-  try {
-    await supabaseClient.from('notifications').update({ read: true }).eq('id', id);
-    const n = notifications.find(x => x.id === id);
-    if (n) n.read = true;
-    updateNotifBadge();
-    renderNotifications();
-  } catch (e) { console.error('Erreur markNotifRead:', e); }
-}
 
-async function markAllRead() {
-  try {
-    await supabaseClient.from('notifications').update({ read: true }).eq('user_id', String(currentUser.id));
-    notifications.forEach(n => { if (n.userId === currentUser.id) n.read = true; });
-    updateNotifBadge();
-    renderNotifications();
-  } catch (e) { console.error('Erreur markAllRead:', e); }
-}
+
+
+
+
+
 
 function formatTime(iso) {
   const d = new Date(iso);
@@ -2393,112 +2326,17 @@ async function rejectDriver(id) {
   }
 }
 // ===== SYSTÈME DE NOTIFICATIONS =====
-async function addNotification(userId, title, message, type = 'info') {
-  try {
-    const { error } = await supabaseClient.from('notifications').insert({
-      user_id: userId,
-      title: title,
-      message: message,
-      type: type,
-      is_read: false
-    });
-    if (error) throw error;
-    loadNotifications();
-  } catch (err) {
-    console.error('Erreur addNotification:', err);
-  }
-}
 
-async function loadNotifications() {
-  if (!currentUser) return;
-  try {
-    const { data, error } = await supabaseClient
-      .from('notifications')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    
-    if (error) throw error;
-    
-    const unreadCount = data.filter(n => !n.is_read).length;
-    const badge = document.getElementById('notif-badge');
-    
-    if (unreadCount > 0) {
-      badge.textContent = unreadCount;
-      badge.style.display = 'inline-block';
-    } else {
-      badge.style.display = 'none';
-    }
-    
-    renderNotifications(data);
-  } catch (err) {
-    console.error('Erreur loadNotifications:', err);
-  }
-}
 
-function renderNotifications(notifs) {
-  const list = document.getElementById('notif-list');
-  if (!list) return;
-  
-  if (notifs.length === 0) {
-    list.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#666">Aucune notification</div>';
-    return;
-  }
-  
-  list.innerHTML = notifs.map(n => {
-    const icon = n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : n.type === 'warning' ? '⚠️' : 'ℹ️';
-    const date = new Date(n.created_at).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    return `<div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markAsRead(${n.id})">
-      <div style="font-size:1.3rem">${icon}</div>
-      <div style="flex:1">
-        <div style="font-weight:bold;font-size:0.9rem">${n.title}</div>
-        <div style="font-size:0.85rem;color:#666">${n.message}</div>
-        <div style="font-size:0.75rem;color:#999;margin-top:0.2rem">${date}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
 
-async function markAsRead(id) {
-  try {
-    await supabaseClient.from('notifications').update({ is_read: true }).eq('id', id);
-    loadNotifications();
-  } catch (err) {
-    console.error('Erreur markAsRead:', err);
-  }
-}
 
-async function markAllRead() {
-  if (!currentUser) return;
-  try {
-    await supabaseClient.from('notifications').update({ is_read: true }).eq('user_id', currentUser.id);
-    loadNotifications();
-    showToast('✅ Toutes marquées comme lues');
-  } catch (err) {
-    console.error('Erreur markAllRead:', err);
-  }
-}
+
+
+
+
 
 // ============ OUVRIR/FERMER LE PANNEAU DE NOTIFICATIONS ============
-function toggleNotifPanel() {
-  console.log("🔔 CLIC DÉTECTÉ SUR LA CLOCHE !");
-  alert("Le clic fonctionne !"); // <-- On ajoute ça pour tester
-  
-  const panel = document.getElementById('notif-panel');
-  if (panel) {
-    if (panel.style.display === 'block') {
-      panel.style.display = 'none';
-    } else {
-      panel.style.display = 'block';
-      loadNotifications();
-    }
-  } else {
-    console.error("❌ Le panneau #notif-panel n'a pas été trouvé dans le HTML !");
-  }
-}
 
-// ===== DÉTAILS DES FONCTIONNALITÉS =====
 // ===== DÉTAILS DES FONCTIONNALITÉS =====
 function showFeatureDetail(type) {
   let title = '';
@@ -2889,4 +2727,98 @@ function viewOrderDetails(id) {
     </div>
   `;
   document.body.appendChild(modal);
+}
+// ============ SYSTÈME DE NOTIFICATIONS (VERSION FINALE) ============
+
+async function addNotification(userId, title, message) {
+  try {
+    await supabaseClient.from('notifications').insert({
+      user_id: String(userId),
+      title: title,
+      message: message,
+      time: new Date().toISOString(),
+      read: false
+    });
+    loadNotifications();
+  } catch (e) {
+    console.error('Erreur addNotification:', e);
+  }
+}
+
+async function loadNotifications() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('user_id', String(currentUser.id))
+      .order('time', { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    
+    const unreadCount = data.filter(n => !n.read).length;
+    const badge = document.getElementById('notif-badge');
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+    renderNotifications(data);
+  } catch (err) {
+    console.error('Erreur loadNotifications:', err);
+  }
+}
+
+function renderNotifications(notifs) {
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  if (!notifs || notifs.length === 0) {
+    list.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#666">Aucune notification</div>';
+    return;
+  }
+  list.innerHTML = notifs.map(n => {
+    const date = new Date(n.time).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return `<div class="notif-item ${n.read ? '' : 'unread'}" onclick="markAsRead('${n.id}')">
+      <div style="flex:1">
+        <div style="font-weight:bold;font-size:0.9rem">${n.title}</div>
+        <div style="font-size:0.85rem;color:#666">${n.message}</div>
+        <div style="font-size:0.75rem;color:#999;margin-top:0.2rem">${date}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function markAsRead(id) {
+  try {
+    await supabaseClient.from('notifications').update({ read: true }).eq('id', id);
+    loadNotifications();
+  } catch (err) {
+    console.error('Erreur markAsRead:', err);
+  }
+}
+
+async function markAllRead() {
+  if (!currentUser) return;
+  try {
+    await supabaseClient.from('notifications').update({ read: true }).eq('user_id', String(currentUser.id));
+    loadNotifications();
+    showToast('✅ Toutes marquées comme lues');
+  } catch (err) {
+    console.error('Erreur markAllRead:', err);
+  }
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  if (panel) {
+    panel.classList.toggle('show');
+    if (panel.classList.contains('show')) {
+      loadNotifications();
+    }
+  }
+}
+
+function updateNotifBadge() {
+  // Cette fonction est maintenant gérée par loadNotifications
 }
