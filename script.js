@@ -259,15 +259,6 @@ if (prodsData && prodsData.length > 0) {
   }
 }
 
-// ============ NOTIFICATIONS ============
-
-
-
-
-
-
-
-
 
 
 function formatTime(iso) {
