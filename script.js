@@ -2334,22 +2334,29 @@ setTimeout(initScrollAnimations, 500);
 
 
 // ============ DÉMARRAGE ============
-window.addEventListener('load', async function() {
-  await load();
-  renderLandingStores();
-  updateCart();
-});
 
-document.addEventListener('click', function(e) {
-  const panel = document.getElementById('notif-panel');
-  const bell = document.querySelector('.notif-bell');
-  if (panel && bell && !panel.contains(e.target) && !bell.contains(e.target)) {
-    panel.classList.remove('show');
+// Charger les données et cacher le loader TOUJOURS après 2 secondes
+window.addEventListener('load', async function(){
+  try {
+    await load();
+    renderLandingStores();
+    updateCart();
+  } catch (e) {
+    console.error('Erreur chargement:', e);
+  } finally {
+    // Cacher le loader après 2 secondes, peu importe ce qui se passe
+    setTimeout(function(){
+      document.getElementById('page-loader').classList.add('hidden');
+    }, 2000);
   }
 });
 
-window.addEventListener('load', function() {
-  setTimeout(function() { document.getElementById('page-loader').classList.add('hidden'); }, 1500);
+document.addEventListener('click', function(e){
+  const panel = document.getElementById('notif-panel');
+  const bell = document.querySelector('.notif-bell');
+  if(panel && bell && !panel.contains(e.target) && !bell.contains(e.target)){
+    panel.classList.remove('show');
+  }
 });
 // ===== APPROBATION DES LIVREURS =====
 async function approveDriver(id) {
