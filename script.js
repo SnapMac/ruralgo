@@ -258,7 +258,7 @@ if (prodsData && prodsData.length > 0) {
     console.error("Erreur de chargement Supabase:", e);
   }
 }
-loadNotifications();
+
 // ============ NOTIFICATIONS ============
 
 
