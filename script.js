@@ -2759,6 +2759,7 @@ function updateNotifBadge() {
     badge.style.display = 'none';
   }
 }
+
 async function loadNotifications() {
   if (!currentUser) return;
   try {
@@ -2773,12 +2774,12 @@ async function loadNotifications() {
     
     const unreadCount = data.filter(n => !n.is_read).length;
     const badge = document.getElementById('notif-badge');
-    if (unreadCount > 0) {
-      badge.textContent = unreadCount;
-      badge.style.display = 'flex';
-    } else {
-      badge.style.display = 'none';
-    }
+if (unreadCount > 0) {
+  badge.textContent = unreadCount;
+  badge.style.display = 'flex';
+} else {
+  badge.style.display = 'none';
+}
     
     renderNotifications(data);
   } catch (err) {
