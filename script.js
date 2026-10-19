@@ -683,6 +683,7 @@ function showUserInterface() {
     renderAllAdmin();
   }
   updateNotifBadge();
+  loadNotifications();
 }
 
 function renderAllAdmin() {
@@ -2845,3 +2846,9 @@ function toggleNotifPanel() {
     }
   }
 }
+// Rafraîchir les notifications toutes les 30 secondes si l'utilisateur est connecté
+setInterval(() => {
+  if (currentUser) {
+    loadNotifications();
+  }
+}, 30000);
