@@ -657,14 +657,18 @@ function showUserInterface() {
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('user-section').style.display = 'flex';
   document.getElementById('notif-bell-container').style.display = 'block';
+  
   const ini = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('user-avatar').textContent = ini;
   document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
-  const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin' };
+  
+  const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
   document.getElementById('user-role').textContent = labels[currentUser.role];
+  
   document.getElementById('nav-client').style.display = 'none';
   document.getElementById('nav-driver').style.display = 'none';
   document.getElementById('nav-admin').style.display = 'none';
+  document.getElementById('nav-store').style.display = 'none';
 
   if (currentUser.role === 'client') {
     document.getElementById('nav-client').style.display = 'block';
@@ -681,9 +685,20 @@ function showUserInterface() {
     document.getElementById('nav-admin').style.display = 'block';
     switchView('view-admin');
     renderAllAdmin();
+  } else if (currentUser.role === 'store') {
+    if (currentUser.status === 'pending') {
+      switchView('view-landing');
+      showToast('⏳ Votre commerce est en attente d\'approbation par l\'administrateur.');
+    } else if (currentUser.status === 'rejected') {
+      switchView('view-landing');
+      showToast('❌ Votre demande de commerce a été refusée. Contactez l\'administration.');
+    } else {
+      document.getElementById('nav-store').style.display = 'block';
+      switchView('view-store');
+      showStoreDashboard();
+    }
   }
   updateNotifBadge();
-  loadNotifications();
 }
 
 function renderAllAdmin() {
@@ -1976,6 +1991,7 @@ async function saveProduct(e) {
     }
     closeModal('product-modal');
     renderAdminProducts();
+    renderStoreProducts();
     renderLandingStores(); // ✅ NOUVEAU : Met à jour la page d'accueil
   } catch (err) {
     console.error('Erreur saveProduct:', err);
@@ -2216,6 +2232,187 @@ function confirmDelete(type, id) {
   openModal('confirm-modal');
 }
 
+// ==========================================
+// GESTION DU TABLEAU DE BORD COMMERCE
+// ==========================================
+
+function showStoreDashboard() {
+  switchView('view-store');
+  document.getElementById('store-dashboard-section').style.display = 'block';
+  document.getElementById('store-categories-section').style.display = 'none';
+  document.getElementById('store-products-section').style.display = 'none';
+  renderStoreDashboard();
+}
+
+function renderStoreDashboard() {
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  if (!myStore) {
+    document.getElementById('store-info-content').innerHTML = '<div class="empty-state"><p>⚠️ Aucun commerce associé à votre compte. Veuillez contacter l\'administration.</p></div>';
+    return;
+  }
+
+  const myProducts = products.filter(p => String(p.storeId) === String(myStore.id));
+  const myCategories = categories.filter(c => String(c.storeId) === String(myStore.id) || !c.storeId);
+  const storeOrders = orders.filter(o => String(o.storeId) === String(myStore.id));
+
+  document.getElementById('store-total-products').textContent = myProducts.length;
+  document.getElementById('store-total-categories').textContent = myCategories.length;
+  document.getElementById('store-total-orders').textContent = storeOrders.length;
+
+  document.getElementById('store-info-content').innerHTML = `
+    <div class="profile-section">
+      <div class="profile-header">
+        <div class="profile-avatar" style="font-size:3rem">${myStore.logo ? `<img src="${myStore.logo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">` : myStore.icon}</div>
+        <div class="profile-info">
+          <h2>${myStore.name}</h2>
+          <p>${myStore.type} • ${myStore.address}</p>
+          <p>📞 ${myStore.phone || 'Non spécifié'}</p>
+          <span class="badge badge-green" style="margin-top:0.5rem;display:inline-block">✅ Actif</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function showStoreCategories() {
+  switchView('view-store');
+  document.getElementById('store-dashboard-section').style.display = 'none';
+  document.getElementById('store-categories-section').style.display = 'block';
+  document.getElementById('store-products-section').style.display = 'none';
+  renderStoreCategories();
+}
+
+function renderStoreCategories() {
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  if (!myStore) return;
+  
+  const myCats = categories.filter(c => String(c.storeId) === String(myStore.id) || !c.storeId);
+  const c = document.getElementById('store-categories-container');
+  
+  if (!myCats.length) {
+    c.innerHTML = '<div class="empty-state"><p>Aucune catégorie. Ajoutez-en une !</p></div>';
+    return;
+  }
+  
+  c.innerHTML = `<div class="cat-grid">${myCats.map(cat => {
+    const count = products.filter(p => String(p.storeId) === String(myStore.id) && String(p.categoryId) === String(cat.id)).length;
+    const isGlobal = !cat.storeId;
+    return `<div class="cat-card">
+      <div class="cat-card-icon">${cat.icon}</div>
+      <div class="cat-card-name">${cat.name}</div>
+      <p style="color:#666;font-size:0.85rem;margin-bottom:0.5rem">${count} produit(s)</p>
+      ${!isGlobal ? `<div class="cat-card-actions"><button class="action-btn btn-red" onclick="confirmDelete('category',${cat.id})">🗑️</button></div>` : '<span style="font-size:0.8rem;color:#999">Catégorie globale</span>'}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function openStoreCategoryModal() {
+  document.getElementById('cat-modal-title').textContent = '➕ Ma Catégorie';
+  document.getElementById('cat-id').value = '';
+  document.getElementById('cat-name').value = '';
+  selectedCatIcon = '';
+  buildIconPicker('cat-icon-picker', 'cat-icon');
+  openModal('category-modal');
+}
+
+async function saveStoreCategory(e) {
+  e.preventDefault();
+  if (!selectedCatIcon && !document.getElementById('cat-icon').value) { showToast('⚠️ Choisissez une icône'); return; }
+  
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  const catData = {
+    icon: document.getElementById('cat-icon').value || selectedCatIcon,
+    name: document.getElementById('cat-name').value,
+    store_id: myStore.id
+  };
+
+  try {
+    const { data: newCat, error } = await supabaseClient.from('categories').insert(catData).select().single();
+    if (error) throw error;
+    categories.push({ ...newCat, id: newCat.id });
+    closeModal('category-modal');
+    showToast('✅ Catégorie ajoutée !');
+    renderStoreCategories();
+  } catch (err) {
+    console.error('Erreur saveStoreCategory:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+function showStoreProducts() {
+  switchView('view-store');
+  document.getElementById('store-dashboard-section').style.display = 'none';
+  document.getElementById('store-categories-section').style.display = 'none';
+  document.getElementById('store-products-section').style.display = 'block';
+  renderStoreProducts();
+}
+
+function renderStoreProducts() {
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  if (!myStore) return;
+  
+  const myProds = products.filter(p => String(p.storeId) === String(myStore.id));
+  const c = document.getElementById('store-products-container');
+  
+  if (!myProds.length) {
+    c.innerHTML = '<div class="empty-state"><p>Aucun produit. Ajoutez-en un !</p></div>';
+    return;
+  }
+  
+  c.innerHTML = `<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr></thead><tbody>${myProds.map(p => {
+    const cat = categories.find(x => String(x.id) === String(p.categoryId));
+    return `<tr><td style="font-size:1.5rem;text-align:center">${p.icon}</td><td><strong>${p.name}</strong></td><td>${cat ? cat.icon + ' ' + cat.name : '-'}</td><td><strong>${p.price.toFixed(2)} $</strong></td><td><span class="badge ${p.available ? 'badge-green' : 'badge-red'}">${p.available ? '✅' : '❌'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editStoreProduct(${p.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('product',${p.id})">🗑️</button></div></td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function openStoreProductModal() {
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  if (!myStore) return;
+
+  document.getElementById('prod-modal-title').textContent = '➕ Mon Produit';
+  document.getElementById('prod-id').value = '';
+  document.getElementById('prod-name').value = '';
+  document.getElementById('prod-desc').value = '';
+  document.getElementById('prod-price').value = '';
+  document.getElementById('prod-available').value = 'true';
+  selectedProdIcon = '';
+  
+  document.getElementById('prod-store').innerHTML = `<option value="${myStore.id}" selected>${myStore.icon} ${myStore.name}</option>`;
+  
+  const myCats = categories.filter(c => String(c.storeId) === String(myStore.id) || !c.storeId);
+  document.getElementById('prod-category').innerHTML = myCats.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+  
+  buildIconPicker('prod-icon-picker', 'prod-icon');
+  openModal('product-modal');
+}
+
+function editStoreProduct(id) {
+  const p = products.find(x => String(x.id) === String(id));
+  if (!p) return;
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  
+  document.getElementById('prod-modal-title').textContent = '✏️ Modifier';
+  document.getElementById('prod-id').value = p.id;
+  document.getElementById('prod-name').value = p.name;
+  document.getElementById('prod-desc').value = p.desc || '';
+  document.getElementById('prod-price').value = p.price;
+  document.getElementById('prod-available').value = p.available ? 'true' : 'false';
+  selectedProdIcon = p.icon;
+  
+  document.getElementById('prod-store').innerHTML = `<option value="${myStore.id}" selected>${myStore.icon} ${myStore.name}</option>`;
+  
+  const myCats = categories.filter(c => String(c.storeId) === String(myStore.id) || !c.storeId);
+  document.getElementById('prod-category').innerHTML = myCats.map(c => `<option value="${c.id}" ${String(c.id) === String(p.categoryId) ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('');
+  
+  buildIconPicker('prod-icon-picker', 'prod-icon');
+  setTimeout(() => {
+    document.querySelectorAll('#prod-icon-picker .icon-option').forEach(o => {
+      if (o.dataset.icon === p.icon) o.classList.add('selected');
+    });
+  }, 50);
+  openModal('product-modal');
+}
+
 // ============ FONCTIONS UTILITAIRES ============
 function calculateDistance(lat1, lng1, lat2, lng2) {
   if (!lat1 || !lng1 || !lat2 || !lng2) return null;
@@ -2326,6 +2523,9 @@ async function rejectDriver(id) {
     showToast('❌ Erreur: ' + err.message);
   }
 }
+
+
+
 // ===== SYSTÈME DE NOTIFICATIONS =====
 
 
@@ -2852,3 +3052,4 @@ setInterval(() => {
     loadNotifications();
   }
 }, 30000);
+

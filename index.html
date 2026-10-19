@@ -69,8 +69,17 @@
       </ul>
     </nav>
 
+
+    
     <!-- 4. NAVIGATION ADMIN -->
-    <nav id="nav-admin" style="display:none">
+     <nav id="nav-store" style="display:none">
+  <ul>
+    <li><a onclick="showStoreDashboard()">Tableau de bord</a></li>
+    <li><a onclick="showStoreCategories()">Catégories</a></li>
+    <li><a onclick="showStoreProducts()">Produits</a></li>
+  </ul>
+</nav>
+ <nav id="nav-admin" style="display:none">
       <ul>
         <li><a onclick="adminTab('dashboard', document.querySelector('.admin-side li'))">Dashboard</a></li>
       </ul>
@@ -452,6 +461,43 @@
 </div>
 
 <!-- VUE ADMIN -->
+ <div id="view-store" class="view">
+  <section class="hero">
+    <h1>🏪 Tableau de bord Commerce</h1>
+    <p>Gérez votre commerce, vos catégories et vos produits</p>
+  </section>
+  
+  <!-- Dashboard -->
+  <section id="store-dashboard-section" style="background:#f5f1e8">
+    <div class="container">
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="store-total-products">0</div><div class="stat-lbl">Produits</div></div>
+        <div class="stat"><div class="stat-val" id="store-total-categories">0</div><div class="stat-lbl">Catégories</div></div>
+        <div class="stat"><div class="stat-val" id="store-total-orders">0</div><div class="stat-lbl">Commandes reçues</div></div>
+      </div>
+      <div class="admin-main" style="margin-top:2rem">
+        <h3 style="color:#0a1929;margin-bottom:1rem">📊 Mes informations</h3>
+        <div id="store-info-content"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Catégories -->
+  <section id="store-categories-section" style="background:#f5f1e8;display:none">
+    <div class="container">
+      <div class="admin-header"><h3>📂 Mes Catégories</h3><button class="btn-add" onclick="openStoreCategoryModal()">➕ Ajouter</button></div>
+      <div id="store-categories-container"></div>
+    </div>
+  </section>
+
+  <!-- Produits -->
+  <section id="store-products-section" style="background:#f5f1e8;display:none">
+    <div class="container">
+      <div class="admin-header"><h3>🛍️ Mes Produits</h3><button class="btn-add" onclick="openStoreProductModal()">➕ Ajouter</button></div>
+      <div id="store-products-container"></div>
+    </div>
+  </section>
+</div>
 <div id="view-admin" class="view">
   <section class="hero">
     <h1>⚙️ Administration RuralGo</h1>
