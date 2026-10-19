@@ -788,43 +788,46 @@ function renderClientStores() {
     return;
   }
   g.innerHTML = active.map(s => {
-    const count = products.filter(p => p.storeId === s.id && p.available).length;
+    // ✅ CORRECTION : Utiliser String() pour éviter les bugs de type (Nombre vs Texte)
+    const count = products.filter(p => String(p.storeId) === String(s.id) && p.available).length;
     const dist = userPosition ? calculateDistance(userPosition.lat, userPosition.lng, s.lat, s.lng) : null;
-    return `<div class="store" onclick="openStoreDetail(${s.id})">
-      <div class="store-img">${s.icon}</div>
-      <div class="store-info">
-        <h3>${s.name}</h3>
-        <p style="color:#666;font-size:0.9rem">${s.type}</p>
-        <p style="color:#999;font-size:0.85rem;margin-top:0.3rem">📍 ${s.address}</p>
-        ${dist ? `<p style="color:#0284c7;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📏 ${dist.toFixed(1)} km de vous</p>` : ''}
-        <p style="color:#0a1929;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📦 ${count} produit(s)</p>
-      </div>
+    return `<div class="store" onclick="openStoreDetail(${s.id})"><div class="store-img">${s.logo ? `<img src="${s.logo}" alt="${s.name}">` : `<span class="emoji-fallback">${s.icon}</span>`}</div>
+    <div class="store-info">
+    <h3>${s.name}</h3>
+    <p style="color:#666;font-size:0.9rem">${s.type}</p>
+    <p style="color:#999;font-size:0.85rem;margin-top:0.3rem">📍 ${s.address}</p>
+    ${dist ? `<p style="color:#0284c7;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📏 ${dist.toFixed(1)} km de vous</p>` : ''}
+    <p style="color:#0a1929;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📦 ${count} produit(s)</p>
+    </div>
     </div>`;
   }).join('');
 }
 
 function openStoreDetail(storeId) {
-  const store = stores.find(s => s.id === storeId);
+  const store = stores.find(s => String(s.id) === String(storeId));
   if (!store) return;
   switchView('view-client');
   document.getElementById('stores-section').style.display = 'none';
   document.getElementById('store-detail-section').style.display = 'block';
-  const storeProducts = products.filter(p => p.storeId === storeId && p.available);
-  const storeCats = [...new Set(storeProducts.map(p => p.categoryId))].map(cid => categories.find(c => c.id === cid)).filter(Boolean);
+
+  // ✅ CORRECTION : Comparaison sécurisée avec String()
+  const storeProducts = products.filter(p => String(p.storeId) === String(storeId) && p.available);
+  const storeCats = [...new Set(storeProducts.map(p => p.categoryId))].map(cid => categories.find(c => String(c.id) === String(cid))).filter(Boolean);
+
   let html = `<button class="back-btn" onclick="showClientStores()">← Retour</button>`;
-  html += `<div class="store-detail-header">
-    <div class="store-detail-icon">${store.icon}</div>
-    <div class="store-detail-info">
-      <h2>${store.name}</h2>
-      <p>${store.type} • ${store.address}</p>
-      <p>${storeProducts.length} produit(s) disponible(s)</p>
-    </div>
+  html += `<div class="store-detail-header"><div class="store-detail-icon">${store.logo ? `<img src="${store.logo}" alt="${store.name}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">` : store.icon}</div>
+  <div class="store-detail-info">
+  <h2>${store.name}</h2>
+  <p>${store.type} • ${store.address}</p>
+  <p>${storeProducts.length} produit(s) disponible(s)</p>
+  </div>
   </div>`;
+
   if (storeCats.length > 0) {
     html += `<div class="categories-bar">
-      <button class="cat-btn active" onclick="filterProducts(${storeId},'all',this)">🏷️ Tout (${storeProducts.length})</button>`;
+    <button class="cat-btn active" onclick="filterProducts(${storeId},'all',this)">🏷️ Tout (${storeProducts.length})</button>`;
     storeCats.forEach(c => {
-      const catCount = storeProducts.filter(p => p.categoryId === c.id).length;
+      const catCount = storeProducts.filter(p => String(p.categoryId) === String(c.id)).length;
       html += `<button class="cat-btn" onclick="filterProducts(${storeId},${c.id},this)">${c.icon} ${c.name} (${catCount})</button>`;
     });
     html += `</div>`;
@@ -841,24 +844,26 @@ function filterProducts(storeId, catId, btn) {
 }
 
 function renderStoreProducts(storeId, catId) {
-  let prods = products.filter(p => p.storeId === storeId && p.available);
-  if (catId !== 'all') prods = prods.filter(p => p.categoryId === catId);
+  // ✅ CORRECTION : Comparaison sécurisée avec String()
+  let prods = products.filter(p => String(p.storeId) === String(storeId) && p.available);
+  if (catId !== 'all') prods = prods.filter(p => String(p.categoryId) === String(catId));
+
   const g = document.getElementById('products-grid-detail');
   if (!prods.length) {
     g.innerHTML = '<div class="no-products"><p>😕 Aucun produit dans cette catégorie</p></div>';
     return;
   }
   g.innerHTML = prods.map(p => {
-    const cat = categories.find(c => c.id === p.categoryId);
+    const cat = categories.find(c => String(c.id) === String(p.categoryId));
     return `<div class="product-card">
-      <div class="product-card-img">${p.icon}</div>
-      <div class="product-card-info">
-        ${cat ? `<span style="display:inline-block;background:#f5f1e8;color:#5c3a21;padding:0.15rem 0.5rem;border-radius:10px;font-size:0.75rem;margin-bottom:0.5rem">${cat.icon} ${cat.name}</span>` : ''}
-        <h4>${p.name}</h4>
-        <p style="color:#666;font-size:0.85rem">${p.desc || ''}</p>
-        <div class="product-price">${p.price.toFixed(2)} $</div>
-        <button class="add-cart-btn" onclick="addToCart(${p.id})">🛒 Ajouter</button>
-      </div>
+    <div class="product-card-img">${p.icon}</div>
+    <div class="product-card-info">
+    ${cat ? `<span style="display:inline-block;background:#f5f1e8;color:#5c3a21;padding:0.15rem 0.5rem;border-radius:10px;font-size:0.75rem;margin-bottom:0.5rem">${cat.icon} ${cat.name}</span>` : ''}
+    <h4>${p.name}</h4>
+    <p style="color:#666;font-size:0.85rem">${p.desc || ''}</p>
+    <div class="product-price">${p.price.toFixed(2)} $</div>
+    <button class="add-cart-btn" onclick="addToCart(${p.id})">🛒 Ajouter</button>
+    </div>
     </div>`;
   }).join('');
 }
