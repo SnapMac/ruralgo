@@ -2049,11 +2049,47 @@ function renderAdminClients() {
 
 function renderAdminDrivers() {
   const c = document.getElementById('drivers-table-container');
-  if (!drivers.length) { c.innerHTML = '<div class="empty-state"><p>Aucun livreur</p></div>'; return; }
-  c.innerHTML = `<table class="admin-table"><thead><tr><th>Nom</th><th>Email</th><th>Véhicule</th><th>Livraisons</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${drivers.map(d => {
-    const myDel = orders.filter(o => o.driverId === d.id && o.status === 'delivered').length;
- return `<tr><td><strong>${d.name}</strong><br><span style="font-size:0.8rem;color:#666">${d.phone}</span></td><td>${d.email}</td><td>${d.vehicle}</td><td>${myDel}</td><td><span class="badge ${d.status === 'approved' ? 'badge-green' : d.status === 'pending' ? 'badge-yellow' : 'badge-red'}">${d.status === 'approved' ? '✅ Approuvé' : d.status === 'pending' ? '⏳ En attente' : '❌ Refusé'}</span></td><td><div class="action-btns">${d.status !== 'approved' ? `<button class="action-btn btn-green" onclick="approveDriver('${d.id}')">✅</button>` : ''}${d.status !== 'rejected' ? `<button class="action-btn btn-red" onclick="rejectDriver('${d.id}')">❌</button>` : ''}</div></td></tr>`;
-  }).join('')}</tbody></table>`;
+  if (!c) return;
+
+  if (!drivers.length) {
+    c.innerHTML = '<div class="empty-state"><p>Aucun livreur</p></div>';
+    return;
+  }
+
+  c.innerHTML = `<table class="admin-table">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Téléphone</th>
+        <th>Véhicule</th>
+        <th>Livraisons</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${drivers.map(d => {
+        const nb = orders.filter(o => String(o.driverId) === String(d.id) && o.status === 'delivered').length;
+        const badge = d.status === 'approved' ? 'badge-green' : d.status === 'pending' ? 'badge-yellow' : 'badge-red';
+        const label = d.status === 'approved' ? '✅ Approuvé' : d.status === 'pending' ? '⏳ En attente' : '❌ Refusé';
+
+        return `<tr>
+          <td><strong>${d.name}</strong><br><small style="color:#666">${d.email || ''}</small></td>
+          <td>${d.phone || '-'}</td>
+          <td>${d.vehicle || '-'}</td>
+          <td>${nb}</td>
+          <td><span class="badge ${badge}">${label}</span></td>
+          <td>
+            <div class="action-btns">
+              <button class="action-btn btn-blue" onclick="editDriver('${d.id}')">✏️ Modifier</button>
+              ${d.status !== 'approved' ? `<button class="action-btn btn-green" onclick="approveDriver('${d.id}')">✅</button>` : ''}
+              <button class="action-btn btn-red" onclick="confirmDeleteDriver('${d.id}')">🗑️</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
 }
 
 // ============ ADMIN - PARAMÈTRES ============
@@ -3187,6 +3223,131 @@ async function confirmDeleteClient(id) {
     renderAdminDashboard();
   } catch (err) {
     console.error('Erreur confirmDeleteClient:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+// ============ MODIFIER UN LIVREUR ============
+function editDriver(id) {
+  const d = drivers.find(x => String(x.id) === String(id));
+  if (!d) { showToast('❌ Livreur introuvable'); return; }
+
+  const old = document.getElementById('edit-driver-modal');
+  if (old) old.remove();
+
+  const vehicles = ['Voiture', 'Camionnette', 'Pick-up', 'VTT/Quad', 'Motoneige'];
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg show';
+  modal.id = 'edit-driver-modal';
+
+  modal.innerHTML = `
+    <div class="modal">
+      <h2 style="color:#0a1929;margin-bottom:1rem">✏️ Modifier le livreur</h2>
+
+      <div class="info-box">💡 Le courriel ne se modifie pas ici : c'est l'identifiant de connexion du livreur.</div>
+
+      <form onsubmit="saveDriverEdit(event, '${id}')">
+        <div class="form-group">
+          <label>👤 Nom complet</label>
+          <input type="text" id="ed-name" value="${d.name || ''}" required>
+        </div>
+
+        <div class="form-group">
+          <label>📱 Téléphone</label>
+          <input type="tel" id="ed-phone" value="${d.phone || ''}">
+        </div>
+
+        <div class="form-group">
+          <label>🚙 Véhicule</label>
+          <select id="ed-vehicle">
+            ${vehicles.map(v => `<option value="${v}" ${d.vehicle === v ? 'selected' : ''}>${v}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>📌 Statut</label>
+          <select id="ed-status">
+            <option value="approved" ${d.status === 'approved' ? 'selected' : ''}>✅ Approuvé (actif)</option>
+            <option value="pending" ${d.status === 'pending' ? 'selected' : ''}>⏳ En attente</option>
+            <option value="rejected" ${d.status === 'rejected' ? 'selected' : ''}>❌ Refusé</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-sm btn-gray" onclick="document.getElementById('edit-driver-modal').remove()">Annuler</button>
+          <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+
+async function saveDriverEdit(event, id) {
+  event.preventDefault();
+
+  const data = {
+    name: document.getElementById('ed-name').value.trim(),
+    phone: document.getElementById('ed-phone').value.trim(),
+    vehicle: document.getElementById('ed-vehicle').value,
+    status: document.getElementById('ed-status').value
+  };
+
+  try {
+    const { error } = await supabaseClient.from('profiles').update(data).eq('id', id);
+    if (error) throw error;
+
+    const idx = drivers.findIndex(d => String(d.id) === String(id));
+    if (idx >= 0) drivers[idx] = { ...drivers[idx], ...data };
+
+    const modal = document.getElementById('edit-driver-modal');
+    if (modal) modal.remove();
+
+    renderAdminDrivers();
+    showToast('✅ Livreur modifié !');
+  } catch (err) {
+    console.error('Erreur saveDriverEdit:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ============ SUPPRIMER UN LIVREUR ============
+async function confirmDeleteDriver(id) {
+  const d = drivers.find(x => String(x.id) === String(id));
+  if (!d) { showToast('❌ Livreur introuvable'); return; }
+
+  if (!confirm('Supprimer le livreur ' + d.name + ' ?\n\nSes commandes ne seront PAS supprimées.\nElles resteront disponibles pour être réassignées.\n\nCette action est irréversible.')) return;
+
+  try {
+    // 1. Détacher le livreur de ses commandes (pour ne rien perdre)
+    const { error: errOrders } = await supabaseClient
+      .from('orders')
+      .update({ driver_id: null, driver_name: null })
+      .eq('driver_id', id);
+    if (errOrders) throw errOrders;
+
+    // 2. Supprimer ses notifications
+    await supabaseClient.from('notifications').delete().eq('user_id', id);
+
+    // 3. Supprimer son profil
+    const { error } = await supabaseClient.from('profiles').delete().eq('id', id);
+    if (error) throw error;
+
+    // 4. Mettre à jour l'affichage local
+    drivers = drivers.filter(x => String(x.id) !== String(id));
+
+    orders.forEach(o => {
+      if (String(o.driverId) === String(id)) {
+        o.driverId = null;
+        o.driverName = null;
+      }
+    });
+
+    renderAdminDrivers();
+    showToast('✅ Livreur supprimé !');
+  } catch (err) {
+    console.error('Erreur confirmDeleteDriver:', err);
     showToast('❌ Erreur : ' + err.message);
   }
 }
