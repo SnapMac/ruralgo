@@ -3368,8 +3368,10 @@ let userWalletBalance = 0;
 
 // Charger le solde du portefeuille de l'utilisateur connecté
 async function loadUserWallet() {
-  if (!currentUser) {
+  // ✅ L'admin n'a pas de wallet (son ID n'est pas un vrai UUID)
+  if (!currentUser || currentUser.id === 'admin') {
     userWalletBalance = 0;
+    updateWalletDisplay();
     return;
   }
   
@@ -3378,14 +3380,14 @@ async function loadUserWallet() {
       .from('wallets')
       .select('balance')
       .eq('user_id', currentUser.id)
-      .single();
+      .maybeSingle();
     
     if (error && error.code !== 'PGRST116') throw error;
     
     if (data) {
       userWalletBalance = parseFloat(data.balance) || 0;
     } else {
-      // Si le portefeuille n'existe pas, le créer
+      // Créer le wallet s'il n'existe pas
       const { error: createError } = await supabaseClient
         .from('wallets')
         .insert({
@@ -3397,7 +3399,6 @@ async function loadUserWallet() {
       userWalletBalance = 0;
     }
     
-    // Mettre à jour l'affichage du solde
     updateWalletDisplay();
     
   } catch (err) {
@@ -3423,8 +3424,9 @@ function showWalletBalance() {
 
 // Recharger le portefeuille (simulation - à remplacer par Stripe plus tard)
 async function depositToWallet(amount) {
-  if (!currentUser) {
-    showToast('❌ Vous devez être connecté');
+  // ✅ L'admin ne peut pas recharger
+  if (!currentUser || currentUser.id === 'admin') {
+    showToast('❌ L\'administrateur n\'a pas de portefeuille');
     return;
   }
   
@@ -3434,19 +3436,17 @@ async function depositToWallet(amount) {
   }
   
   try {
-    // 1. Essayer de récupérer le portefeuille existant
     let wallet;
     const { data: existingWallet, error: walletError } = await supabaseClient
       .from('wallets')
       .select('balance')
       .eq('user_id', currentUser.id)
-      .maybeSingle(); // maybeSingle au lieu de single pour éviter l'erreur
+      .maybeSingle();
     
     if (walletError && walletError.code !== 'PGRST116') {
       throw walletError;
     }
     
-    // 2. Si le wallet n'existe pas, le créer
     if (!existingWallet) {
       const { error: createError } = await supabaseClient
         .from('wallets')
@@ -3464,7 +3464,6 @@ async function depositToWallet(amount) {
     const balanceBefore = parseFloat(wallet.balance);
     const balanceAfter = balanceBefore + amount;
     
-    // 3. Créer la transaction
     const { error: transactionError } = await supabaseClient
       .from('transactions')
       .insert({
@@ -3480,7 +3479,6 @@ async function depositToWallet(amount) {
     
     if (transactionError) throw transactionError;
     
-    // 4. Enregistrer le dépôt
     const { error: depositError } = await supabaseClient
       .from('deposits')
       .insert({
@@ -3493,7 +3491,6 @@ async function depositToWallet(amount) {
     
     if (depositError) throw depositError;
     
-    // 5. Mettre à jour le portefeuille
     const { error: updateError } = await supabaseClient
       .from('wallets')
       .update({ balance: balanceAfter, updated_at: new Date().toISOString() })
@@ -3501,7 +3498,6 @@ async function depositToWallet(amount) {
     
     if (updateError) throw updateError;
     
-    // 6. Mettre à jour l'affichage
     userWalletBalance = balanceAfter;
     updateWalletDisplay();
     
