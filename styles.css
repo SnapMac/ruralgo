@@ -722,13 +722,16 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   align-items: center !important;
 }
 
-/* Force les sections de connexion/utilisateur tout à droite */
+/* Force les sections tout à droite, mais ne force PAS l'affichage */
 #auth-section,
 #user-section {
   margin-left: auto !important;
-  display: flex !important;
   align-items: center !important;
   gap: 1rem !important;
+}
+
+#auth-section {
+  display: flex !important; /* auth-section toujours visible quand déconnecté */
 }
 
 /* Force l'alignement du nom et du rôle */
