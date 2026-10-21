@@ -653,7 +653,6 @@ async function logout() {
   switchView('view-landing');
   showToast('👋 Déconnexion');
 }
-
 function showUserInterface() {
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('user-section').style.display = 'flex';
