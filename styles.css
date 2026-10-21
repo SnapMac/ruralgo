@@ -716,37 +716,55 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   .wallet-balance-btn {
     width: 120px;
   }
-/* ============ ALIGNEMENT À DROITE DU HEADER ============ */
-/* Pousse les boutons de connexion ET la section utilisateur tout à droite */
-#auth-section,
-#user-section {
-  margin-left: auto; /* C'est cette ligne qui pousse tout à droite ! */
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+/* === ALIGNEMENT À DROITE GARANTI (FORCE) === */
+.nav {
+  display: flex !important;
+  align-items: center !important;
 }
 
-/* S'assurer que le nom et l'avatar restent bien groupés */
+/* Force les sections de connexion/utilisateur tout à droite */
+#auth-section,
+#user-section {
+  margin-left: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 1rem !important;
+}
+
+/* Force l'alignement du nom et du rôle */
 .user-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-align: right;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  text-align: right !important;
 }
 
 .user-details {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end; /* Alignement du texte à droite */
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important; /* Texte aligné à droite */
 }
 
 .user-name {
-  font-weight: 700;
-  color: #0a1929;
-  font-size: 0.95rem;
+  font-weight: 700 !important;
+  color: #0a1929 !important;
+  font-size: 0.95rem !important;
+  white-space: nowrap !important;
 }
 
 .user-role {
-  font-size: 0.75rem;
-  color: #666;
+  font-size: 0.75rem !important;
+  color: #666 !important;
+  white-space: nowrap !important;
+}/* === RÉORGANISATION : Wallet → Nom → Déconnexion === */
+#user-section .wallet-widget {
+  order: 1; /* Wallet en premier */
+}
+
+#user-section .user-info {
+  order: 2; /* Nom au milieu */
+}
+
+#user-section .logout-btn {
+  order: 3; /* Déconnexion en dernier */
 }
