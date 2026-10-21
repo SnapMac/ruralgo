@@ -619,8 +619,26 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   background: linear-gradient(135deg, #f5f1e8 0%, #fff9f0 100%);
   border-color: #f5a623;
   color: #0a1929;
-  width: 130px; /* Largeur FIXE, pas min-width */
+  width: 140px; /* Largeur FIXE */
   justify-content: center;
+  overflow: hidden; /* Empêche le débordement */
+}
+
+.wallet-balance-wrapper {
+  display: inline-block;
+  width: 80px; /* Espace fixe pour le montant */
+  text-align: right;
+  overflow: hidden;
+}
+
+.wallet-balance {
+  font-weight: 700;
+  color: #f5a623;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums; /* Chiffres de même largeur */
+  letter-spacing: -0.5px;
+  display: inline-block;
+  width: 100%;
 }
 
 .wallet-balance-btn:hover {

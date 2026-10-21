@@ -3410,7 +3410,9 @@ async function loadUserWallet() {
 function updateWalletDisplay() {
   const walletElements = document.querySelectorAll('.wallet-balance, #wallet-balance');
   walletElements.forEach(el => {
-    el.textContent = userWalletBalance.toFixed(2) + ' $';
+    // Formater le montant avec 2 décimales et espace pour les milliers
+    const formatted = userWalletBalance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    el.textContent = formatted + ' $';
   });
 }
 
