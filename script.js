@@ -640,19 +640,40 @@ async function loginUser(e) {
   
   showToast('✅ Bienvenue ' + currentUser.name.split(' ')[0] + ' !');
 }
+function logout() {
+  // 1. Déconnexion de Supabase
+  supabaseClient.auth.signOut().then(() => {
+    // 2. Réinitialiser l'utilisateur local
+    currentUser = null;
+    userWalletBalance = 0;
+    
+    // 3. Cacher la section utilisateur et le menu de navigation
+    const userSection = document.getElementById('user-section');
+    if (userSection) {
+      userSection.style.display = 'none';
+      userSection.classList.remove('show');
+    }
+    
+    // 4. Réafficher les boutons de connexion / inscription
+    const authSection = document.getElementById('auth-section');
+    if (authSection) {
+      authSection.style.display = 'flex'; // ou 'block' selon ton design
+    }
 
-async function logout() {
-  await supabaseClient.auth.signOut();
-  currentUser = null;
-  document.getElementById('auth-section').style.display = 'flex';
-  document.getElementById('user-section').style.display = 'none';
-  document.getElementById('nav-client').style.display = 'none';
-  document.getElementById('nav-driver').style.display = 'none';
-  document.getElementById('nav-admin').style.display = 'none';
-  document.getElementById('notif-bell-container').style.display = 'none';
-  switchView('view-landing');
-  showToast('👋 Déconnexion');
+    // 5. Cacher la cloche de notification
+    const notifBell = document.getElementById('notif-bell-container');
+    if (notifBell) {
+      notifBell.style.display = 'none';
+    }
+
+    // 6. Retourner à la page d'accueil
+    switchView('view-landing');
+    showToast('👋 À bientôt !');
+  }).catch(err => {
+    console.error('Erreur déconnexion:', err);
+  });
 }
+
 function showUserInterface() {
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('user-section').style.display = 'flex';

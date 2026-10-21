@@ -596,7 +596,15 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   align-items: center;
   gap: 1rem; /* Espacement parfait entre l'avatar, le wallet et la déconnexion */
 }
+/* ============ SECTION UTILISATEUR (CACHÉE PAR DÉFAUT) ============ */
+#user-section {
+  display: none !important; /* Caché par défaut, seul le JS peut l'afficher */
+}
 
+/* Quand l'utilisateur est connecté, le JS ajoutera cette classe ou changera le style */
+#user-section.show {
+  display: flex !important;
+}
 /* ============ WIDGET PORTEFEUILLE (DESIGN PRO) ============ */
 .wallet-widget {
   display: flex;
