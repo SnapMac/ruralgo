@@ -730,13 +730,6 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   gap: 1rem;
 }
 
-##auth-section,
-#user-section {
-  margin-left: auto;
-  align-items: center;
-  gap: 1rem;
-}
-
 /* Force l'alignement du nom et du rôle */
 .user-info {
   display: flex !important;

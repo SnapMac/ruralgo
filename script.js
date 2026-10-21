@@ -1190,6 +1190,22 @@ async function placeOrder() {
   const tax = subtotal * platformSettings.taxRate;
   const total = subtotal + deliveryInfo.totalFee + tax;
 
+  // ✅ VÉRIFIER LE SOLDE DU WALLET
+  if (userWalletBalance < total) {
+    showToast(`❌ Solde insuffisant ! Vous avez ${userWalletBalance.toFixed(2)}$ mais la commande coûte ${total.toFixed(2)}$`);
+    setTimeout(() => {
+      if (confirm('Voulez-vous recharger votre compte maintenant ?')) {
+        openDepositModal();
+      }
+    }, 1000);
+    return;
+  }
+
+  // ✅ CONFIRMER LE PAIEMENT
+  if (!confirm(`Payer ${total.toFixed(2)}$ avec votre portefeuille ?\n\nSolde actuel : ${userWalletBalance.toFixed(2)}$\nSolde après paiement : ${(userWalletBalance - total).toFixed(2)}$`)) {
+    return;
+  }
+
   const orderData = {
     order_number: 'RG' + Date.now().toString().slice(-6),
     client_id: currentUser.id,
@@ -1215,14 +1231,46 @@ async function placeOrder() {
     status: 'pending',
     store_id: store.id,
     store_name: store.name,
+    payment_method: 'wallet',
     status_history: [{
       status: 'pending',
       time: new Date().toISOString(),
-      note: 'Commande créée'
+      note: 'Commande créée et payée'
     }]
   };
 
   try {
+    // ✅ CRÉER LA TRANSACTION DE PAIEMENT
+    const { error: transactionError } = await supabaseClient
+      .from('transactions')
+      .insert({
+        user_id: currentUser.id,
+        type: 'payment',
+        amount: -total,
+        balance_before: userWalletBalance,
+        balance_after: userWalletBalance - total,
+        description: `Paiement commande ${orderData.order_number}`,
+        status: 'completed',
+        related_order_id: orderData.order_number
+      });
+
+    if (transactionError) throw transactionError;
+
+    // ✅ METTRE À JOUR LE SOLDE DU WALLET
+    const { error: walletError } = await supabaseClient
+      .from('wallets')
+      .update({ 
+        balance: userWalletBalance - total,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', currentUser.id);
+
+    if (walletError) throw walletError;
+
+    userWalletBalance -= total;
+    updateWalletDisplay();
+
+    // ✅ CRÉER LA COMMANDE
     const { data: newOrder, error } = await supabaseClient
       .from('orders')
       .insert(orderData)
@@ -1231,12 +1279,12 @@ async function placeOrder() {
 
     if (error) throw error;
 
-    await addNotification('admin', '📦 Nouvelle commande',
-      `Commande ${newOrder.order_number} de ${currentUser.name} - ${total.toFixed(2)}$`);
+    await addNotification('admin', '💰 Nouvelle commande payée',
+      `Commande ${newOrder.order_number} de ${currentUser.name} - ${total.toFixed(2)}$ (payée avec wallet)`);
 
     cart = [];
     updateCart();
-    showToast('✅ Commande passée avec succès !');
+    showToast(`✅ Commande payée ! Nouveau solde : ${userWalletBalance.toFixed(2)}$`);
     showClientOrders();
   } catch (err) {
     console.error('Erreur placeOrder:', err);
