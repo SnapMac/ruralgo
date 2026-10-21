@@ -617,6 +617,8 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   background: linear-gradient(135deg, #f5f1e8 0%, #fff9f0 100%);
   border-color: #f5a623;
   color: #0a1929;
+  min-width: 120px; /* Largeur minimale fixe */
+  justify-content: center; /* Centre le texte */
 }
 
 .wallet-balance-btn:hover {
