@@ -756,15 +756,16 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   font-size: 0.75rem !important;
   color: #666 !important;
   white-space: nowrap !important;
-}/* === RÉORGANISATION : Wallet → Nom → Déconnexion === */
+}
+/* === RÉORGANISATION FORCÉE : Wallet → Nom → Déconnexion === */
 #user-section .wallet-widget {
-  order: 1; /* Wallet en premier */
+  order: 1 !important;
 }
 
 #user-section .user-info {
-  order: 2; /* Nom au milieu */
+  order: 2 !important;
 }
 
 #user-section .logout-btn {
-  order: 3; /* Déconnexion en dernier */
+  order: 3 !important;
 }
