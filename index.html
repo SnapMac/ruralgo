@@ -70,32 +70,25 @@
         <li><a onclick="showDriverHistory()">Historique</a></li>
       </ul>
     </nav>
-
-
     
-    <!-- 4. NAVIGATION ADMIN -->
-     <nav id="nav-store" style="display:none">
-  <ul>
-    <li><a onclick="showStoreDashboard()">Tableau de bord</a></li>
-    <li><a onclick="showStoreCategories()">Catégories</a></li>
-    <li><a onclick="showStoreProducts()">Produits</a></li>
-  </ul>
-</nav>
- <nav id="nav-admin" style="display:none">
+    <!-- 4. NAVIGATION COMMERCE -->
+    <nav id="nav-store" style="display:none">
       <ul>
-        <nav id="nav-store" style="display:none">
-  <ul>
-    <li><a onclick="showStoreDashboard()">Tableau de bord</a></li>
-    <li><a onclick="showStoreCategories()">Catégories</a></li>
-    <li><a onclick="showStoreProducts()">Produits</a></li>
-  </ul>
-</nav>
+        <li><a onclick="showStoreDashboard()">Tableau de bord</a></li>
+        <li><a onclick="showStoreCategories()">Catégories</a></li>
+        <li><a onclick="showStoreProducts()">Produits</a></li>
+      </ul>
+    </nav>
+
+    <!-- 5. NAVIGATION ADMIN -->
+    <nav id="nav-admin" style="display:none">
+      <ul>
         <li><a onclick="adminTab('dashboard', document.querySelector('.admin-side li'))">Dashboard</a></li>
       </ul>
     </nav>
 
-    <!-- 5. CLOCHE DE NOTIFICATIONS (STRUCTURE CORRIGÉE) -->
-    <div id="notif-bell-container" style="display:block; position:relative;">
+    <!-- 6. CLOCHE DE NOTIFICATIONS -->
+    <div id="notif-bell-container" style="display:none; position:relative;">
       <div class="notif-bell" onclick="toggleNotifPanel()">
         🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span>
       </div>
@@ -108,56 +101,39 @@
       </div>
     </div>
 
-    <!-- 6. BOUTONS DE CONNEXION / INSCRIPTION -->
+    <!-- 7. BOUTONS DE CONNEXION / INSCRIPTION (VISIBLE SI DÉCONNECTÉ) -->
     <div id="auth-section" class="auth-buttons">
       <button class="auth-btn" onclick="openChooseTypeModal()">📝 S'inscrire</button>
       <button class="auth-btn secondary" onclick="openLoginModal()">🔑 Connexion</button>
     </div>
 
- <!-- 7. SECTION UTILISATEUR CONNECTÉ (VERSION PRO) -->
-<div id="user-section" style="display:none">
-  
-  <!-- Infos utilisateur -->
-  <div class="user-info" style="cursor:pointer" onclick="showProfile()">
-    <div class="user-avatar" id="user-avatar">👤</div>
-    <div class="user-details">
-      <div class="user-name" id="user-name">User</div>
-      <div class="user-role" id="user-role">Client</div>
+    <!-- 8. SECTION UTILISATEUR CONNECTÉ (PROPRE, SANS DOUBLON) -->
+    <div id="user-section" style="display:none">
+      <!-- Infos utilisateur -->
+      <div class="user-info" style="cursor:pointer" onclick="showProfile()">
+        <div class="user-avatar" id="user-avatar">👤</div>
+        <div class="user-details">
+          <div class="user-name" id="user-name">User</div>
+          <div class="user-role" id="user-role">Client</div>
+        </div>
+      </div>
+
+      <!-- Widget Portefeuille -->
+      <div class="wallet-widget">
+        <button class="wallet-btn wallet-balance-btn" onclick="showWalletBalance()" title="Voir mon solde">
+          💰 <span class="wallet-balance-wrapper"><span class="wallet-balance" id="wallet-balance">0.00 $</span></span>
+        </button>
+        <button class="wallet-btn wallet-deposit-btn" onclick="openDepositModal()" title="Recharger mon compte">
+          💳 Recharger
+        </button>
+        <button class="wallet-btn wallet-history-btn" onclick="showTransactionHistory()" title="Historique">
+          📋
+        </button>
+      </div>
+
+      <!-- Bouton Déconnexion -->
+      <button class="logout-btn" onclick="logout()">Déconnexion</button>
     </div>
-  </div>
-
-  <!-- Widget Portefeuille (Regroupé et élégant) -->
-  <div class="wallet-widget">
-    <button class="wallet-btn wallet-balance-btn" onclick="showWalletBalance()" title="Voir mon solde">
-      💰 <span class="wallet-balance-wrapper"><span class="wallet-balance" id="wallet-balance">0.00 $</span></span>
-    </button>
-    <button class="wallet-btn wallet-deposit-btn" onclick="openDepositModal()" title="Recharger mon compte">
-      💳 Recharger
-    </button>
-    <button class="wallet-btn wallet-history-btn" onclick="showTransactionHistory()" title="Historique">
-      📋
-    </button>
-  </div>
-
-  <!-- Bouton Déconnexion -->
-  <button class="logout-btn" onclick="logout()">Déconnexion</button>
-</div>
-  
-  <!-- 💰 NOUVEAU : BOUTONS DU PORTEFEUILLE -->
-  <div class="wallet-buttons">
-    <button class="wallet-btn wallet-balance-btn" onclick="showWalletBalance()" title="Voir mon solde">
-  💰 <span class="wallet-balance-wrapper"><span class="wallet-balance" id="wallet-balance">0.00 $</span></span>
-</button>
-    <button class="wallet-btn wallet-deposit-btn" onclick="openDepositModal()" title="Recharger mon compte">
-      💳 Recharger
-    </button>
-    <button class="wallet-btn wallet-history-btn" onclick="showTransactionHistory()" title="Historique">
-      📋
-    </button>
-  </div>
-  
-  <button class="logout-btn" onclick="logout()">Déconnexion</button>
-</div>
 
   </div> <!-- Fin de .nav -->
 </header>
