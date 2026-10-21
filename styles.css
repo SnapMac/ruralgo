@@ -705,13 +705,8 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
 }
 
 /* Responsive mobile */
-@media (max-width: 768px) {
-  #user-section {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.8rem;
-  }
-  
+
+
   .wallet-widget {
     width: 100%;
     justify-content: center;
@@ -721,8 +716,3 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   .wallet-balance-btn {
     width: 120px;
   }
-}
-#user-section {
-  align-items: center;
-  gap: 1rem;
-}
