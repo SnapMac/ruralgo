@@ -1251,7 +1251,7 @@ async function placeOrder() {
         balance_after: userWalletBalance - total,
         description: `Paiement commande ${orderData.order_number}`,
         status: 'completed',
-        related_order_id: orderData.order_number
+        related_order_id: null
       });
 
     if (transactionError) throw transactionError;
