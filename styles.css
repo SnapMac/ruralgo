@@ -590,3 +590,83 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   max-height: 300px;
   overflow-y: auto;
 }
+/* ============ BOUTONS DU PORTEFEUILLE ============ */
+.wallet-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0 0.5rem;
+}
+
+.wallet-btn {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.wallet-balance-btn {
+  background: linear-gradient(135deg, #f5f1e8 0%, #fff9f0 100%);
+  border-color: #f5a623;
+  color: #0a1929;
+}
+
+.wallet-balance-btn:hover {
+  background: linear-gradient(135deg, #f5a623 0%, #ffd89b 100%);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3);
+}
+
+.wallet-deposit-btn {
+  background: #0a1929;
+  border-color: #0a1929;
+  color: white;
+}
+
+.wallet-deposit-btn:hover {
+  background: #f5a623;
+  border-color: #f5a623;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3);
+}
+
+.wallet-history-btn {
+  background: white;
+  border-color: #0a1929;
+  color: #0a1929;
+  padding: 0.4rem 0.6rem;
+}
+
+.wallet-history-btn:hover {
+  background: #0a1929;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.wallet-balance {
+  font-weight: 700;
+  color: #f5a623;
+}
+
+/* Responsive mobile */
+@media (max-width: 768px) {
+  .wallet-buttons {
+    margin: 0.5rem 0;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .wallet-btn {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+}

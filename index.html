@@ -115,16 +115,30 @@
     </div>
 
     <!-- 7. SECTION UTILISATEUR CONNECTÉ -->
-    <div id="user-section" style="display:none">
-      <div class="user-info" style="cursor:pointer" onclick="showProfile()">
-        <div class="user-avatar" id="user-avatar">👤</div>
-        <div class="user-details">
-          <div class="user-name" id="user-name">User</div>
-          <div class="user-role" id="user-role">Client</div>
-        </div>
-      </div>
-      <button class="logout-btn" onclick="logout()">Déconnexion</button>
+<div id="user-section" style="display:none">
+  <div class="user-info" style="cursor:pointer" onclick="showProfile()">
+    <div class="user-avatar" id="user-avatar">👤</div>
+    <div class="user-details">
+      <div class="user-name" id="user-name">User</div>
+      <div class="user-role" id="user-role">Client</div>
     </div>
+  </div>
+  
+  <!-- 💰 NOUVEAU : BOUTONS DU PORTEFEUILLE -->
+  <div class="wallet-buttons">
+    <button class="wallet-btn wallet-balance-btn" onclick="showWalletBalance()" title="Voir mon solde">
+      💰 <span class="wallet-balance" id="wallet-balance">0.00 $</span>
+    </button>
+    <button class="wallet-btn wallet-deposit-btn" onclick="openDepositModal()" title="Recharger mon compte">
+      💳 Recharger
+    </button>
+    <button class="wallet-btn wallet-history-btn" onclick="showTransactionHistory()" title="Historique">
+      📋
+    </button>
+  </div>
+  
+  <button class="logout-btn" onclick="logout()">Déconnexion</button>
+</div>
 
   </div> <!-- Fin de .nav -->
 </header>

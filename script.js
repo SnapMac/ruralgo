@@ -600,6 +600,7 @@ async function loginUser(e) {
   const email = document.getElementById('login-email').value;
   const pass = correctPassword(document.getElementById('login-pass').value);
 
+  // ============ CONNEXION ADMIN ============
   if (email === 'admin@ruralgo.ca' && pass === 'admin123') {
     currentUser = {
       id: 'admin', name: 'Administrateur', email, role: 'admin',
@@ -608,10 +609,15 @@ async function loginUser(e) {
     };
     closeModal('login-modal');
     showUserInterface();
+    
+    // ✅ AJOUT ICI : Charger le solde (sera 0 pour l'admin)
+    loadUserWallet();
+    
     showToast('✅ Bienvenue Admin !');
     return;
   }
 
+  // ============ CONNEXION UTILISATEUR NORMAL ============
   const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
   if (error) { showToast('❌ Email ou mot de passe incorrect'); return; }
 
@@ -628,6 +634,10 @@ async function loginUser(e) {
 
   closeModal('login-modal');
   showUserInterface();
+  
+  // ✅ AJOUT ICI : Charger le solde du portefeuille
+  loadUserWallet();
+  
   showToast('✅ Bienvenue ' + currentUser.name.split(' ')[0] + ' !');
 }
 
@@ -3350,4 +3360,349 @@ async function confirmDeleteDriver(id) {
     console.error('Erreur confirmDeleteDriver:', err);
     showToast('❌ Erreur : ' + err.message);
   }
+}
+// ============ SYSTÈME DE TRANSACTIONS ET PORTEFEUILLE ============
+
+// Variable globale pour stocker le solde de l'utilisateur
+let userWalletBalance = 0;
+
+// Charger le solde du portefeuille de l'utilisateur connecté
+async function loadUserWallet() {
+  if (!currentUser) {
+    userWalletBalance = 0;
+    return;
+  }
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', currentUser.id)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    
+    if (data) {
+      userWalletBalance = parseFloat(data.balance) || 0;
+    } else {
+      // Si le portefeuille n'existe pas, le créer
+      const { error: createError } = await supabaseClient
+        .from('wallets')
+        .insert({
+          user_id: currentUser.id,
+          balance: 0
+        });
+      
+      if (createError) throw createError;
+      userWalletBalance = 0;
+    }
+    
+    // Mettre à jour l'affichage du solde
+    updateWalletDisplay();
+    
+  } catch (err) {
+    console.error('Erreur loadUserWallet:', err);
+    userWalletBalance = 0;
+  }
+}
+
+// Mettre à jour l'affichage du solde dans l'interface
+function updateWalletDisplay() {
+  const walletElements = document.querySelectorAll('.wallet-balance, #wallet-balance');
+  walletElements.forEach(el => {
+    el.textContent = userWalletBalance.toFixed(2) + ' $';
+  });
+}
+
+// Afficher le solde dans une alerte (pour tester)
+function showWalletBalance() {
+  showToast(`💰 Votre solde : ${userWalletBalance.toFixed(2)} $`);
+}
+
+// Recharger le portefeuille (simulation - à remplacer par Stripe plus tard)
+async function depositToWallet(amount) {
+  if (!currentUser) {
+    showToast('❌ Vous devez être connecté');
+    return;
+  }
+  
+  if (amount <= 0) {
+    showToast('❌ Le montant doit être supérieur à 0');
+    return;
+  }
+  
+  try {
+    // 1. Récupérer le solde actuel
+    const { data: wallet, error: walletError } = await supabaseClient
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', currentUser.id)
+      .single();
+    
+    if (walletError) throw walletError;
+    
+    const balanceBefore = parseFloat(wallet.balance);
+    const balanceAfter = balanceBefore + amount;
+    
+    // 2. Créer la transaction
+    const { error: transactionError } = await supabaseClient
+      .from('transactions')
+      .insert({
+        user_id: currentUser.id,
+        type: 'deposit',
+        amount: amount,
+        balance_before: balanceBefore,
+        balance_after: balanceAfter,
+        description: 'Recharge de compte',
+        status: 'completed',
+        payment_method: 'cash'
+      });
+    
+    if (transactionError) throw transactionError;
+    
+    // 3. Enregistrer le dépôt
+    const { error: depositError } = await supabaseClient
+      .from('deposits')
+      .insert({
+        user_id: currentUser.id,
+        amount: amount,
+        payment_method: 'cash',
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      });
+    
+    if (depositError) throw depositError;
+    
+    // 4. Mettre à jour le portefeuille
+    const { error: updateError } = await supabaseClient
+      .from('wallets')
+      .update({ balance: balanceAfter, updated_at: new Date().toISOString() })
+      .eq('user_id', currentUser.id);
+    
+    if (updateError) throw updateError;
+    
+    // 5. Mettre à jour l'affichage
+    userWalletBalance = balanceAfter;
+    updateWalletDisplay();
+    
+    showToast(`✅ Recharge réussie ! Nouveau solde : ${balanceAfter.toFixed(2)} $`);
+    
+  } catch (err) {
+    console.error('Erreur depositToWallet:', err);
+    showToast('❌ Erreur lors de la recharge : ' + err.message);
+  }
+}
+
+// Payer une commande avec le portefeuille
+async function payOrderWithWallet(orderId, amount) {
+  if (!currentUser) {
+    showToast('❌ Vous devez être connecté');
+    return false;
+  }
+  
+  if (userWalletBalance < amount) {
+    showToast(`❌ Solde insuffisant. Vous avez ${userWalletBalance.toFixed(2)} $, il faut ${amount.toFixed(2)} $`);
+    return false;
+  }
+  
+  try {
+    // 1. Récupérer le solde actuel
+    const { data: wallet, error: walletError } = await supabaseClient
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', currentUser.id)
+      .single();
+    
+    if (walletError) throw walletError;
+    
+    const balanceBefore = parseFloat(wallet.balance);
+    const balanceAfter = balanceBefore - amount;
+    
+    // 2. Créer la transaction
+    const { error: transactionError } = await supabaseClient
+      .from('transactions')
+      .insert({
+        user_id: currentUser.id,
+        type: 'payment',
+        amount: amount,
+        balance_before: balanceBefore,
+        balance_after: balanceAfter,
+        description: `Paiement commande #${orderId}`,
+        related_order_id: orderId,
+        status: 'completed',
+        payment_method: 'wallet'
+      });
+    
+    if (transactionError) throw transactionError;
+    
+    // 3. Mettre à jour le portefeuille
+    const { error: updateError } = await supabaseClient
+      .from('wallets')
+      .update({ balance: balanceAfter, updated_at: new Date().toISOString() })
+      .eq('user_id', currentUser.id);
+    
+    if (updateError) throw updateError;
+    
+    // 4. Mettre à jour l'affichage
+    userWalletBalance = balanceAfter;
+    updateWalletDisplay();
+    
+    showToast(`✅ Paiement réussi ! Nouveau solde : ${balanceAfter.toFixed(2)} $`);
+    return true;
+    
+  } catch (err) {
+    console.error('Erreur payOrderWithWallet:', err);
+    showToast('❌ Erreur lors du paiement : ' + err.message);
+    return false;
+  }
+}
+
+// Voir l'historique des transactions
+async function showTransactionHistory() {
+  if (!currentUser) {
+    showToast('❌ Vous devez être connecté');
+    return;
+  }
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('transactions')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      showToast('📭 Aucune transaction pour le moment');
+      return;
+    }
+    
+    // Créer un modal pour afficher l'historique
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg show';
+    modal.innerHTML = `
+      <div class="modal" style="max-width:700px;max-height:80vh;overflow-y:auto">
+        <h2 style="color:#0a1929;margin-bottom:1.5rem">💰 Historique des transactions</h2>
+        <div style="display:grid;gap:1rem">
+          ${data.map(t => {
+            const icons = {
+              'deposit': '💳',
+              'withdrawal': '💸',
+              'payment': '🛒',
+              'earning': '💰',
+              'refund': '↩️',
+              'transfer': '🔄'
+            };
+            const colors = {
+              'deposit': '#10b981',
+              'withdrawal': '#ef4444',
+              'payment': '#ef4444',
+              'earning': '#10b981',
+              'refund': '#f59e0b',
+              'transfer': '#3b82f6'
+            };
+            const icon = icons[t.type] || '💵';
+            const color = colors[t.type] || '#666';
+            const sign = ['deposit', 'earning', 'refund'].includes(t.type) ? '+' : '-';
+            
+            return `
+              <div style="background:#f5f1e8;padding:1rem;border-radius:8px;border-left:4px solid ${color}">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div style="display:flex;align-items:center;gap:1rem">
+                    <div style="font-size:2rem">${icon}</div>
+                    <div>
+                      <div style="font-weight:bold;color:#0a1929">${t.description || 'Transaction'}</div>
+                      <div style="font-size:0.85rem;color:#666">${new Date(t.created_at).toLocaleString('fr-CA')}</div>
+                    </div>
+                  </div>
+                  <div style="text-align:right">
+                    <div style="font-size:1.2rem;font-weight:bold;color:${color}">
+                      ${sign}${t.amount.toFixed(2)} $
+                    </div>
+                    <div style="font-size:0.85rem;color:#666">
+                      Solde : ${t.balance_after.toFixed(2)} $
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div style="margin-top:1.5rem;text-align:right">
+          <button class="btn-sm btn-gray" onclick="this.closest('.modal-bg').remove()">Fermer</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+  } catch (err) {
+    console.error('Erreur showTransactionHistory:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+// ============ MODAL DE RECHARGE ============
+function openDepositModal() {
+  if (!currentUser) {
+    showToast('❌ Vous devez être connecté');
+    return;
+  }
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg show';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:500px">
+      <h2 style="color:#0a1929;margin-bottom:1.5rem">💳 Recharger mon compte</h2>
+      
+      <div style="background:linear-gradient(135deg, #f5f1e8 0%, #fff9f0 100%);padding:1.5rem;border-radius:12px;margin-bottom:1.5rem;text-align:center;border:2px solid #f5a623">
+        <div style="font-size:0.9rem;color:#666;margin-bottom:0.5rem">Solde actuel</div>
+        <div style="font-size:2rem;font-weight:bold;color:#f5a623">${userWalletBalance.toFixed(2)} $</div>
+      </div>
+      
+      <div style="margin-bottom:1.5rem">
+        <label style="display:block;font-weight:bold;margin-bottom:0.5rem;color:#0a1929">Montant à recharger</label>
+        <input type="number" id="deposit-amount" min="5" step="0.01" placeholder="Ex: 20.00" style="width:100%;padding:0.8rem;border:2px solid #e0e0e0;border-radius:8px;font-size:1rem">
+      </div>
+      
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin-bottom:1.5rem">
+        <button class="btn-sm btn-gray" onclick="document.getElementById('deposit-amount').value=10">10 $</button>
+        <button class="btn-sm btn-gray" onclick="document.getElementById('deposit-amount').value=25">25 $</button>
+        <button class="btn-sm btn-gray" onclick="document.getElementById('deposit-amount').value=50">50 $</button>
+        <button class="btn-sm btn-gray" onclick="document.getElementById('deposit-amount').value=100">100 $</button>
+      </div>
+      
+      <div style="background:#f5f1e8;padding:1rem;border-radius:8px;margin-bottom:1.5rem;font-size:0.85rem;color:#666">
+        💡 <strong>Note :</strong> Pour l'instant, les recharges sont simulées. L'intégration Stripe/PayPal arrive bientôt !
+      </div>
+      
+      <div class="modal-actions">
+        <button class="btn-sm btn-gray" onclick="this.closest('.modal-bg').remove()">Annuler</button>
+        <button class="btn-sm btn-green" onclick="confirmDeposit()">✅ Recharger</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+// Confirmer la recharge
+async function confirmDeposit() {
+  const amountInput = document.getElementById('deposit-amount');
+  const amount = parseFloat(amountInput.value);
+  
+  if (!amount || amount < 5) {
+    showToast('❌ Le montant minimum est de 5 $');
+    return;
+  }
+  
+  if (amount > 1000) {
+    showToast('❌ Le montant maximum est de 1000 $');
+    return;
+  }
+  
+  // Fermer le modal
+  document.querySelector('.modal-bg.show').remove();
+  
+  // Effectuer la recharge
+  await depositToWallet(amount);
 }
