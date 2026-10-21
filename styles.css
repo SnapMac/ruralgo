@@ -716,7 +716,8 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   .wallet-balance-btn {
     width: 120px;
   }
-/* === ALIGNEMENT À DROITE GARANTI (FORCE) === */
+
+  /* === ALIGNEMENT À DROITE GARANTI (FORCE) === */
 .nav {
   display: flex !important;
   align-items: center !important;
