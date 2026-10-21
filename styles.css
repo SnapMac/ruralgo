@@ -716,3 +716,37 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   .wallet-balance-btn {
     width: 120px;
   }
+/* ============ ALIGNEMENT À DROITE DU HEADER ============ */
+/* Pousse les boutons de connexion ET la section utilisateur tout à droite */
+#auth-section,
+#user-section {
+  margin-left: auto; /* C'est cette ligne qui pousse tout à droite ! */
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* S'assurer que le nom et l'avatar restent bien groupés */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: right;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* Alignement du texte à droite */
+}
+
+.user-name {
+  font-weight: 700;
+  color: #0a1929;
+  font-size: 0.95rem;
+}
+
+.user-role {
+  font-size: 0.75rem;
+  color: #666;
+}
