@@ -114,8 +114,10 @@
       <button class="auth-btn secondary" onclick="openLoginModal()">🔑 Connexion</button>
     </div>
 
-    <!-- 7. SECTION UTILISATEUR CONNECTÉ -->
+ <!-- 7. SECTION UTILISATEUR CONNECTÉ (VERSION PRO) -->
 <div id="user-section" style="display:none">
+  
+  <!-- Infos utilisateur -->
   <div class="user-info" style="cursor:pointer" onclick="showProfile()">
     <div class="user-avatar" id="user-avatar">👤</div>
     <div class="user-details">
@@ -123,6 +125,23 @@
       <div class="user-role" id="user-role">Client</div>
     </div>
   </div>
+
+  <!-- Widget Portefeuille (Regroupé et élégant) -->
+  <div class="wallet-widget">
+    <button class="wallet-btn wallet-balance-btn" onclick="showWalletBalance()" title="Voir mon solde">
+      💰 <span class="wallet-balance-wrapper"><span class="wallet-balance" id="wallet-balance">0.00 $</span></span>
+    </button>
+    <button class="wallet-btn wallet-deposit-btn" onclick="openDepositModal()" title="Recharger mon compte">
+      💳 Recharger
+    </button>
+    <button class="wallet-btn wallet-history-btn" onclick="showTransactionHistory()" title="Historique">
+      📋
+    </button>
+  </div>
+
+  <!-- Bouton Déconnexion -->
+  <button class="logout-btn" onclick="logout()">Déconnexion</button>
+</div>
   
   <!-- 💰 NOUVEAU : BOUTONS DU PORTEFEUILLE -->
   <div class="wallet-buttons">
