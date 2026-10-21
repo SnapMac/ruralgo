@@ -1287,7 +1287,7 @@ async function placeOrder() {
     showToast(`✅ Commande payée ! Nouveau solde : ${userWalletBalance.toFixed(2)}$`);
     showClientOrders();
   } catch (err) {
-    console.error('Erreur placeOrder:', err);
+  console.error('Erreur placeOrder:', err.message, JSON.stringify(err));
     showToast('❌ Erreur : ' + err.message);
   }
 }
