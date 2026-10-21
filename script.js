@@ -1240,6 +1240,7 @@ async function placeOrder() {
   };
 
   try {
+  
     // ✅ CRÉER LA TRANSACTION DE PAIEMENT
     const { error: transactionError } = await supabaseClient
       .from('transactions')
@@ -1250,11 +1251,13 @@ async function placeOrder() {
         balance_before: userWalletBalance,
         balance_after: userWalletBalance - total,
         description: `Paiement commande ${orderData.order_number}`,
-        status: 'completed',
-        related_order_id: null
+        status: 'completed'
       });
 
-    if (transactionError) throw transactionError;
+    if (transactionError) {
+      console.error('Erreur transaction:', transactionError);
+      throw transactionError;
+    }
 
     // ✅ METTRE À JOUR LE SOLDE DU WALLET
     const { error: walletError } = await supabaseClient
