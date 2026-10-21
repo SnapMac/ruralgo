@@ -1241,13 +1241,14 @@ async function placeOrder() {
 
   try {
   
-    // ✅ CRÉER LA TRANSACTION DE PAIEMENT
+ 
+        // ✅ CRÉER LA TRANSACTION DE PAIEMENT
     const { error: transactionError } = await supabaseClient
       .from('transactions')
       .insert({
         user_id: currentUser.id,
         type: 'payment',
-        amount: -total,
+        amount: total, // ✅ POSITIF ! (La base de données l'exige)
         balance_before: userWalletBalance,
         balance_after: userWalletBalance - total,
         description: `Paiement commande ${orderData.order_number}`,
