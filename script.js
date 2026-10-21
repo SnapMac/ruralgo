@@ -1231,11 +1231,10 @@ async function placeOrder() {
     status: 'pending',
     store_id: store.id,
     store_name: store.name,
-    payment_method: 'wallet',
     status_history: [{
       status: 'pending',
       time: new Date().toISOString(),
-      note: 'Commande créée et payée'
+      note: 'Commande créée et payée avec le portefeuille'
     }]
   };
 
