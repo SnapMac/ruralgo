@@ -717,18 +717,17 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
     width: 120px;
   }
 
-  /* === ALIGNEMENT À DROITE GARANTI (FORCE) === */
+ /* === ALIGNEMENT À DROITE === */
 .nav {
-  display: flex !important;
-  align-items: center !important;
+  display: flex;
+  align-items: center;
 }
 
-/* Force les sections tout à droite, mais ne force PAS l'affichage */
 #auth-section,
 #user-section {
-  margin-left: auto !important;
-  align-items: center !important;
-  gap: 1rem !important;
+  margin-left: auto;
+  align-items: center;
+  gap: 1rem;
 }
 
 #auth-section {
