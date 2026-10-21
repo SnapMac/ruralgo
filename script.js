@@ -3432,19 +3432,37 @@ async function depositToWallet(amount) {
   }
   
   try {
-    // 1. Récupérer le solde actuel
-    const { data: wallet, error: walletError } = await supabaseClient
+    // 1. Essayer de récupérer le portefeuille existant
+    let wallet;
+    const { data: existingWallet, error: walletError } = await supabaseClient
       .from('wallets')
       .select('balance')
       .eq('user_id', currentUser.id)
-      .single();
+      .maybeSingle(); // maybeSingle au lieu de single pour éviter l'erreur
     
-    if (walletError) throw walletError;
+    if (walletError && walletError.code !== 'PGRST116') {
+      throw walletError;
+    }
+    
+    // 2. Si le wallet n'existe pas, le créer
+    if (!existingWallet) {
+      const { error: createError } = await supabaseClient
+        .from('wallets')
+        .insert({
+          user_id: currentUser.id,
+          balance: 0
+        });
+      
+      if (createError) throw createError;
+      wallet = { balance: 0 };
+    } else {
+      wallet = existingWallet;
+    }
     
     const balanceBefore = parseFloat(wallet.balance);
     const balanceAfter = balanceBefore + amount;
     
-    // 2. Créer la transaction
+    // 3. Créer la transaction
     const { error: transactionError } = await supabaseClient
       .from('transactions')
       .insert({
@@ -3460,7 +3478,7 @@ async function depositToWallet(amount) {
     
     if (transactionError) throw transactionError;
     
-    // 3. Enregistrer le dépôt
+    // 4. Enregistrer le dépôt
     const { error: depositError } = await supabaseClient
       .from('deposits')
       .insert({
@@ -3473,7 +3491,7 @@ async function depositToWallet(amount) {
     
     if (depositError) throw depositError;
     
-    // 4. Mettre à jour le portefeuille
+    // 5. Mettre à jour le portefeuille
     const { error: updateError } = await supabaseClient
       .from('wallets')
       .update({ balance: balanceAfter, updated_at: new Date().toISOString() })
@@ -3481,7 +3499,7 @@ async function depositToWallet(amount) {
     
     if (updateError) throw updateError;
     
-    // 5. Mettre à jour l'affichage
+    // 6. Mettre à jour l'affichage
     userWalletBalance = balanceAfter;
     updateWalletDisplay();
     
