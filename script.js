@@ -663,10 +663,15 @@ function showUserInterface() {
   document.getElementById('user-avatar').textContent = ini;
   document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
   
-  // ✅ CORRECTION 1 : Ajout de 'store' dans les labels
   const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
   document.getElementById('user-role').textContent = labels[currentUser.role];
   
+  // ✅ NOUVEAU : Cacher les boutons du portefeuille pour l'admin
+  const walletButtons = document.querySelector('.wallet-buttons');
+  if (walletButtons) {
+    walletButtons.style.display = currentUser.role === 'admin' ? 'none' : 'flex';
+  }
+
   document.getElementById('nav-client').style.display = 'none';
   document.getElementById('nav-driver').style.display = 'none';
   document.getElementById('nav-admin').style.display = 'none';
@@ -690,7 +695,6 @@ function showUserInterface() {
     switchView('view-admin');
     renderAllAdmin();
   } else if (currentUser.role === 'store') { 
-    // ✅ CORRECTION 2 : Le bloc qui manquait totalement pour les commerces !
     if (navStore) navStore.style.display = 'block';
     
     if (currentUser.status === 'pending') {
