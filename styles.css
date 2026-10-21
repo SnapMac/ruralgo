@@ -596,6 +596,7 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   gap: 0.5rem;
   align-items: center;
   margin: 0 0.5rem;
+  flex-shrink: 0; /* Empêche les boutons de se compresser */
 }
 
 .wallet-btn {
@@ -611,14 +612,15 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   align-items: center;
   gap: 0.3rem;
   white-space: nowrap;
+  flex-shrink: 0; /* Empêche le bouton de rétrécir */
 }
 
 .wallet-balance-btn {
   background: linear-gradient(135deg, #f5f1e8 0%, #fff9f0 100%);
   border-color: #f5a623;
   color: #0a1929;
-  min-width: 120px; /* Largeur minimale fixe */
-  justify-content: center; /* Centre le texte */
+  width: 130px; /* Largeur FIXE, pas min-width */
+  justify-content: center;
 }
 
 .wallet-balance-btn:hover {
@@ -657,6 +659,11 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
 .wallet-balance {
   font-weight: 700;
   color: #f5a623;
+  font-size: 0.85rem; /* Taille FIXE */
+  line-height: 1;
+  display: inline-block;
+  min-width: 60px; /* Espace minimum pour le montant */
+  text-align: right;
 }
 
 /* Responsive mobile */
@@ -670,5 +677,9 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   .wallet-btn {
     font-size: 0.75rem;
     padding: 0.3rem 0.6rem;
+  }
+  
+  .wallet-balance-btn {
+    width: 110px;
   }
 }
