@@ -3780,20 +3780,86 @@ function openDepositModal() {
 async function confirmDeposit() {
   const amountInput = document.getElementById('deposit-amount');
   const amount = parseFloat(amountInput.value);
-  
+
   if (!amount || amount < 5) {
-    showToast('❌ Le montant minimum est de 5 $');
+    showToast('❌ Le montant minimum est de 5$');
     return;
   }
-  
-  if (amount > 1000) {
-    showToast('❌ Le montant maximum est de 1000 $');
+
+  if (!currentUser) {
+    showToast('❌ Vous devez être connecté');
     return;
   }
-  
+
   // Fermer le modal
-  document.querySelector('.modal-bg.show').remove();
+  const modal = document.querySelector('.modal-bg.show');
+  if (modal) modal.remove();
+
+  showToast('⏳ Redirection vers le paiement sécurisé...');
+
+  try {
+    // Appel à notre fonction sécurisée Supabase (Edge Function)
+    const { data, error } = await supabaseClient.functions.invoke('create-checkout-session', {
+      body: {
+        amount: amount,
+        userId: currentUser.id,
+        userEmail: currentUser.email || 'client@ruralgo.com'
+      }
+    });
+
+    if (error) {
+      console.error('Erreur Edge Function:', error);
+      throw new Error(error.message || 'Erreur lors de la création du paiement');
+    }
+
+    // Redirection vers la page de paiement Stripe
+    if (data && data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error('Aucune URL de paiement reçue');
+    }
+
+  } catch (err) {
+    console.error('Erreur Stripe:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+// === GESTION DU RETOUR DE PAIEMENT STRIPE ===
+const urlParams = new URLSearchParams(window.location.search);
+
+if (urlParams.get('payment_success') === 'true') {
+  const amount = parseFloat(urlParams.get('amount'));
+  const sessionId = urlParams.get('session_id');
   
-  // Effectuer la recharge
-  await depositToWallet(amount);
+  if (currentUser && amount) {
+    // ⚠️ NOTE : En production, un Webhook Stripe devrait faire cette mise à jour de façon sécurisée.
+    // Pour les tests, on simule l'ajout au portefeuille :
+    
+    // 1. Ajouter la transaction dans la base de données
+    supabaseClient.from('transactions').insert({
+      user_id: currentUser.id,
+      type: 'deposit',
+      amount: amount,
+      balance_before: userWalletBalance,
+      balance_after: userWalletBalance + amount,
+      description: `Recharge via Stripe (Session: ${sessionId})`,
+      status: 'completed'
+    }).then(() => {
+      // 2. Mettre à jour le solde local
+      userWalletBalance += amount;
+      updateWalletDisplay();
+      showToast(`✅ Paiement de ${amount}$ réussi ! Solde mis à jour.`);
+    }).catch(err => {
+      console.error('Erreur mise à jour solde:', err);
+      showToast('⚠️ Paiement réussi, mais erreur de mise à jour du solde. Contactez le support.');
+    });
+  }
+  
+  // Nettoyer l'URL pour ne pas ré-afficher le message au prochain rafraîchissement
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+if (urlParams.get('payment_canceled') === 'true') {
+  showToast('❌ Paiement annulé. Aucun montant n\'a été débité.');
+  window.history.replaceState({}, document.title, window.location.pathname);
 }
