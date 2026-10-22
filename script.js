@@ -3799,11 +3799,18 @@ async function confirmDeposit() {
 
   try {
     // Appel à notre fonction sécurisée Supabase (Edge Function)
+    // Récupérer le token de l'utilisateur connecté
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const token = session?.access_token;
+
     const { data, error } = await supabaseClient.functions.invoke('create-checkout-session', {
       body: {
         amount: amount,
         userId: currentUser.id,
         userEmail: currentUser.email || 'client@ruralgo.com'
+      },
+      headers: {
+        Authorization: `Bearer ${token}`
       }
     });
 
