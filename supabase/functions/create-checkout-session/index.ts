@@ -1,53 +1,76 @@
-// @ts-ignore Deno resolves this URL import at runtime; TypeScript tooling may not.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-// @ts-ignore Deno resolves this URL import at runtime; TypeScript tooling may not.
 import Stripe from "https://esm.sh/stripe@13.6.0?target=deno";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// @ts-ignore Deno provides this global at runtime; browser TypeScript tooling may not.
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   apiVersion: '2023-10-16',
   httpClient: Stripe.createFetchHttpClient(),
 });
 
-serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, x-client-info, apikey, content-type' } });
-  }
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
+
+serve(async (req) => {
+  const signature = req.headers.get('stripe-signature');
+  const body = await req.text();
 
   try {
-    const { amount, userId, userEmail } = await req.json();
+    // Vérifier que c'est bien Stripe qui envoie le webhook
+    const event = stripe.webhooks.constructEvent(
+      body,
+      signature!,
+      Deno.env.get('STRIPE_WEBHOOK_SECRET') || ''
+    );
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'cad',
-            product_data: {
-              name: 'Recharge de portefeuille RuralGo',
-            },
-            unit_amount: Math.round(amount * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${req.headers.get('origin')}/?payment_success=true&amount=${amount}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get('origin')}/?payment_canceled=true`,
-      metadata: {
-        userId: userId,
-        amount: amount
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const userId = session.metadata?.userId;
+      const amount = parseFloat(session.metadata?.amount || '0');
+
+      if (userId && amount > 0) {
+        // Récupérer le solde actuel
+        const { data: wallet } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('user_id', userId)
+          .single();
+
+        const currentBalance = wallet?.balance || 0;
+        const newBalance = currentBalance + amount;
+
+        // Mettre à jour le solde
+        await supabase
+          .from('wallets')
+          .update({ balance: newBalance, updated_at: new Date().toISOString() })
+          .eq('user_id', userId);
+
+        // Ajouter la transaction
+        await supabase
+          .from('transactions')
+          .insert({
+            user_id: userId,
+            type: 'deposit',
+            amount: amount,
+            balance_before: currentBalance,
+            balance_after: newBalance,
+            description: `Recharge via Stripe (Session: ${session.id})`,
+            status: 'completed'
+          });
+
+        console.log(`✅ Solde mis à jour pour ${userId}: +${amount}$`);
       }
-    });
+    }
 
-    return new Response(JSON.stringify({ url: session.url }), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { 'Content-Type': 'application/json' },
       status: 200,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return new Response(JSON.stringify({ error: message }), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+  } catch (err) {
+    console.error('Erreur webhook:', err.message);
+    return new Response(JSON.stringify({ error: err.message }), {
+      headers: { 'Content-Type': 'application/json' },
       status: 400,
     });
   }

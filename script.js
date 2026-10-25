@@ -3831,38 +3831,11 @@ async function confirmDeposit() {
     showToast('❌ Erreur : ' + err.message);
   }
 }
-// === GESTION DU RETOUR DE PAIEMENT STRIPE ===
+// === RETOUR DE PAIEMENT STRIPE (affichage uniquement) ===
 const urlParams = new URLSearchParams(window.location.search);
 
 if (urlParams.get('payment_success') === 'true') {
-  const amount = parseFloat(urlParams.get('amount'));
-  const sessionId = urlParams.get('session_id');
-  
-  if (currentUser && amount) {
-    // ⚠️ NOTE : En production, un Webhook Stripe devrait faire cette mise à jour de façon sécurisée.
-    // Pour les tests, on simule l'ajout au portefeuille :
-    
-    // 1. Ajouter la transaction dans la base de données
-    supabaseClient.from('transactions').insert({
-      user_id: currentUser.id,
-      type: 'deposit',
-      amount: amount,
-      balance_before: userWalletBalance,
-      balance_after: userWalletBalance + amount,
-      description: `Recharge via Stripe (Session: ${sessionId})`,
-      status: 'completed'
-    }).then(() => {
-      // 2. Mettre à jour le solde local
-      userWalletBalance += amount;
-      updateWalletDisplay();
-      showToast(`✅ Paiement de ${amount}$ réussi ! Solde mis à jour.`);
-    }).catch(err => {
-      console.error('Erreur mise à jour solde:', err);
-      showToast('⚠️ Paiement réussi, mais erreur de mise à jour du solde. Contactez le support.');
-    });
-  }
-  
-  // Nettoyer l'URL pour ne pas ré-afficher le message au prochain rafraîchissement
+  showToast('✅ Paiement effectué. Ton solde va être mis à jour automatiquement.');
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
