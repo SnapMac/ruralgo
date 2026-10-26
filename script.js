@@ -2,6 +2,161 @@
 // ==========================================
 // CONNEXION À SUPABASE
 // ==========================================
+const SUPABASE_URL = 'https://shopfllntsigjmayqrre.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const MANIWAKI_CENTER = [46.3767, -75.9653];
+const DELIVERY_RADIUS_KM = 40;
+
+// ==========================================
+// ✅ SYSTÈME DE NOTIFICATIONS CENTRALISÉ
+// ==========================================
+
+// Fonction principale : affiche le toast + sauvegarde + incrémente la cloche
+async function showNotification(title, message, type = 'info', targetUserId = null) {
+  // 1. Afficher le toast (comme avant)
+  showToast(message);
+  
+  // 2. Déterminer à qui envoyer la notification
+  let userId = targetUserId;
+  if (!userId && currentUser && currentUser.id) {
+    userId = currentUser.id;
+  }
+  
+  // 3. Sauvegarder dans la base de données
+  if (userId) {
+    try {
+      await supabaseClient.from('notifications').insert({
+        user_id: userId,
+        title: title,
+        message: message,
+        type: type,
+        is_read: false
+      });
+      
+      // 4. Mettre à jour le badge de la cloche
+      await updateNotifBadge();
+      
+    } catch (err) {
+      console.error('Erreur sauvegarde notification:', err);
+    }
+  }
+}
+
+// Met à jour le chiffre rouge sur la cloche
+async function updateNotifBadge() {
+  if (!currentUser || !currentUser.id) return;
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('notifications')
+      .select('id')
+      .eq('user_id', currentUser.id)
+      .eq('is_read', false);
+    
+    if (error) throw error;
+    
+    const count = data ? data.length : 0;
+    const badge = document.getElementById('notif-badge');
+    
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    
+  } catch (err) {
+    console.error('Erreur updateNotifBadge:', err);
+  }
+}
+
+// Ouvrir/fermer le panneau des notifications
+async function toggleNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  
+  // Si le panneau est caché, l'ouvrir et charger les notifications
+  if (panel.style.display === 'none' || !panel.style.display) {
+    panel.style.display = 'block';
+    await loadNotifPanel();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+// Charger les notifications dans le panneau
+async function loadNotifPanel() {
+  if (!currentUser || !currentUser.id) return;
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (error) throw error;
+    
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+    
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div style="padding:1rem;text-align:center;color:#666">Aucune notification</div>';
+      return;
+    }
+    
+    list.innerHTML = data.map(notif => {
+      const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌' };
+      const icon = icons[notif.type] || 'ℹ️';
+      const date = new Date(notif.created_at).toLocaleString('fr-CA');
+      const bg = notif.is_read ? '#f9f9f9' : '#fff9f0';
+      
+      return `
+        <div style="padding:0.8rem;border-bottom:1px solid #eee;background:${bg}">
+          <div style="font-weight:bold;color:#0a1929">${icon} ${notif.title}</div>
+          <div style="font-size:0.9rem;color:#666;margin-top:0.3rem">${notif.message}</div>
+          <div style="font-size:0.75rem;color:#999;margin-top:0.3rem">${date}</div>
+        </div>
+      `;
+    }).join('');
+    
+  } catch (err) {
+    console.error('Erreur loadNotifPanel:', err);
+  }
+}
+
+// Marquer toutes les notifications comme lues
+async function markAllRead() {
+  if (!currentUser || !currentUser.id) return;
+  
+  try {
+    await supabaseClient
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', currentUser.id)
+      .eq('is_read', false);
+    
+    await updateNotifBadge();
+    await loadNotifPanel(); // Rafraîchir le panneau
+    showToast('✅ Toutes les notifications marquées comme lues');
+    
+  } catch (err) {
+    console.error('Erreur markAllRead:', err);
+  }
+}
+
+// Initialiser les notifications après connexion
+async function initNotifications() {
+  if (currentUser && currentUser.id) {
+    const bellContainer = document.getElementById('notif-bell-container');
+    if (bellContainer) bellContainer.style.display = 'block';
+    await updateNotifBadge();
+  }
+}
 
 // ==========================================
 // ✅ GESTION DU RETOUR DE PAIEMENT (SUCCÈS OU ANNULATION)
@@ -63,11 +218,6 @@ async function checkPaymentStatus() {
 setTimeout(checkPaymentStatus, 1500);
 // ==========================================
 
-const SUPABASE_URL = 'https://shopfllntsigjmayqrre.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const MANIWAKI_CENTER = [46.3767, -75.9653];
-const DELIVERY_RADIUS_KM = 40;
 
 let stores = [
   {id:1,icon:'🛒',name:'Épicerie Générale du Haut-Pays',type:'Épicerie',address:'100 rue Principale, Maniwaki, QC',phone:'(819) 449-1234',status:'active',lat:46.3770,lng:-75.9650},
@@ -724,6 +874,7 @@ async function loginUser(event) {
     }
 
     // Si ce n'est pas un commerce, ou si le commerce a déjà payé
+    await initNotifications();
     showUserInterface();
     showToast('✅ Connexion réussie, bienvenue ' + currentUser.name + ' !');
 
@@ -732,6 +883,7 @@ async function loginUser(event) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
+
 // ✅ Affiche l'écran de choix de forfait pour un commerce approuvé
 async function showStorePaymentScreen() {
   console.log("🔍 DEBUG PAIEMENT - Début du chargement des forfaits...");
@@ -2851,11 +3003,43 @@ document.querySelectorAll('.modal-bg').forEach(m => {
   m.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
 });
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+// ✅ SUPER SHOWTOAST : Affiche le toast + Sauvegarde en DB + Incrémente la cloche
+async function showToast(message, type = 'info') {
+  // 1. Affichage visuel du toast (ton ancien code)
+  const toast = document.getElementById('toast');
+  if (toast) {
+    toast.textContent = message;
+    toast.className = 'toast show'; // Assure-toi que c'est la bonne classe pour l'afficher
+    setTimeout(() => {
+      toast.className = toast.className.replace('show', '');
+    }, 3000); // Disparaît après 3 secondes
+  }
+
+  // 2. Détection intelligente du type de message basé sur les émojis (optionnel mais pratique)
+  if (message.includes('✅') || message.includes('Succès') || message.includes('réussi')) type = 'success';
+  else if (message.includes('❌') || message.includes('Erreur') || message.includes('échoué')) type = 'error';
+  else if (message.includes('⚠️') || message.includes('Attention')) type = 'warning';
+  else type = 'info';
+
+  // 3. Sauvegarde automatique en base de données et mise à jour de la cloche
+  if (currentUser && currentUser.id) {
+    try {
+      await supabaseClient.from('notifications').insert({
+        user_id: currentUser.id,
+        title: 'Notification', // Titre par défaut
+        message: message,
+        type: type,
+        is_read: false
+      });
+      
+      // Met à jour le badge rouge instantanément
+      await updateNotifBadge();
+      
+    } catch (err) {
+      // On ne bloque pas l'app si la sauvegarde échoue, on log juste
+      console.error('Erreur sauvegarde auto-notification:', err);
+    }
+  }
 }
 
 
@@ -3356,17 +3540,6 @@ async function addNotification(userId, title, message, type = 'info') {
     console.error('Erreur addNotification:', err);
   }
 }
-function updateNotifBadge() {
-  if (!currentUser) return;
-  const userNotifs = notifications.filter(n => String(n.userId) === String(currentUser.id) && !n.read);
-  const badge = document.getElementById('notif-badge');
-  if (userNotifs.length > 0) {
-    badge.style.display = 'flex';
-    badge.textContent = userNotifs.length;
-  } else {
-    badge.style.display = 'none';
-  }
-}
 
 async function loadNotifications() {
   if (!currentUser) return;
@@ -3433,26 +3606,8 @@ async function markAsRead(id) {
   }
 }
 
-async function markAllRead() {
-  if (!currentUser) return;
-  try {
-    await supabaseClient.from('notifications').update({ is_read: true }).eq('user_id', String(currentUser.id));
-    loadNotifications();
-    showToast('✅ Toutes marquées comme lues');
-  } catch (err) {
-    console.error('Erreur markAllRead:', err);
-  }
-}
 
-function toggleNotifPanel() {
-  const panel = document.getElementById('notif-panel');
-  if (panel) {
-    panel.classList.toggle('show');
-    if (panel.classList.contains('show')) {
-      loadNotifications();
-    }
-  }
-}
+
 // Rafraîchir les notifications toutes les 30 secondes si l'utilisateur est connecté
 setInterval(() => {
   if (currentUser) {
