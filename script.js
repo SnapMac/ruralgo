@@ -3876,3 +3876,44 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 });
+// ✅ VÉRIFIER LE PAIEMENT RÉUSSI DÈS QUE LA PAGE EST PRÊTE
+async function checkPaymentSuccess() {
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  if (urlParams.get('payment_success') === 'true') {
+    // 1. Afficher un message de succès
+    showToast('✅ Paiement réussi ! Votre solde a été mis à jour.');
+    
+    // 2. Nettoyer l'URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // 3. Forcer la mise à jour du solde
+    if (typeof currentUser !== 'undefined' && currentUser) {
+      try {
+        const { data: wallet, error } = await supabaseClient
+          .from('wallets')
+          .select('balance')
+          .eq('user_id', currentUser.id)
+          .single();
+        
+        if (!error && wallet) {
+          userWalletBalance = parseFloat(wallet.balance);
+          if (typeof updateWalletDisplay === 'function') {
+            updateWalletDisplay();
+          }
+          console.log('🔄 Solde rafraîchi:', userWalletBalance);
+        }
+      } catch (err) {
+        console.error('Erreur:', err);
+      }
+    }
+  }
+}
+
+// Exécuter immédiatement si la page est déjà chargée
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  checkPaymentSuccess();
+} else {
+  // Sinon, attendre le chargement
+  window.addEventListener('DOMContentLoaded', checkPaymentSuccess);
+}
