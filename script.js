@@ -734,7 +734,6 @@ async function loginUser(event) {
 }
 // ✅ Affiche l'écran de choix de forfait pour un commerce approuvé
 async function showStorePaymentScreen() {
-  // Récupérer les forfaits depuis la base de données
   const { data: plans, error } = await supabaseClient
     .from('plans')
     .select('*')
@@ -744,15 +743,25 @@ async function showStorePaymentScreen() {
   if (error || !plans) {
     showToast('❌ Erreur de chargement des forfaits');
     return;
-  }
+ }
 
-  // Générer le HTML pour chaque forfait
+  const selectedPlanId = currentUser.selected_plan_id;
+  const planNames = { 1: 'Essai', 2: 'Base', 3: 'Croissance', 4: 'Partenaires Plus' };
+  const chosenName = planNames[selectedPlanId] || 'inconnu';
+
   const plansHtml = plans.map(plan => {
     const featuresHtml = plan.features ? plan.features.map(f => `<li style="margin-bottom:0.5rem">✅ ${f}</li>`).join('') : '';
     const btnText = plan.price === 0 ? '🎁 Activer l\'essai gratuit' : `💳 Payer ${plan.price}$ / mois`;
     
+    // Mettre en surbrillance le forfait choisi lors de l'inscription
+    const isChosen = plan.id === selectedPlanId;
+    const borderColor = isChosen ? '#f5a623' : '#e0e0e0';
+    const bg = isChosen ? '#fff9f0' : 'white';
+    const badge = isChosen ? '<div style="background:#f5a623;color:white;padding:4px 8px;border-radius:4px;font-size:0.8rem;margin-bottom:8px;display:inline-block;">⭐ Votre choix à l\'inscription</div>' : '';
+
     return `
-      <div style="border: 2px solid #e0e0e0; border-radius: 12px; padding: 1.5rem; text-align: center; background: white; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div style="border: 3px solid ${borderColor}; border-radius: 12px; padding: 1.5rem; text-align: center; background: ${bg}; transition: transform 0.2s; position: relative;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+        ${badge}
         <h3 style="color: #0a1929; margin-bottom: 0.5rem;">${plan.name}</h3>
         <div style="font-size: 2rem; font-weight: bold; color: #f5a623; margin-bottom: 1rem;">
           ${plan.price === 0 ? 'GRATUIT' : plan.price + ' $<span style="font-size:1rem;color:#666">/mois</span>'}
@@ -760,21 +769,27 @@ async function showStorePaymentScreen() {
         <ul style="text-align: left; color: #666; margin-bottom: 1.5rem; padding-left: 1.5rem; font-size: 0.9rem; list-style: none;">
           ${featuresHtml}
         </ul>
-        <button class="btn-sm btn-green" style="width: 100%;" onclick="handlePlanSelection(${plan.id}, ${plan.price})">
+        <button class="btn-sm btn-green" style="width: 100%; font-weight: bold;" onclick="handlePlanSelection(${plan.id}, ${plan.price})">
           ${btnText}
         </button>
       </div>
     `;
   }).join('');
 
-  // Créer le modal
   const modal = document.createElement('div');
   modal.className = 'modal-bg show';
   modal.id = 'store-payment-modal';
+  modal.style.zIndex = '9999'; // S'assurer qu'il est au-dessus de tout
   modal.innerHTML = `
     <div class="modal" style="max-width: 900px;">
       <h2 style="color: #0a1929; margin-bottom: 0.5rem;">🎉 Votre compte a été approuvé !</h2>
-      <p style="color: #666; margin-bottom: 2rem;">Choisissez votre forfait pour finaliser l'activation de votre commerce sur RuralGo.</p>
+      <p style="color: #666; margin-bottom: 1rem;">L'administrateur a validé votre demande.</p>
+      <div style="background: #e6f7ff; border: 1px solid #91d5ff; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; text-align: center;">
+        <p style="margin: 0; color: #0050b3; font-weight: bold;">
+          Vous avez sélectionné le forfait : <span style="color: #f5a623; font-size: 1.2rem;">${chosenName}</span> lors de votre inscription.
+        </p>
+        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #666;">Vous pouvez le confirmer ci-dessous ou en choisir un autre.</p>
+      </div>
       
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
         ${plansHtml}
@@ -782,9 +797,13 @@ async function showStorePaymentScreen() {
       
       <div style="text-align: right;">
         <button class="btn-sm btn-gray" onclick="document.getElementById('store-payment-modal').remove(); supabaseClient.auth.signOut(); currentUser=null; showUserInterface();">🚪 Se déconnecter</button>
-      </div>
+      </div
     </div>
   `;
+  
+  // Supprimer l'ancien modal s'il existe pour éviter les doublons
+  const oldModal = document.getElementById('store-payment-modal');
+  if (oldModal) oldModal.remove();
   
   document.body.appendChild(modal);
 }
