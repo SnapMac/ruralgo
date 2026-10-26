@@ -3841,64 +3841,57 @@ if (urlParams.get('payment_canceled') === 'true') {
   showToast('❌ Paiement annulé. Aucun montant n\'a été débité.');
   window.history.replaceState({}, document.title, window.location.pathname);
 }
-// ✅ VÉRIFIER LE PAIEMENT RÉUSSI DE MANIÈRE FIABLE (Même après rechargement)
 async function checkPaymentSuccess() {
+  console.log("🔍 [DEBUG] Vérification du paiement démarrée...");
   const urlParams = new URLSearchParams(window.location.search);
+  console.log("🔍 [DEBUG] Paramètres URL :", urlParams.toString());
   
   if (urlParams.get('payment_success') === 'true') {
-    // 1. Nettoyer l'URL immédiatement pour éviter les boucles de rafraîchissement
+    console.log("✅ [DEBUG] 'payment_success' détecté !");
+    
+    // 1. Nettoyer l'URL
     window.history.replaceState({}, document.title, window.location.pathname);
     
-    // 2. Demander DIRECTEMENT à Supabase qui est connecté (ne dépend pas de la variable globale)
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    // 2. Attendre 500ms pour laisser à Supabase le temps de restaurer la session au retour de Stripe
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    if (userError || !user) {
-      console.log("⚠️ Session non restaurée au retour du paiement");
-      return;
-    }
-
-    // 3. Mettre à jour ta variable globale si elle existe, pour le reste du site
-    if (typeof currentUser !== 'undefined') {
-      currentUser = user;
-    }
-
-    try {
-      // 4. Forcer la récupération du tout nouveau solde depuis la base de données
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    console.log("🔍 [DEBUG] Utilisateur connecté :", user ? user.id : "NON CONNECTÉ", "Erreur:", userError);
+    
+    if (user) {
       const { data: wallet, error: walletError } = await supabaseClient
         .from('wallets')
         .select('balance')
         .eq('user_id', user.id)
         .single();
       
-      if (!walletError && wallet) {
+      console.log("🔍 [DEBUG] Données du portefeuille reçues :", wallet, "Erreur:", walletError);
+      
+      if (wallet) {
         const newBalance = parseFloat(wallet.balance);
+        console.log("🎯 [DEBUG] NOUVEAU SOLDE RÉCUPÉRÉ :", newBalance);
         
-        // Met à jour la variable globale du solde si elle existe
-        if (typeof userWalletBalance !== 'undefined') {
-          userWalletBalance = newBalance;
-        }
+        // Forcer la mise à jour des variables globales
+        if (typeof currentUser !== 'undefined') currentUser = user;
+        if (typeof userWalletBalance !== 'undefined') userWalletBalance = newBalance;
         
-        // Met à jour l'affichage à l'écran
+        // Forcer la mise à jour de l'affichage
         if (typeof updateWalletDisplay === 'function') {
+          console.log("🔄 [DEBUG] Appel de la fonction updateWalletDisplay()...");
           updateWalletDisplay();
         }
         
-        // Afficher le message de succès
         if (typeof showToast === 'function') {
-          showToast(`✅ Paiement réussi ! Nouveau solde : ${newBalance.toFixed(2)} $`);
+          showToast(`✅ Paiement réussi ! Solde : ${newBalance.toFixed(2)} $`);
         }
-        
-        console.log('🔄 Solde rafraîchi avec succès:', newBalance);
-      } else {
-        console.error('Erreur récupération wallet:', walletError);
       }
-    } catch (err) {
-      console.error('Erreur de mise à jour du solde:', err);
     }
+  } else {
+    console.log("ℹ️ [DEBUG] Aucun paramètre 'payment_success' dans l'URL.");
   }
 }
 
-// Exécuter dès que possible (que la page soit déjà chargée ou non)
+// Lancer la vérification
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   checkPaymentSuccess();
 } else {
