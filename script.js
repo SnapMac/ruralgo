@@ -660,15 +660,12 @@ async function loginUser(event) {
   try {
     showToast('⏳ Connexion en cours...');
     
-    // 1. Connexion Supabase Auth
     const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password
+      email, password
     });
 
     if (authError) throw authError;
 
-    // 2. Récupérer le profil pour vérifier le rôle, le statut et le forfait choisi
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('role, status, selected_plan_id, name')
@@ -677,7 +674,6 @@ async function loginUser(event) {
 
     if (profileError) throw profileError;
 
-    // 3. Sauvegarder l'utilisateur connecté
     currentUser = {
       id: authData.user.id,
       email: authData.user.email,
@@ -689,8 +685,10 @@ async function loginUser(event) {
 
     closeModal('login-modal');
 
-    // 4. LOGIQUE SPÉCIALE POUR LES COMMERCES
+    // --- LOGIQUE SPÉCIALE POUR LES COMMERCES ---
     if (currentUser.role === 'store') {
+      console.log("🔍 DEBUG LOGIN - Rôle: store, Statut:", currentUser.status, "Plan ID:", currentUser.selected_plan_id);
+
       if (currentUser.status === 'pending') {
         showToast('⏳ Votre compte est en attente de validation par l\'administrateur.');
         await supabaseClient.auth.signOut();
@@ -699,26 +697,33 @@ async function loginUser(event) {
       }
 
       if (currentUser.status === 'approved') {
-        // Vérifier s'ils ont déjà un abonnement actif dans la table 'subscriptions'
-        const { data: subscription } = await supabaseClient
+        console.log("🔍 DEBUG LOGIN - Vérification de l'abonnement...");
+        
+        const { data: subscription, error: subError } = await supabaseClient
           .from('subscriptions')
           .select('status')
           .eq('user_id', currentUser.id)
-          .single();
+          .maybeSingle(); // maybeSingle évite les erreurs si aucune ligne n'existe
 
-        const isFreeTrial = currentUser.selected_plan_id === 1; // 1 = Essai gratuit
+        if (subError) console.error("Erreur subscription:", subError);
+
+        const isFreeTrial = currentUser.selected_plan_id === 1; // 1 = Essai
         const hasActiveSubscription = subscription && subscription.status === 'active';
 
-        // Si ce n'est pas l'essai gratuit ET qu'ils n'ont pas d'abonnement actif → les envoyer payer
+        console.log("🔍 DEBUG LOGIN - Essai gratuit ?", isFreeTrial, "| Abonnement actif ?", hasActiveSubscription);
+
         if (!isFreeTrial && !hasActiveSubscription) {
+          console.log("🚨 DEBUG LOGIN - DÉCLENCHEMENT DE L'ÉCRAN DE PAIEMENT !");
           showToast('💳 Veuillez régler votre forfait pour activer votre compte.');
-          showStorePaymentScreen(); // Affiche l'écran de choix de paiement
-          return; // On s'arrête ici, on n'affiche pas le dashboard normal
+          showStorePaymentScreen(); // Affiche l'écran de paiement
+          return; // ⚠️ TRÈS IMPORTANT : On s'arrête ici, on n'affiche PAS le dashboard normal
+        } else {
+          console.log("✅ DEBUG LOGIN - Accès dashboard autorisé.");
         }
       }
     }
 
-    // 5. Si tout est bon (ou si c'est un client/livreur), afficher l'interface normale
+    // Si ce n'est pas un commerce, ou si le commerce a déjà payé
     showUserInterface();
     showToast('✅ Connexion réussie, bienvenue ' + currentUser.name + ' !');
 
