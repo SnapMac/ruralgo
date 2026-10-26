@@ -3,22 +3,65 @@
 // CONNEXION À SUPABASE
 // ==========================================
 
-// ✅ CAPTURER L'URL IMMÉDIATEMENT AU CHARGEMENT (avant toute redirection)
-const initialURL = window.location.href;
+// ==========================================
+// ✅ GESTION DU RETOUR DE PAIEMENT (SUCCÈS OU ANNULATION)
+// ==========================================
 const initialParams = new URLSearchParams(window.location.search);
-console.log("🚨 [EARLY DEBUG] URL au chargement initial :", initialURL);
-console.log("🚨 [EARLY DEBUG] Paramètres au chargement initial :", initialParams.toString());
 
+// 1. Capturer l'état immédiatement avant que l'URL ne soit nettoyée
 if (initialParams.get('payment_success') === 'true') {
-  console.log("🎯 [EARLY DEBUG] PAYMENT SUCCESS DÉTECTÉ TÔT !");
-  
-  // Sauvegarder dans sessionStorage pour que le reste du code puisse le lire
-  sessionStorage.setItem('payment_success', 'true');
+  sessionStorage.setItem('payment_status', 'success');
   sessionStorage.setItem('payment_amount', initialParams.get('amount') || '0');
-  
-  // Nettoyer l'URL immédiatement
+  window.history.replaceState({}, document.title, window.location.pathname);
+} 
+else if (initialParams.get('payment_canceled') === 'true') {
+  sessionStorage.setItem('payment_status', 'canceled');
   window.history.replaceState({}, document.title, window.location.pathname);
 }
+
+// 2. Fonction qui vérifie le statut et met à jour l'affichage
+async function checkPaymentStatus() {
+  const status = sessionStorage.getItem('payment_status');
+  
+  if (status === 'success') {
+    // --- CAS DU SUCCÈS ---
+    sessionStorage.removeItem('payment_status');
+    sessionStorage.removeItem('payment_amount');
+    
+    // Attendre un peu que la session Supabase soit bien restaurée
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (user) {
+      const { data: wallet } = await supabaseClient
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (wallet) {
+        const newBalance = parseFloat(wallet.balance);
+        if (typeof currentUser !== 'undefined') currentUser = user;
+        if (typeof userWalletBalance !== 'undefined') userWalletBalance = newBalance;
+        if (typeof updateWalletDisplay === 'function') updateWalletDisplay();
+        if (typeof showToast === 'function') showToast(`✅ Paiement réussi ! Solde : ${newBalance.toFixed(2)} $`);
+      }
+    }
+  } 
+  else if (status === 'canceled') {
+    // --- CAS DE L'ANNULATION ---
+    sessionStorage.removeItem('payment_status');
+    
+    // Afficher un message clair à l'utilisateur
+    if (typeof showToast === 'function') {
+      showToast('❌ Paiement annulé. Votre solde n\'a pas été modifié.');
+    }
+  }
+}
+
+// Lancer la vérification après un court délai pour laisser le reste de la page se charger
+setTimeout(checkPaymentStatus, 1500);
+// ==========================================
 
 const SUPABASE_URL = 'https://shopfllntsigjmayqrre.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU';
