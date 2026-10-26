@@ -2,6 +2,24 @@
 // ==========================================
 // CONNEXION À SUPABASE
 // ==========================================
+
+// ✅ CAPTURER L'URL IMMÉDIATEMENT AU CHARGEMENT (avant toute redirection)
+const initialURL = window.location.href;
+const initialParams = new URLSearchParams(window.location.search);
+console.log("🚨 [EARLY DEBUG] URL au chargement initial :", initialURL);
+console.log("🚨 [EARLY DEBUG] Paramètres au chargement initial :", initialParams.toString());
+
+if (initialParams.get('payment_success') === 'true') {
+  console.log("🎯 [EARLY DEBUG] PAYMENT SUCCESS DÉTECTÉ TÔT !");
+  
+  // Sauvegarder dans sessionStorage pour que le reste du code puisse le lire
+  sessionStorage.setItem('payment_success', 'true');
+  sessionStorage.setItem('payment_amount', initialParams.get('amount') || '0');
+  
+  // Nettoyer l'URL immédiatement
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
 const SUPABASE_URL = 'https://shopfllntsigjmayqrre.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -3842,21 +3860,23 @@ if (urlParams.get('payment_canceled') === 'true') {
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 async function checkPaymentSuccess() {
-  console.log("🔍 [DEBUG] Vérification du paiement démarrée...");
-  const urlParams = new URLSearchParams(window.location.search);
-  console.log("🔍 [DEBUG] Paramètres URL :", urlParams.toString());
+  console.log("🔍 [DEBUG] Vérification depuis sessionStorage...");
   
-  if (urlParams.get('payment_success') === 'true') {
-    console.log("✅ [DEBUG] 'payment_success' détecté !");
+  // Vérifier si on a sauvegardé le succès plus tôt
+  const paymentSuccess = sessionStorage.getItem('payment_success');
+  
+  if (paymentSuccess === 'true') {
+    console.log("✅ [DEBUG] Succès trouvé dans sessionStorage !");
     
-    // 1. Nettoyer l'URL
-    window.history.replaceState({}, document.title, window.location.pathname);
+    // Nettoyer le sessionStorage
+    sessionStorage.removeItem('payment_success');
+    sessionStorage.removeItem('payment_amount');
     
-    // 2. Attendre 500ms pour laisser à Supabase le temps de restaurer la session au retour de Stripe
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Attendre que la session Supabase soit prête
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    console.log("🔍 [DEBUG] Utilisateur connecté :", user ? user.id : "NON CONNECTÉ", "Erreur:", userError);
+    console.log("🔍 [DEBUG] Utilisateur :", user ? user.id : "NON CONNECTÉ");
     
     if (user) {
       const { data: wallet, error: walletError } = await supabaseClient
@@ -3865,19 +3885,16 @@ async function checkPaymentSuccess() {
         .eq('user_id', user.id)
         .single();
       
-      console.log("🔍 [DEBUG] Données du portefeuille reçues :", wallet, "Erreur:", walletError);
+      console.log("🔍 [DEBUG] Wallet :", wallet);
       
       if (wallet) {
         const newBalance = parseFloat(wallet.balance);
-        console.log("🎯 [DEBUG] NOUVEAU SOLDE RÉCUPÉRÉ :", newBalance);
+        console.log("🎯 [DEBUG] NOUVEAU SOLDE :", newBalance);
         
-        // Forcer la mise à jour des variables globales
         if (typeof currentUser !== 'undefined') currentUser = user;
         if (typeof userWalletBalance !== 'undefined') userWalletBalance = newBalance;
         
-        // Forcer la mise à jour de l'affichage
         if (typeof updateWalletDisplay === 'function') {
-          console.log("🔄 [DEBUG] Appel de la fonction updateWalletDisplay()...");
           updateWalletDisplay();
         }
         
@@ -3887,9 +3904,12 @@ async function checkPaymentSuccess() {
       }
     }
   } else {
-    console.log("ℹ️ [DEBUG] Aucun paramètre 'payment_success' dans l'URL.");
+    console.log("ℹ️ [DEBUG] Pas de paiement réussi dans sessionStorage");
   }
 }
+
+// Lancer après un délai pour laisser le temps au reste du code de se charger
+setTimeout(checkPaymentSuccess, 1500);
 
 // Lancer la vérification
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
