@@ -2382,50 +2382,45 @@ function renderAdminSettings() {
 
 // Afficher les demandes de commerces en attente
 // ============ ADMIN - Demandes de commerces en attente ============
+
 async function renderPendingStores() {
   const container = document.getElementById('pending-stores-container');
-  if (!container) {
-    console.log("⚠️ Erreur : Le conteneur 'pending-stores-container' est introuvable dans le HTML.");
-    return;
-  }
+  if (!container) return;
 
   console.log("🔄 Chargement des demandes de commerces en attente...");
 
   try {
+    // ✅ CORRECTION : On interroge la table 'profiles' qui est notre source de vérité
     const { data, error } = await supabaseClient
-      .from('stores')
+      .from('profiles')
       .select('*')
-      .eq('status', 'pending') // On cherche uniquement les commerces en attente
+      .eq('role', 'store')
+      .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error("❌ Erreur Supabase :", error);
-      throw error;
-    }
+    if (error) throw error;
 
-    // 🕵️‍♂️ C'est la ligne magique : elle nous dira combien de commerces elle a trouvés
-    console.log("✅ Données reçues de Supabase :", data); 
+    console.log("✅ Demandes en attente trouvées :", data); 
 
     if (!data || data.length === 0) {
       container.innerHTML = '<div style="text-align:center;padding:2rem;color:#666">Aucune demande en attente pour le moment.</div>';
       return;
     }
 
-    container.innerHTML = data.map(store => `
+    container.innerHTML = data.map(profile => `
       <div style="background:white;padding:1.5rem;border-radius:12px;margin-bottom:1rem;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
         <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;flex-wrap:wrap">
           <div style="flex:1;min-width:250px">
-            <h4 style="color:#0a1929;margin:0 0 0.5rem">${store.name}</h4>
-            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Type :</strong> ${store.type || 'Non spécifié'}</p>
-            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
-            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
-            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Email :</strong> ${store.email || 'Non spécifié'}</p>
-            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Forfait :</strong> ${store.forfait || 'Non spécifié'}</p>
-            <p style="margin:0.3rem 0;color:#999;font-size:0.85rem">Demandé le : ${new Date(store.created_at).toLocaleDateString('fr-CA')}</p>
+            <h4 style="color:#0a1929;margin:0 0 0.5rem">${profile.name}</h4>
+            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Email :</strong> ${profile.email || 'Non spécifié'}</p>
+            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Téléphone :</strong> ${profile.phone || 'Non spécifié'}</p>
+            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Adresse :</strong> ${profile.address || 'Non spécifiée'}</p>
+            <p style="margin:0.3rem 0;color:#666;font-size:0.9rem"><strong>Forfait choisi :</strong> ${getPlanName(profile.selected_plan_id)}</p>
+            <p style="margin:0.3rem 0;color:#999;font-size:0.85rem">Demandé le : ${new Date(profile.created_at).toLocaleDateString('fr-CA')}</p>
           </div>
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-            <button class="btn-sm btn-green" onclick="approveStore('${store.id}')">✅ Approuver</button>
-            <button class="btn-sm btn-red" onclick="rejectStore('${store.id}')">❌ Refuser</button>
+            <button class="btn-sm btn-green" onclick="approveStore('${profile.id}')">✅ Approuver</button>
+            <button class="btn-sm btn-red" onclick="rejectStore('${profile.id}')">❌ Refuser</button>
           </div>
         </div>
       </div>
@@ -2437,23 +2432,58 @@ async function renderPendingStores() {
   }
 }
 
+// Petite fonction utilitaire pour afficher le nom du forfait
+function getPlanName(planId) {
+  if (planId === 1) return '🌱 Essai (0$)';
+  if (planId === 2) return '🏪 Base (7.99$)';
+  if (planId === 3) return '🚀 Croissance (29.99$)';
+  if (planId === 4) return '👑 Partenaire Plus (89.99$)';
+  return 'Non spécifié';
+}
 // Approuver un commerce
-async function approveStore(id) {
+async function approveStore(profileId) {
   try {
-    // Mettre à jour le statut dans la table stores
+    showToast('⏳ Approbation en cours...');
+    
+    // 1. Mettre à jour le statut dans profiles
     const { error } = await supabaseClient
-      .from('stores')
-      .update({ status: 'active' })
-      .eq('id', id);
-    
+      .from('profiles')
+      .update({ status: 'approved' })
+      .eq('id', profileId);
+
     if (error) throw error;
+
+    // 2. (Optionnel) Si tu as une table 'stores', la mettre à jour aussi
+    // await supabaseClient.from('stores').update({ status: 'active' }).eq('user_id', profileId);
+
+    showToast('✅ Commerce approuvé avec succès !');
     
-    showToast('✅ Commerce approuvé !');
-    renderPendingStores(); // Rafraîchir la liste
+    // 3. Rafraîchir la liste
+    renderPendingStores();
     
-  } catch (error) {
-    console.error('Erreur approveStore:', error);
-    showToast('❌ Erreur : ' + error.message);
+  } catch (err) {
+    console.error('Erreur approbation:', err);
+    showToast('❌ Erreur lors de l\'approbation : ' + err.message);
+    console.log("ID essayé :", profileId);
+  }
+}
+
+async function rejectStore(profileId) {
+  try {
+    // Supprimer le profil (et l'utilisateur sera supprimé en cascade grâce à ON DELETE CASCADE)
+    const { error } = await supabaseClient
+      .from('profiles')
+      .delete()
+      .eq('id', profileId);
+
+    if (error) throw error;
+
+    showToast('🗑️ Demande refusée et supprimée.');
+    renderPendingStores();
+    
+  } catch (err) {
+    console.error('Erreur refus:', err);
+    showToast('❌ Erreur lors du refus.');
   }
 }
 
