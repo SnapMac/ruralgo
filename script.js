@@ -544,29 +544,39 @@ async function registerStore(event) {
   const phone = document.getElementById('rs-phone').value.trim();
   const province = document.getElementById('rs-province').value;
   const address = document.getElementById('rs-address').value.trim();
-  const forfait = document.getElementById('rs-forfait').value;
+  const forfaitChoisi = document.getElementById('rs-forfait').value;
   
-  // 2. Vérification du double mot de passe
+  // 2. Vérifications de base
   if (pass !== passConfirm) {
     showToast('❌ Les mots de passe ne correspondent pas');
     return;
   }
-  
   if (pass.length < 6) {
     showToast('❌ Le mot de passe doit contenir au moins 6 caractères');
     return;
   }
-  
-  // 3. Vérification que tous les champs sont remplis
-  if (!name || !type || !owner || !email || !phone || !address || !forfait) {
+  if (!name || !type || !owner || !email || !phone || !address || !forfaitChoisi) {
     showToast('❌ Veuillez remplir tous les champs obligatoires');
     return;
   }
   
-  // 4. Créer le compte dans Supabase Auth
+  // 3. Mapper le choix du formulaire vers l'ID du forfait dans la base de données
+  // (1=Essai, 2=Base, 3=Croissance, 4=Partenaires Plus)
+  let planId = null;
+  if (forfaitChoisi === 'essai') planId = 1;
+  else if (forfaitChoisi === 'base') planId = 2;
+  else if (forfaitChoisi === 'croissance') planId = 3;
+  else if (forfaitChoisi === 'partenaire') planId = 4;
+
+  if (!planId) {
+    showToast('❌ Forfait invalide');
+    return;
+  }
+
   try {
     showToast('📨 Envoi de votre demande en cours...');
     
+    // 4. Créer le compte dans Supabase Auth
     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
       email: email,
       password: pass,
@@ -580,56 +590,42 @@ async function registerStore(event) {
     
     if (authError) throw authError;
     
-    // 5. Créer le profil dans la table profiles
+    // 5. Créer le profil dans la table profiles (avec le selected_plan_id !)
     const { error: profileError } = await supabaseClient.from('profiles').insert({
       id: authData.user.id,
       email: email,
       role: 'store',
       name: owner,
       phone: phone,
-      status: 'pending'
+      address: address,
+      status: 'pending', // En attente d'approbation par l'admin
+      selected_plan_id: planId // ✅ C'est ici qu'on sauvegarde le choix !
     });
     
     if (profileError) throw profileError;
     
-    // 6. Créer l'entrée dans la table stores
+    // 6. Créer l'entrée dans la table stores (si tu as cette table)
     const { error: storeError } = await supabaseClient.from('stores').insert({
-      owner_id: authData.user.id,
+      user_id: authData.user.id,
       name: name,
       type: type,
       address: address,
       phone: phone,
-      email: email,
-      province: province,
-      forfait: forfait,
       status: 'pending'
     });
-    
-    if (storeError) throw storeError;
-    
-    // 7. ✅ FERMER LE MODAL ET AFFICHER LE TOAST DE SUCCÈS
-    closeModal('register-store-modal');
-    
-    // Toast bien visible avec message clair
-    showToast('✅ Demande envoyée avec succès ! Votre commerce sera examiné par un administrateur. Vous recevrez une confirmation par courriel.');
-    
-    // 8. Réinitialiser le formulaire
-    event.target.reset();
-    
-    // 9. Optionnel : Rediriger vers la page d'accueil après 3 secondes
-    setTimeout(() => {
-      showToast('🏠 Retour à la page d\'accueil...');
-      goHome();
-    }, 3000);
-    
-  } catch (error) {
-    console.error('Erreur registerStore:', error);
-    
-    if (error.message && error.message.includes('already registered')) {
-      showToast('❌ Cet email est déjà utilisé');
-    } else {
-      showToast('❌ Erreur : ' + (error.message || 'Erreur inconnue'));
+
+    if (storeError) {
+      console.error('Erreur store:', storeError);
+      // On ne bloque pas tout si la table stores n'existe pas encore, mais on log l'erreur
     }
+    
+    // 7. Succès
+    closeModal('register-store-modal');
+    showToast('✅ Demande envoyée avec succès ! Vous serez contacté après validation.');
+    
+  } catch (err) {
+    console.error('Erreur inscription commerce:', err);
+    showToast('❌ Erreur : ' + err.message);
   }
 }
 
@@ -656,51 +652,172 @@ async function registerDriver(e) {
   showToast('📨 Demande envoyée ! En attente d\'approbation admin.');
 }
 
-async function loginUser(e) {
-  e.preventDefault();
+async function loginUser(event) {
+  event.preventDefault();
   const email = document.getElementById('login-email').value;
-  const pass = correctPassword(document.getElementById('login-pass').value);
+  const password = document.getElementById('login-pass').value;
 
-  // ============ CONNEXION ADMIN ============
-  if (email === 'admin@ruralgo.ca' && pass === 'admin123') {
+  try {
+    showToast('⏳ Connexion en cours...');
+    
+    // 1. Connexion Supabase Auth
+    const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (authError) throw authError;
+
+    // 2. Récupérer le profil pour vérifier le rôle, le statut et le forfait choisi
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('role, status, selected_plan_id, name')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (profileError) throw profileError;
+
+    // 3. Sauvegarder l'utilisateur connecté
     currentUser = {
-      id: 'admin', name: 'Administrateur', email, role: 'admin',
-      phone: '(819) 000-0000', address: 'Maniwaki, QC',
-      createdAt: new Date().toISOString()
+      id: authData.user.id,
+      email: authData.user.email,
+      role: profile.role,
+      name: profile.name,
+      status: profile.status,
+      selected_plan_id: profile.selected_plan_id
     };
+
     closeModal('login-modal');
+
+    // 4. LOGIQUE SPÉCIALE POUR LES COMMERCES
+    if (currentUser.role === 'store') {
+      if (currentUser.status === 'pending') {
+        showToast('⏳ Votre compte est en attente de validation par l\'administrateur.');
+        await supabaseClient.auth.signOut();
+        currentUser = null;
+        return;
+      }
+
+      if (currentUser.status === 'approved') {
+        // Vérifier s'ils ont déjà un abonnement actif dans la table 'subscriptions'
+        const { data: subscription } = await supabaseClient
+          .from('subscriptions')
+          .select('status')
+          .eq('user_id', currentUser.id)
+          .single();
+
+        const isFreeTrial = currentUser.selected_plan_id === 1; // 1 = Essai gratuit
+        const hasActiveSubscription = subscription && subscription.status === 'active';
+
+        // Si ce n'est pas l'essai gratuit ET qu'ils n'ont pas d'abonnement actif → les envoyer payer
+        if (!isFreeTrial && !hasActiveSubscription) {
+          showToast('💳 Veuillez régler votre forfait pour activer votre compte.');
+          showStorePaymentScreen(); // Affiche l'écran de choix de paiement
+          return; // On s'arrête ici, on n'affiche pas le dashboard normal
+        }
+      }
+    }
+
+    // 5. Si tout est bon (ou si c'est un client/livreur), afficher l'interface normale
     showUserInterface();
-    
-    // ✅ AJOUT ICI : Charger le solde (sera 0 pour l'admin)
-    loadUserWallet();
-    
-    showToast('✅ Bienvenue Admin !');
+    showToast('✅ Connexion réussie, bienvenue ' + currentUser.name + ' !');
+
+  } catch (err) {
+    console.error('Erreur de connexion:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+// ✅ Affiche l'écran de choix de forfait pour un commerce approuvé
+async function showStorePaymentScreen() {
+  // Récupérer les forfaits depuis la base de données
+  const { data: plans, error } = await supabaseClient
+    .from('plans')
+    .select('*')
+    .eq('is_active', true)
+    .order('price', { ascending: true });
+
+  if (error || !plans) {
+    showToast('❌ Erreur de chargement des forfaits');
     return;
   }
 
-  // ============ CONNEXION UTILISATEUR NORMAL ============
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
-  if (error) { showToast('❌ Email ou mot de passe incorrect'); return; }
+  // Générer le HTML pour chaque forfait
+  const plansHtml = plans.map(plan => {
+    const featuresHtml = plan.features ? plan.features.map(f => `<li style="margin-bottom:0.5rem">✅ ${f}</li>`).join('') : '';
+    const btnText = plan.price === 0 ? '🎁 Activer l\'essai gratuit' : `💳 Payer ${plan.price}$ / mois`;
+    
+    return `
+      <div style="border: 2px solid #e0e0e0; border-radius: 12px; padding: 1.5rem; text-align: center; background: white; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+        <h3 style="color: #0a1929; margin-bottom: 0.5rem;">${plan.name}</h3>
+        <div style="font-size: 2rem; font-weight: bold; color: #f5a623; margin-bottom: 1rem;">
+          ${plan.price === 0 ? 'GRATUIT' : plan.price + ' $<span style="font-size:1rem;color:#666">/mois</span>'}
+        </div>
+        <ul style="text-align: left; color: #666; margin-bottom: 1.5rem; padding-left: 1.5rem; font-size: 0.9rem; list-style: none;">
+          ${featuresHtml}
+        </ul>
+        <button class="btn-sm btn-green" style="width: 100%;" onclick="handlePlanSelection(${plan.id}, ${plan.price})">
+          ${btnText}
+        </button>
+      </div>
+    `;
+  }).join('');
 
-  const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('*').eq('id', data.user.id).maybeSingle();
-  if (profileError || !profile) { showToast('❌ Profil introuvable'); return; }
-  if (profile.role === 'driver' && profile.status === 'pending') { showToast('⏳ En attente d\'approbation'); return; }
-  if (profile.role === 'driver' && profile.status === 'rejected') { showToast('❌ Demande refusée'); return; }
-
-  currentUser = {
-    id: profile.id, role: profile.role, name: profile.name, email: data.user.email,
-    phone: profile.phone, address: profile.address, lat: profile.lat, lng: profile.lng,
-    vehicle: profile.vehicle, status: profile.status, createdAt: profile.created_at
-  };
-
-  closeModal('login-modal');
-  showUserInterface();
+  // Créer le modal
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg show';
+  modal.id = 'store-payment-modal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width: 900px;">
+      <h2 style="color: #0a1929; margin-bottom: 0.5rem;">🎉 Votre compte a été approuvé !</h2>
+      <p style="color: #666; margin-bottom: 2rem;">Choisissez votre forfait pour finaliser l'activation de votre commerce sur RuralGo.</p>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        ${plansHtml}
+      </div>
+      
+      <div style="text-align: right;">
+        <button class="btn-sm btn-gray" onclick="document.getElementById('store-payment-modal').remove(); supabaseClient.auth.signOut(); currentUser=null; showUserInterface();">🚪 Se déconnecter</button>
+      </div>
+    </div>
+  `;
   
-  // ✅ AJOUT ICI : Charger le solde du portefeuille
-  loadUserWallet();
-  
-  showToast('✅ Bienvenue ' + currentUser.name.split(' ')[0] + ' !');
+  document.body.appendChild(modal);
 }
+
+// ✅ Gère le clic sur un forfait
+async function handlePlanSelection(planId, price) {
+  if (!currentUser) return;
+  
+  showToast('⏳ Préparation du paiement...');
+  
+  try {
+    // Appel à la fonction Edge 'create-subscription' qu'on a créée plus tôt
+    const { data, error } = await supabaseClient.functions.invoke('create-subscription', {
+      body: {
+        planId: planId,
+        userEmail: currentUser.email
+      }
+    });
+    
+    if (error) throw error;
+    
+    if (data.success && data.redirect) {
+      // C'était l'essai gratuit (0$), activé directement sans Stripe
+      showToast('✅ Forfait Essai activé avec succès !');
+      document.getElementById('store-payment-modal').remove();
+      showUserInterface(); // Affiche le dashboard normal
+    } else if (data.url) {
+      // Forfait payant : redirection vers Stripe Checkout
+      window.location.href = data.url;
+    } else {
+      throw new Error('Réponse inattendue du serveur');
+    }
+  } catch (err) {
+    console.error('Erreur paiement forfait:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
 function logout() {
   // 1. Déconnexion de Supabase
   supabaseClient.auth.signOut().then(() => {
