@@ -3841,3 +3841,38 @@ if (urlParams.get('payment_canceled') === 'true') {
   showToast('❌ Paiement annulé. Aucun montant n\'a été débité.');
   window.history.replaceState({}, document.title, window.location.pathname);
 }
+// ✅ CODE POUR METTRE À JOUR L'AFFICHAGE APRÈS UN PAIEMENT RÉUSSI
+window.addEventListener('DOMContentLoaded', async () => {
+  // Vérifie si l'URL contient ?payment_success=true
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  if (urlParams.get('payment_success') === 'true') {
+    // 1. Afficher un message de succès
+    showToast('✅ Paiement réussi ! Votre solde a été mis à jour.');
+    
+    // 2. Nettoyer l'URL pour ne pas réafficher le message si on rafraîchit la page
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // 3. Forcer la mise à jour du solde depuis la base de données
+    if (typeof currentUser !== 'undefined' && currentUser) {
+      try {
+        const { data: wallet, error } = await supabaseClient
+          .from('wallets')
+          .select('balance')
+          .eq('user_id', currentUser.id)
+          .single();
+        
+        if (!error && wallet) {
+          // Met à jour la variable globale et l'affichage
+          userWalletBalance = parseFloat(wallet.balance);
+          if (typeof updateWalletDisplay === 'function') {
+            updateWalletDisplay();
+          }
+          console.log('🔄 Solde rafraîchi depuis la base de données:', userWalletBalance);
+        }
+      } catch (err) {
+        console.error('Erreur de mise à jour du solde:', err);
+      }
+    }
+  }
+});
