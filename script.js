@@ -734,26 +734,39 @@ async function loginUser(event) {
 }
 // ✅ Affiche l'écran de choix de forfait pour un commerce approuvé
 async function showStorePaymentScreen() {
+  console.log("🔍 DEBUG PAIEMENT - Début du chargement des forfaits...");
+  
   const { data: plans, error } = await supabaseClient
     .from('plans')
     .select('*')
     .eq('is_active', true)
     .order('price', { ascending: true });
 
-  if (error || !plans) {
-    showToast('❌ Erreur de chargement des forfaits');
+  if (error) {
+    console.error("❌ Erreur Supabase lors du chargement des forfaits:", error);
+    showToast('❌ Erreur de chargement des forfaits: ' + error.message);
     return;
- }
+  }
+
+  console.log("✅ Forfaits chargés depuis la base de données:", plans);
+
+  if (!plans || plans.length === 0) {
+    showToast('⚠️ Aucun forfait disponible pour le moment. Contactez l\'admin.');
+    return;
+  }
 
   const selectedPlanId = currentUser.selected_plan_id;
   const planNames = { 1: 'Essai', 2: 'Base', 3: 'Croissance', 4: 'Partenaires Plus' };
   const chosenName = planNames[selectedPlanId] || 'inconnu';
 
   const plansHtml = plans.map(plan => {
-    const featuresHtml = plan.features ? plan.features.map(f => `<li style="margin-bottom:0.5rem">✅ ${f}</li>`).join('') : '';
+    // Vérification sécurisée des fonctionnalités
+    const featuresHtml = plan.features && Array.isArray(plan.features) 
+      ? plan.features.map(f => `<li style="margin-bottom:0.5rem">✅ ${f}</li>`).join('') 
+      : '<li style="margin-bottom:0.5rem">ℹ️ Détails du forfait</li>';
+      
     const btnText = plan.price === 0 ? '🎁 Activer l\'essai gratuit' : `💳 Payer ${plan.price}$ / mois`;
     
-    // Mettre en surbrillance le forfait choisi lors de l'inscription
     const isChosen = plan.id === selectedPlanId;
     const borderColor = isChosen ? '#f5a623' : '#e0e0e0';
     const bg = isChosen ? '#fff9f0' : 'white';
@@ -769,7 +782,7 @@ async function showStorePaymentScreen() {
         <ul style="text-align: left; color: #666; margin-bottom: 1.5rem; padding-left: 1.5rem; font-size: 0.9rem; list-style: none;">
           ${featuresHtml}
         </ul>
-        <button class="btn-sm btn-green" style="width: 100%; font-weight: bold;" onclick="handlePlanSelection(${plan.id}, ${plan.price})">
+        <button class="btn-sm btn-green" style="width: 100%; font-weight: bold; cursor: pointer;" onclick="handlePlanSelection(${plan.id}, ${plan.price})">
           ${btnText}
         </button>
       </div>
@@ -779,7 +792,7 @@ async function showStorePaymentScreen() {
   const modal = document.createElement('div');
   modal.className = 'modal-bg show';
   modal.id = 'store-payment-modal';
-  modal.style.zIndex = '9999'; // S'assurer qu'il est au-dessus de tout
+  modal.style.zIndex = '9999';
   modal.innerHTML = `
     <div class="modal" style="max-width: 900px;">
       <h2 style="color: #0a1929; margin-bottom: 0.5rem;">🎉 Votre compte a été approuvé !</h2>
@@ -791,17 +804,16 @@ async function showStorePaymentScreen() {
         <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #666;">Vous pouvez le confirmer ci-dessous ou en choisir un autre.</p>
       </div>
       
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
         ${plansHtml}
       </div>
       
       <div style="text-align: right;">
         <button class="btn-sm btn-gray" onclick="document.getElementById('store-payment-modal').remove(); supabaseClient.auth.signOut(); currentUser=null; showUserInterface();">🚪 Se déconnecter</button>
-      </div
+      </div>
     </div>
   `;
   
-  // Supprimer l'ancien modal s'il existe pour éviter les doublons
   const oldModal = document.getElementById('store-payment-modal');
   if (oldModal) oldModal.remove();
   
