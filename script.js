@@ -862,6 +862,8 @@ function showClientStores() {
   document.getElementById('client-orders-section').style.display = 'none';
   document.getElementById('client-order-detail-section').style.display = 'none';
   document.getElementById('client-profile-section').style.display = 'none';
+  // ✅ CORRECTION : Remettre le panier en visible
+  document.getElementById('cart-section').style.display = 'block';
   renderClientStores();
   setTimeout(() => document.getElementById('stores-section').scrollIntoView({ behavior: 'smooth' }), 200);
 }
@@ -1057,8 +1059,11 @@ function scrollToCart() {
   document.getElementById('client-orders-section').style.display = 'none';
   document.getElementById('client-order-detail-section').style.display = 'none';
   document.getElementById('client-profile-section').style.display = 'none';
+  // ✅ CORRECTION : Remettre le panier en visible
+  document.getElementById('cart-section').style.display = 'block';
   setTimeout(() => { document.getElementById('cart-section').scrollIntoView({ behavior: 'smooth' }); }, 100);
 }
+
 
 function updateDeliveryAddress() {
   const d = document.getElementById('delivery-address-display');
@@ -1077,7 +1082,8 @@ function showClientOrders() {
   switchView('view-client');
   document.getElementById('stores-section').style.display = 'none';
   document.getElementById('store-detail-section').style.display = 'none';
-  document.getElementById('cart-section').style.display = 'none';
+  // ✅ CORRECTION : Garder le panier visible même dans "Mes commandes"
+  document.getElementById('cart-section').style.display = 'block';
   document.getElementById('client-order-detail-section').style.display = 'none';
   document.getElementById('client-profile-section').style.display = 'none';
   document.getElementById('client-orders-section').style.display = 'block';
