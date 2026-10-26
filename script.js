@@ -809,7 +809,7 @@ async function showStorePaymentScreen() {
       </div>
       
       <div style="text-align: right;">
-        <button class="btn-sm btn-gray" onclick="document.getElementById('store-payment-modal').remove(); supabaseClient.auth.signOut(); currentUser=null; showUserInterface();">🚪 Se déconnecter</button>
+       <button class="btn-sm btn-gray" onclick="document.getElementById('store-payment-modal').remove(); supabaseClient.auth.signOut(); currentUser=null; location.reload();">🚪 Se déconnecter</button>
       </div>
     </div>
   `;
