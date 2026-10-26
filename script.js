@@ -3777,6 +3777,7 @@ function openDepositModal() {
 }
 
 // Confirmer la recharge
+// Confirmer la recharge (Version corrigée et infaillible)
 async function confirmDeposit() {
   const amountInput = document.getElementById('deposit-amount');
   const amount = parseFloat(amountInput.value);
@@ -3786,31 +3787,28 @@ async function confirmDeposit() {
     return;
   }
 
-  if (!currentUser) {
-    showToast('❌ Vous devez être connecté');
-    return;
-  }
-
-  // Fermer le modal
-  const modal = document.querySelector('.modal-bg.show');
-  if (modal) modal.remove();
-
-  showToast('⏳ Redirection vers le paiement sécurisé...');
+  showToast('⏳ Vérification de votre session...');
 
   try {
-    // Appel à notre fonction sécurisée Supabase (Edge Function)
-    // Récupérer le token de l'utilisateur connecté
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    const token = session?.access_token;
+    // 1. Demander DIRECTEMENT à Supabase qui est connecté (garanti d'avoir l'ID)
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    
+    if (userError || !user) {
+      showToast('❌ Vous devez être connecté pour recharger');
+      return;
+    }
 
+    const userId = user.id; // <-- Ici, c'est garanti d'être le bon ID, plus jamais null !
+    const userEmail = user.email || 'client@ruralgo.com';
+
+    showToast('⏳ Redirection vers le paiement sécurisé...');
+
+    // 2. Appel à la fonction Edge avec l'ID garanti
     const { data, error } = await supabaseClient.functions.invoke('create-checkout-session', {
       body: {
         amount: amount,
-        userId: currentUser.id,
-        userEmail: currentUser.email || 'client@ruralgo.com'
-      },
-      headers: {
-        Authorization: `Bearer ${token}`
+        userId: userId, 
+        userEmail: userEmail
       }
     });
 
@@ -3819,15 +3817,15 @@ async function confirmDeposit() {
       throw new Error(error.message || 'Erreur lors de la création du paiement');
     }
 
-    // Redirection vers la page de paiement Stripe
-    if (data && data.url) {
-      window.location.href = data.url;
-    } else {
+    if (!data || !data.url) {
       throw new Error('Aucune URL de paiement reçue');
     }
 
+    // 3. Rediriger vers Stripe
+    window.location.href = data.url;
+
   } catch (err) {
-    console.error('Erreur Stripe:', err);
+    console.error('Erreur confirmDeposit:', err);
     showToast('❌ Erreur : ' + err.message);
   }
 }
