@@ -3841,44 +3841,66 @@ if (urlParams.get('payment_canceled') === 'true') {
   showToast('❌ Paiement annulé. Aucun montant n\'a été débité.');
   window.history.replaceState({}, document.title, window.location.pathname);
 }
-// ✅ VÉRIFIER LE PAIEMENT RÉUSSI DÈS QUE LA PAGE EST PRÊTE
+// ✅ VÉRIFIER LE PAIEMENT RÉUSSI DE MANIÈRE FIABLE (Même après rechargement)
 async function checkPaymentSuccess() {
   const urlParams = new URLSearchParams(window.location.search);
   
   if (urlParams.get('payment_success') === 'true') {
-    // 1. Afficher un message de succès
-    showToast('✅ Paiement réussi ! Votre solde a été mis à jour.');
-    
-    // 2. Nettoyer l'URL
+    // 1. Nettoyer l'URL immédiatement pour éviter les boucles de rafraîchissement
     window.history.replaceState({}, document.title, window.location.pathname);
     
-    // 3. Forcer la mise à jour du solde
-    if (typeof currentUser !== 'undefined' && currentUser) {
-      try {
-        const { data: wallet, error } = await supabaseClient
-          .from('wallets')
-          .select('balance')
-          .eq('user_id', currentUser.id)
-          .single();
+    // 2. Demander DIRECTEMENT à Supabase qui est connecté (ne dépend pas de la variable globale)
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    
+    if (userError || !user) {
+      console.log("⚠️ Session non restaurée au retour du paiement");
+      return;
+    }
+
+    // 3. Mettre à jour ta variable globale si elle existe, pour le reste du site
+    if (typeof currentUser !== 'undefined') {
+      currentUser = user;
+    }
+
+    try {
+      // 4. Forcer la récupération du tout nouveau solde depuis la base de données
+      const { data: wallet, error: walletError } = await supabaseClient
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!walletError && wallet) {
+        const newBalance = parseFloat(wallet.balance);
         
-        if (!error && wallet) {
-          userWalletBalance = parseFloat(wallet.balance);
-          if (typeof updateWalletDisplay === 'function') {
-            updateWalletDisplay();
-          }
-          console.log('🔄 Solde rafraîchi:', userWalletBalance);
+        // Met à jour la variable globale du solde si elle existe
+        if (typeof userWalletBalance !== 'undefined') {
+          userWalletBalance = newBalance;
         }
-      } catch (err) {
-        console.error('Erreur:', err);
+        
+        // Met à jour l'affichage à l'écran
+        if (typeof updateWalletDisplay === 'function') {
+          updateWalletDisplay();
+        }
+        
+        // Afficher le message de succès
+        if (typeof showToast === 'function') {
+          showToast(`✅ Paiement réussi ! Nouveau solde : ${newBalance.toFixed(2)} $`);
+        }
+        
+        console.log('🔄 Solde rafraîchi avec succès:', newBalance);
+      } else {
+        console.error('Erreur récupération wallet:', walletError);
       }
+    } catch (err) {
+      console.error('Erreur de mise à jour du solde:', err);
     }
   }
 }
 
-// Exécuter immédiatement si la page est déjà chargée
+// Exécuter dès que possible (que la page soit déjà chargée ou non)
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   checkPaymentSuccess();
 } else {
-  // Sinon, attendre le chargement
   window.addEventListener('DOMContentLoaded', checkPaymentSuccess);
 }
