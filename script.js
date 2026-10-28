@@ -1041,59 +1041,73 @@ function logout() {
 }
 
 function showUserInterface() {
+  // 1. Afficher la section utilisateur et la cloche
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('user-section').style.display = 'flex';
   document.getElementById('notif-bell-container').style.display = 'block';
 
-  if (currentUser.role === 'driver' || currentUser.role === 'admin') {
-  // Cacher les éléments liés au wallet
-  const walletElements = [
-    'user-wallet-section',
-    'wallet-btn',
-    'recharge-btn'
-  ];
-  
-  walletElements.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
-  
+  // 2. Mise à jour de l'avatar et du nom
   const ini = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('user-avatar').textContent = ini;
   document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
   
   const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
-  document.getElementById('user-role').textContent = labels[currentUser.role];
+  document.getElementById('user-role').textContent = labels[currentUser.role] || currentUser.role;
   
-  // ✅ NOUVEAU : Cacher les boutons du portefeuille pour l'admin
+  // 3. ✅ GESTION DU WALLET : Cacher pour Livreur et Admin, Afficher pour Client et Commerce
+  const walletSection = document.getElementById('user-wallet-section');
+  const storeWalletSection = document.getElementById('store-wallet-section');
   const walletButtons = document.querySelector('.wallet-buttons');
-  if (walletButtons) {
-    walletButtons.style.display = currentUser.role === 'admin' ? 'none' : 'flex';
+  
+  if (currentUser.role === 'driver' || currentUser.role === 'admin') {
+    // 🚫 CACHER le wallet
+    if (walletSection) walletSection.style.display = 'none';
+    if (storeWalletSection) storeWalletSection.style.display = 'none';
+    if (walletButtons) walletButtons.style.display = 'none';
+    
+    // Cacher aussi les boutons spécifiques s'ils existent
+    ['wallet-btn', 'recharge-btn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  } else {
+    // ✅ AFFICHER le wallet pour Client et Commerce
+    if (walletSection) walletSection.style.display = 'block';
+    if (storeWalletSection) storeWalletSection.style.display = 'block';
+    if (walletButtons) walletButtons.style.display = 'flex';
+    
+    // Charger le solde depuis la base de données
+    if (typeof updateWalletDisplay === 'function') {
+      updateWalletDisplay();
+    }
   }
 
+  // 4. Réinitialiser l'affichage des menus de navigation
   document.getElementById('nav-client').style.display = 'none';
   document.getElementById('nav-driver').style.display = 'none';
   document.getElementById('nav-admin').style.display = 'none';
-  
   const navStore = document.getElementById('nav-store');
   if (navStore) navStore.style.display = 'none';
 
+  // 5. Afficher l'interface spécifique au rôle
   if (currentUser.role === 'client') {
     document.getElementById('nav-client').style.display = 'block';
     document.getElementById('client-firstname').textContent = currentUser.name.split(' ')[0];
-    updateDeliveryAddress();
+    if (typeof updateDeliveryAddress === 'function') updateDeliveryAddress();
     switchView('view-client');
-    showClientStores();
+    if (typeof showClientStores === 'function') showClientStores();
+    
   } else if (currentUser.role === 'driver') {
     document.getElementById('nav-driver').style.display = 'block';
     document.getElementById('driver-firstname').textContent = currentUser.name.split(' ')[0];
     switchView('view-driver');
-    showDriverDashboard();
+    if (typeof showDriverDashboard === 'function') showDriverDashboard();
+    
   } else if (currentUser.role === 'admin') {
     document.getElementById('nav-admin').style.display = 'block';
     switchView('view-admin');
-    renderAllAdmin();
+    if (typeof renderAllAdmin === 'function') renderAllAdmin();
+    
   } else if (currentUser.role === 'store') { 
     if (navStore) navStore.style.display = 'block';
     
@@ -1110,7 +1124,11 @@ function showUserInterface() {
       }
     }
   }
-  updateNotifBadge();
+  
+  // 6. Mettre à jour le badge de la cloche de notification
+  if (typeof updateNotifBadge === 'function') {
+    updateNotifBadge();
+  }
 }
 
 function renderAllAdmin() {
