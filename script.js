@@ -4561,3 +4561,185 @@ async function openAddProductModal(storeId) {
     showToast("❌ Erreur lors de l'ajout : " + err.message);
   }
 }
+// ==========================================
+// ✅ TABLEAU DE BORD COMMERCE - VERSION COMPLÈTE
+// ==========================================
+
+async function showStoreDashboard() {
+  if (!currentUser || currentUser.role !== 'store') return;
+
+  try {
+    // 1. Récupérer les infos du commerce
+    const { data: store, error } = await supabaseClient
+      .from('stores')
+      .select('*')
+      .eq('owner_id', currentUser.id)
+      .maybeSingle();
+
+    if (error || !store) {
+      const container = document.getElementById('store-dashboard-content');
+      if (container) {
+        container.innerHTML = `<div style="text-align:center;padding:2rem;color:red;">❌ Commerce introuvable</div>`;
+      }
+      return;
+    }
+
+    // 2. Afficher le dashboard complet
+    const container = document.getElementById('store-dashboard-content');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div style="background:white;padding:1.5rem;border-radius:12px;margin-bottom:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h3 style="color:#0a1929;margin:0;">🏪 ${store.name}</h3>
+          <button onclick="editStoreName('${store.id}', '${store.name}')" style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;">✏️ Modifier le nom</button>
+        </div>
+        
+        <p><strong>Type :</strong> ${store.type || 'Non spécifié'}</p>
+        <p><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}, ${store.province || ''}</p>
+        <p><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
+        <p><strong>Email :</strong> ${store.email || 'Non spécifié'}</p>
+        <p><strong>Statut :</strong> <span style="color:${store.status === 'approved' || store.status === 'active' ? '#10b981' : '#f59e0b'};font-weight:bold;">
+          ${store.status === 'approved' || store.status === 'active' ? '✅ Approuvé' : '⏳ En attente'}
+        </span></p>
+        
+        ${store.description ? `<p><strong>Description :</strong> ${store.description}</p>` : ''}
+        
+        <hr style="margin:1.5rem 0;border:0;border-top:1px solid #eee;">
+        
+        <h4 style="color:#0a1929;">📦 Mes Produits</h4>
+        <button onclick="openAddProductModal('${store.id}')" style="margin-bottom:1rem;padding:10px 20px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">➕ Ajouter un produit</button>
+        
+        <div id="store-products-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;">
+          <!-- Produits ici -->
+        </div>
+      </div>
+    `;
+
+    // 3. Charger les produits
+    loadStoreProducts(store.id);
+
+  } catch (err) {
+    console.error('Erreur showStoreDashboard:', err);
+  }
+}
+
+// Modifier le nom du commerce
+async function editStoreName(storeId, currentName) {
+  const newName = prompt("Nouveau nom du commerce :", currentName);
+  if (!newName || newName === currentName) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from('stores')
+      .update({ name: newName })
+      .eq('id', storeId);
+
+    if (error) throw error;
+
+    showToast("✅ Nom modifié avec succès !");
+    showStoreDashboard(); // Rafraîchir
+  } catch (err) {
+    showToast("❌ Erreur : " + err.message);
+  }
+}
+
+// Charger les produits du commerce
+async function loadStoreProducts(storeId) {
+  const container = document.getElementById('store-products-list');
+  if (!container) return;
+
+  const { data: products, error } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('store_id', storeId)
+    .order('created_at', { ascending: false });
+
+  if (error || !products || products.length === 0) {
+    container.innerHTML = '<p style="color:#666;grid-column:1/-1;">Aucun produit ajouté pour le moment.</p>';
+    return;
+  }
+
+  container.innerHTML = products.map(product => `
+    <div style="background:#f9f9f9;padding:1rem;border-radius:8px;border:1px solid #eee;">
+      <div style="display:flex;justify-content:space-between;align-items:start;">
+        <h5 style="margin:0 0 0.5rem 0;color:#0a1929;">${product.name}</h5>
+        <span style="color:${product.available ? '#10b981' : '#ef4444'};font-size:0.8rem;font-weight:bold;">
+          ${product.available ? '✅ Dispo' : '❌ Indispo'}
+        </span>
+      </div>
+      <p style="margin:0;color:#10b981;font-weight:bold;font-size:1.2rem;">${product.price} $</p>
+      <p style="margin:0.5rem 0 0 0;font-size:0.85rem;color:#666;">${product.description || 'Aucune description'}</p>
+      <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
+        <button onclick="toggleProductAvailability(${product.id}, ${!product.available}, '${storeId}')" style="padding:4px 8px;background:#f59e0b;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">
+          ${product.available ? 'Désactiver' : 'Activer'}
+        </button>
+        <button onclick="deleteProduct(${product.id}, '${storeId}')" style="padding:4px 8px;background:#ef4444;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">🗑️ Supprimer</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Ajouter un produit
+async function openAddProductModal(storeId) {
+  const name = prompt("Nom du produit :");
+  if (!name) return;
+  
+  const price = prompt("Prix du produit (ex: 15.99) :");
+  if (!price || isNaN(price)) {
+    showToast("❌ Prix invalide");
+    return;
+  }
+
+  const description = prompt("Description du produit (optionnel) :") || "";
+
+  try {
+    showToast("⏳ Ajout du produit...");
+    const { error } = await supabaseClient.from('products').insert({
+      store_id: storeId,
+      name: name,
+      price: parseFloat(price),
+      description: description,
+      available: true,
+      icon: '📦'
+    });
+
+    if (error) throw error;
+
+    showToast("✅ Produit ajouté !");
+    loadStoreProducts(storeId);
+  } catch (err) {
+    showToast("❌ Erreur : " + err.message);
+  }
+}
+
+// Activer/Désactiver un produit
+async function toggleProductAvailability(productId, newStatus, storeId) {
+  try {
+    await supabaseClient
+      .from('products')
+      .update({ available: newStatus })
+      .eq('id', productId);
+
+    loadStoreProducts(storeId);
+  } catch (err) {
+    showToast("❌ Erreur : " + err.message);
+  }
+}
+
+// Supprimer un produit
+async function deleteProduct(productId, storeId) {
+  if (!confirm("Supprimer ce produit ?")) return;
+
+  try {
+    await supabaseClient
+      .from('products')
+      .delete()
+      .eq('id', productId);
+
+    showToast("✅ Produit supprimé");
+    loadStoreProducts(storeId);
+  } catch (err) {
+    showToast("❌ Erreur : " + err.message);
+  }
+}
