@@ -1044,6 +1044,20 @@ function showUserInterface() {
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('user-section').style.display = 'flex';
   document.getElementById('notif-bell-container').style.display = 'block';
+
+  if (currentUser.role === 'driver' || currentUser.role === 'admin') {
+  // Cacher les éléments liés au wallet
+  const walletElements = [
+    'user-wallet-section',
+    'wallet-btn',
+    'recharge-btn'
+  ];
+  
+  walletElements.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
   
   const ini = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('user-avatar').textContent = ini;
@@ -3888,13 +3902,51 @@ async function loadUserWallet() {
 }
 
 // Mettre à jour l'affichage du solde dans l'interface
-function updateWalletDisplay() {
-  const walletElements = document.querySelectorAll('.wallet-balance, #wallet-balance');
-  walletElements.forEach(el => {
-    // Formater le montant avec 2 décimales et espace pour les milliers
-    const formatted = userWalletBalance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    el.textContent = formatted + ' $';
-  });
+// ✅ Affiche le wallet UNIQUEMENT pour les clients et commerces (pas livreurs/admins)
+async function updateWalletDisplay() {
+  if (!currentUser || !currentUser.id) return;
+
+  // 🚫 CACHER pour les livreurs et admins
+  const walletSection = document.getElementById('user-wallet-section');
+  if (walletSection) {
+    if (currentUser.role === 'driver' || currentUser.role === 'admin') {
+      walletSection.style.display = 'none';
+      return; // On arrête ici, pas besoin de charger le solde
+    } else {
+      walletSection.style.display = 'block'; // ✅ Afficher pour clients et commerces
+    }
+  }
+
+  try {
+    const { data: wallet, error } = await supabaseClient
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (wallet) {
+      const balance = parseFloat(wallet.balance || 0).toFixed(2);
+      const balanceEl = document.getElementById('user-wallet-balance');
+      if (balanceEl) balanceEl.textContent = balance + ' $';
+      
+      if (typeof userWalletBalance !== 'undefined') {
+        userWalletBalance = parseFloat(wallet.balance || 0);
+      }
+    } else {
+      // Créer le wallet à 0$ s'il n'existe pas
+      await supabaseClient.from('wallets').insert({
+        user_id: currentUser.id,
+        balance: 0.00
+      });
+      
+      const balanceEl = document.getElementById('user-wallet-balance');
+      if (balanceEl) balanceEl.textContent = '0.00 $';
+    }
+  } catch (err) {
+    console.error('Erreur lecture portefeuille:', err);
+  }
 }
 
 // Afficher le solde dans une alerte (pour tester)
