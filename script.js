@@ -1039,47 +1039,79 @@ function logout() {
     console.error('Erreur déconnexion:', err);
   });
 }
-
 function showUserInterface() {
+  // 1. Afficher la section utilisateur et la cloche
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('user-section').style.display = 'flex';
   document.getElementById('notif-bell-container').style.display = 'block';
-  
+
+  // 2. Mise à jour de l'avatar et du nom
   const ini = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('user-avatar').textContent = ini;
   document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
   
   const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
-  document.getElementById('user-role').textContent = labels[currentUser.role];
+  document.getElementById('user-role').textContent = labels[currentUser.role] || currentUser.role;
   
-  // ✅ NOUVEAU : Cacher les boutons du portefeuille pour l'admin
+  // 3. ✅ GESTION STRICTE DU WALLET : UNIQUEMENT POUR LES CLIENTS
+  const isClient = currentUser.role === 'client';
+  
+  const walletSection = document.getElementById('user-wallet-section');
+  const storeWalletSection = document.getElementById('store-wallet-section');
   const walletButtons = document.querySelector('.wallet-buttons');
-  if (walletButtons) {
-    walletButtons.style.display = currentUser.role === 'admin' ? 'none' : 'flex';
+  
+  if (isClient) {
+    // ✅ AFFICHER le wallet uniquement pour le client
+    if (walletSection) walletSection.style.display = 'block';
+    if (walletButtons) walletButtons.style.display = 'flex';
+    
+    ['wallet-btn', 'recharge-btn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'inline-block'; // ou 'flex' selon ton design
+    });
+    
+    // Charger le solde
+    if (typeof updateWalletDisplay === 'function') {
+      updateWalletDisplay();
+    }
+  } else {
+    // 🚫 CACHER le wallet pour TOUT LE MONDE (Livreur, Admin, Commerce)
+    if (walletSection) walletSection.style.display = 'none';
+    if (storeWalletSection) storeWalletSection.style.display = 'none';
+    if (walletButtons) walletButtons.style.display = 'none';
+    
+    ['wallet-btn', 'recharge-btn', 'store-wallet-section'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
   }
 
+  // 4. Réinitialiser l'affichage des menus de navigation
   document.getElementById('nav-client').style.display = 'none';
   document.getElementById('nav-driver').style.display = 'none';
   document.getElementById('nav-admin').style.display = 'none';
-  
   const navStore = document.getElementById('nav-store');
   if (navStore) navStore.style.display = 'none';
 
+  // 5. Afficher l'interface spécifique au rôle
   if (currentUser.role === 'client') {
     document.getElementById('nav-client').style.display = 'block';
     document.getElementById('client-firstname').textContent = currentUser.name.split(' ')[0];
-    updateDeliveryAddress();
+    if (typeof updateDeliveryAddress === 'function') updateDeliveryAddress();
     switchView('view-client');
-    showClientStores();
+    if (typeof showClientStores === 'function') showClientStores();
+    
   } else if (currentUser.role === 'driver') {
     document.getElementById('nav-driver').style.display = 'block';
     document.getElementById('driver-firstname').textContent = currentUser.name.split(' ')[0];
     switchView('view-driver');
-    showDriverDashboard();
+    if (typeof showDriverDashboard === 'function') showDriverDashboard();
+    
   } else if (currentUser.role === 'admin') {
     document.getElementById('nav-admin').style.display = 'block';
     switchView('view-admin');
-    renderAllAdmin();
+    if (typeof renderAllAdmin === 'function') renderAllAdmin();
+    
   } else if (currentUser.role === 'store') { 
     if (navStore) navStore.style.display = 'block';
     
@@ -1096,7 +1128,11 @@ function showUserInterface() {
       }
     }
   }
-  updateNotifBadge();
+  
+  // 6. Mettre à jour le badge de la cloche de notification
+  if (typeof updateNotifBadge === 'function') {
+    updateNotifBadge();
+  }
 }
 
 function renderAllAdmin() {
@@ -3888,13 +3924,51 @@ async function loadUserWallet() {
 }
 
 // Mettre à jour l'affichage du solde dans l'interface
-function updateWalletDisplay() {
-  const walletElements = document.querySelectorAll('.wallet-balance, #wallet-balance');
-  walletElements.forEach(el => {
-    // Formater le montant avec 2 décimales et espace pour les milliers
-    const formatted = userWalletBalance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    el.textContent = formatted + ' $';
-  });
+// ✅ Affiche le wallet UNIQUEMENT pour les clients et commerces (pas livreurs/admins)
+async function updateWalletDisplay() {
+  if (!currentUser || !currentUser.id) return;
+
+  // 🚫 CACHER pour les livreurs et admins
+  const walletSection = document.getElementById('user-wallet-section');
+  if (walletSection) {
+    if (currentUser.role === 'driver' || currentUser.role === 'admin') {
+      walletSection.style.display = 'none';
+      return; // On arrête ici, pas besoin de charger le solde
+    } else {
+      walletSection.style.display = 'block'; // ✅ Afficher pour clients et commerces
+    }
+  }
+
+  try {
+    const { data: wallet, error } = await supabaseClient
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (wallet) {
+      const balance = parseFloat(wallet.balance || 0).toFixed(2);
+      const balanceEl = document.getElementById('user-wallet-balance');
+      if (balanceEl) balanceEl.textContent = balance + ' $';
+      
+      if (typeof userWalletBalance !== 'undefined') {
+        userWalletBalance = parseFloat(wallet.balance || 0);
+      }
+    } else {
+      // Créer le wallet à 0$ s'il n'existe pas
+      await supabaseClient.from('wallets').insert({
+        user_id: currentUser.id,
+        balance: 0.00
+      });
+      
+      const balanceEl = document.getElementById('user-wallet-balance');
+      if (balanceEl) balanceEl.textContent = '0.00 $';
+    }
+  } catch (err) {
+    console.error('Erreur lecture portefeuille:', err);
+  }
 }
 
 // Afficher le solde dans une alerte (pour tester)
