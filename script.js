@@ -2718,31 +2718,30 @@ async function renderAllStores() {
   const container = document.getElementById('stores-table-container');
   if (!container) return;
 
-  // 1. Récupérer seulement les commerces actifs ou approuvés
+  // ✅ LIRE DIRECTEMENT DANS 'profiles' au lieu de 'stores'
   const { data, error } = await supabaseClient
-    .from('stores')
+    .from('profiles')
     .select('*')
-    .in('status', ['active', 'approved'])
+    .eq('role', 'store')
+    .eq('status', 'approved')
     .order('created_at', { ascending: false });
 
-  // 2. Si vide ou erreur, afficher un message simple
-  if (error || !data || data.length === 0) {
-    container.innerHTML = '<div style="padding:1rem;text-align:center;color:#666">Aucun commerce actif pour le moment.</div>';
+  if (error) {
+    console.error('Erreur:', error);
+    container.innerHTML = '<div style="padding:1rem;color:red">Erreur de chargement</div>';
     return;
   }
 
-  // 3. Afficher une liste simple et propre
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div style="padding:1rem;text-align:center;color:#666">Aucun commerce approuvé.</div>';
+    return;
+  }
+
   container.innerHTML = data.map(store => `
-    <div style="background:white; padding:1rem; border-radius:8px; margin-bottom:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <strong style="color:#0a1929; font-size:1.1rem;">${store.name}</strong>
-        <div style="font-size:0.85rem; color:#666; margin-top:4px;">
-          ${store.type || 'Commerce'} • ${store.address || 'Adresse non spécifiée'}
-        </div>
-      </div>
-      <span style="background:#10b981; color:white; padding:4px 8px; border-radius:4px; font-size:0.8rem; font-weight:bold;">
-        ✅ Actif
-      </span>
+    <div style="background:white; padding:1rem; border-radius:8px; margin-bottom:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.1);">
+      <strong style="color:#0a1929;">${store.name || 'Commerce'}</strong>
+      <span style="background:#10b981; color:white; padding:4px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">✅ Approuvé</span>
+      <div style="font-size:0.85rem; color:#666; margin-top:4px;">${store.email || ''}</div>
     </div>
   `).join('');
 }
