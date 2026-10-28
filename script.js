@@ -3934,12 +3934,10 @@ async function loadUserWallet() {
 // Mettre à jour l'affichage du solde dans l'interface
 // ✅ Affiche le wallet UNIQUEMENT pour les clients et commerces (pas livreurs/admins)
 async function updateWalletDisplay() {
-  // Ne s'exécute que si c'est un client connecté
   if (!currentUser || !currentUser.id || currentUser.role !== 'client') return;
 
   try {
-    console.log("🔍 Chargement du solde pour l'utilisateur:", currentUser.id);
-    
+    // 1. Récupérer le solde depuis Supabase
     const { data: wallet, error } = await supabaseClient
       .from('wallets')
       .select('balance')
@@ -3947,32 +3945,32 @@ async function updateWalletDisplay() {
       .maybeSingle();
 
     if (error) {
-      console.error("❌ Erreur Supabase lors de la lecture du wallet:", error);
+      console.error("Erreur Supabase wallet:", error);
       return;
     }
 
-    // Calculer le solde (0.00 si vide)
     const balance = wallet ? parseFloat(wallet.balance || 0).toFixed(2) : "0.00";
-    console.log("✅ Solde réel récupéré de la base de données :", balance, "$");
+    console.log("✅ Solde réel récupéré :", balance, "$");
 
-    // 1. Mettre à jour l'élément principal par son ID
-    const balanceEl = document.getElementById('user-wallet-balance');
+    // 2. ✅ CIBLER LE BON ID : 'wallet-balance' (et non 'user-wallet-balance')
+    const balanceEl = document.getElementById('wallet-balance');
+    
     if (balanceEl) {
       balanceEl.textContent = balance + ' $';
-      // Astuce : mettre à jour l'attribut title au cas où ton "hover" utilise ça
-      balanceEl.setAttribute('title', 'Solde actuel : ' + balance + ' $'); 
+      console.log("✅ SUCCÈS ! Le solde a été mis à jour à l'écran.");
+      
+      // Mettre à jour la variable globale si elle existe
+      if (typeof userWalletBalance !== 'undefined') {
+        userWalletBalance = parseFloat(balance);
+      }
     } else {
-      console.warn("⚠️ L'élément avec l'ID 'user-wallet-balance' est introuvable dans le HTML !");
-    }
-
-    // 2. Mettre à jour la variable globale si elle existe dans ton code
-    if (typeof userWalletBalance !== 'undefined') {
-      userWalletBalance = parseFloat(balance);
+      // Sécurité : si l'élément n'est pas encore dessiné, on réessaie dans 1 seconde
+      console.log("⏳ L'élément #wallet-balance n'est pas encore prêt, on réessaie dans 1s...");
+      setTimeout(updateWalletDisplay, 1000);
     }
 
   } catch (err) {
-    console.error('Erreur critique lecture portefeuille:', err);
-    showToast('❌ Erreur de chargement du solde');
+    console.error('Erreur critique wallet:', err);
   }
 }
 
