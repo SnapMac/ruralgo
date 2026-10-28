@@ -1053,30 +1053,48 @@ function showUserInterface() {
   const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
   document.getElementById('user-role').textContent = labels[currentUser.role] || currentUser.role;
   
-  // 3. ✅ APPROCHE BRUTALE : Cacher TOUS les éléments liés au wallet pour les non-clients
-  if (currentUser.role !== 'client') {
-    // Chercher TOUS les éléments dont l'ID ou la classe contient wallet/balance/recharge/transaction
-    const allWalletElements = document.querySelectorAll(
-      '[id*="wallet"], [id*="balance"], [id*="recharge"], [id*="transaction"], ' +
-      '[class*="wallet"], [class*="balance"], [class*="recharge"], [class*="transaction"]'
-    );
-    
-    allWalletElements.forEach(el => {
-      el.style.display = 'none';
+  // 3. ✅ GESTION DU WALLET : UNIQUEMENT POUR LES CLIENTS
+  // Liste de TOUS les IDs et classes possibles liés au wallet
+  const walletSelectors = [
+    '#user-wallet-section',
+    '#store-wallet-section', 
+    '#wallet-balance',
+    '#recharge-btn',
+    '.wallet-section',
+    '.wallet-buttons',
+    '.recharge-button',
+    '[id*="wallet"]',
+    '[id*="balance"]',
+    '[id*="recharge"]',
+    '[id*="transaction"]',
+    '[class*="wallet"]',
+    '[class*="balance"]',
+    '[class*="recharge"]',
+    '[class*="transaction"]'
+  ];
+
+  if (currentUser.role === 'client') {
+    // ✅ AFFICHER le wallet pour les clients
+    walletSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        el.style.display = ''; // Réinitialiser le display (laisse le CSS décider)
+      });
     });
     
-    console.log(`✅ ${allWalletElements.length} éléments wallet cachés pour ${currentUser.role}`);
-  } else {
-    // ✅ Pour les clients : s'assurer que le wallet est visible
-    const walletBalance = document.getElementById('wallet-balance');
-    if (walletBalance) walletBalance.style.display = 'inline';
-    
-    // Charger le solde après un court délai
+    // Charger le solde
     setTimeout(() => {
       if (typeof updateWalletDisplay === 'function') {
         updateWalletDisplay();
       }
     }, 500);
+    
+  } else {
+    // ❌ CACHER le wallet pour admin, livreur, commerce
+    walletSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        el.style.display = 'none';
+      });
+    });
   }
 
   // 4. Réinitialiser l'affichage des menus de navigation
@@ -1122,7 +1140,7 @@ function showUserInterface() {
     }
   }
   
-  // 6. Mettre à jour le badge de la cloche de notification
+  // 6. Mettre à jour le badge de la cloche
   if (typeof updateNotifBadge === 'function') {
     updateNotifBadge();
   }
