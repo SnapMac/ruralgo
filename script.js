@@ -1039,7 +1039,6 @@ function logout() {
     console.error('Erreur déconnexion:', err);
   });
 }
-
 function showUserInterface() {
   // 1. Afficher la section utilisateur et la cloche
   document.getElementById('auth-section').style.display = 'none';
@@ -1054,32 +1053,37 @@ function showUserInterface() {
   const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
   document.getElementById('user-role').textContent = labels[currentUser.role] || currentUser.role;
   
-  // 3. ✅ GESTION DU WALLET : Cacher pour Livreur et Admin, Afficher pour Client et Commerce
+  // 3. ✅ GESTION STRICTE DU WALLET : UNIQUEMENT POUR LES CLIENTS
+  const isClient = currentUser.role === 'client';
+  
   const walletSection = document.getElementById('user-wallet-section');
   const storeWalletSection = document.getElementById('store-wallet-section');
   const walletButtons = document.querySelector('.wallet-buttons');
   
-  if (currentUser.role === 'driver' || currentUser.role === 'admin') {
-    // 🚫 CACHER le wallet
+  if (isClient) {
+    // ✅ AFFICHER le wallet uniquement pour le client
+    if (walletSection) walletSection.style.display = 'block';
+    if (walletButtons) walletButtons.style.display = 'flex';
+    
+    ['wallet-btn', 'recharge-btn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'inline-block'; // ou 'flex' selon ton design
+    });
+    
+    // Charger le solde
+    if (typeof updateWalletDisplay === 'function') {
+      updateWalletDisplay();
+    }
+  } else {
+    // 🚫 CACHER le wallet pour TOUT LE MONDE (Livreur, Admin, Commerce)
     if (walletSection) walletSection.style.display = 'none';
     if (storeWalletSection) storeWalletSection.style.display = 'none';
     if (walletButtons) walletButtons.style.display = 'none';
     
-    // Cacher aussi les boutons spécifiques s'ils existent
-    ['wallet-btn', 'recharge-btn'].forEach(id => {
+    ['wallet-btn', 'recharge-btn', 'store-wallet-section'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-  } else {
-    // ✅ AFFICHER le wallet pour Client et Commerce
-    if (walletSection) walletSection.style.display = 'block';
-    if (storeWalletSection) storeWalletSection.style.display = 'block';
-    if (walletButtons) walletButtons.style.display = 'flex';
-    
-    // Charger le solde depuis la base de données
-    if (typeof updateWalletDisplay === 'function') {
-      updateWalletDisplay();
-    }
   }
 
   // 4. Réinitialiser l'affichage des menus de navigation
