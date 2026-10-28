@@ -3934,45 +3934,58 @@ async function loadUserWallet() {
 // Mettre à jour l'affichage du solde dans l'interface
 // ✅ Affiche le wallet UNIQUEMENT pour les clients et commerces (pas livreurs/admins)
 async function updateWalletDisplay() {
-  if (!currentUser || !currentUser.id || currentUser.role !== 'client') return;
+  console.log("🔍 updateWalletDisplay() APPELÉE");
+  console.log("🔍 currentUser:", currentUser);
+  console.log("🔍 currentUser.id:", currentUser?.id);
+  console.log("🔍 currentUser.role:", currentUser?.role);
+  
+  if (!currentUser || !currentUser.id) {
+    console.error("❌ PAS D'UTILISATEUR CONNECTÉ !");
+    return;
+  }
+  
+  if (currentUser.role !== 'client') {
+    console.log("ℹ️ Pas un client, on ne charge pas le wallet");
+    return;
+  }
 
   try {
-    // 1. Récupérer le solde depuis Supabase
+    console.log("🔍 Requête SQL : SELECT balance FROM wallets WHERE user_id =", currentUser.id);
+    
     const { data: wallet, error } = await supabaseClient
       .from('wallets')
-      .select('balance')
+      .select('balance, user_id') // ✅ Ajouter user_id pour voir ce qui est retourné
       .eq('user_id', currentUser.id)
       .maybeSingle();
 
     if (error) {
-      console.error("Erreur Supabase wallet:", error);
+      console.error("❌ Erreur Supabase:", error);
       return;
     }
 
-    const balance = wallet ? parseFloat(wallet.balance || 0).toFixed(2) : "0.00";
-    console.log("✅ Solde réel récupéré :", balance, "$");
+    console.log("✅ Données retournées par Supabase:", wallet);
 
-    // 2. ✅ CIBLER LE BON ID : 'wallet-balance' (et non 'user-wallet-balance')
+    const balance = wallet ? parseFloat(wallet.balance || 0).toFixed(2) : "0.00";
+    console.log("✅ Solde calculé:", balance, "$");
+
     const balanceEl = document.getElementById('wallet-balance');
     
     if (balanceEl) {
       balanceEl.textContent = balance + ' $';
-      console.log("✅ SUCCÈS ! Le solde a été mis à jour à l'écran.");
+      console.log("✅ Solde affiché à l'écran:", balance, "$");
       
-      // Mettre à jour la variable globale si elle existe
       if (typeof userWalletBalance !== 'undefined') {
         userWalletBalance = parseFloat(balance);
       }
     } else {
-      // Sécurité : si l'élément n'est pas encore dessiné, on réessaie dans 1 seconde
-      console.log("⏳ L'élément #wallet-balance n'est pas encore prêt, on réessaie dans 1s...");
-      setTimeout(updateWalletDisplay, 1000);
+      console.error("❌ Élément #wallet-balance introuvable");
     }
 
   } catch (err) {
-    console.error('Erreur critique wallet:', err);
+    console.error('❌ Erreur critique wallet:', err);
   }
 }
+
 
 // Afficher le solde dans une alerte (pour tester)
 function showWalletBalance() {
