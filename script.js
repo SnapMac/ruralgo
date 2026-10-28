@@ -2681,26 +2681,70 @@ async function approveStore(profileId) {
     showToast('⏳ Approbation en cours...');
     
     // 1. Mettre à jour le statut dans profiles
-    const { error } = await supabaseClient
+    const { error: profileError } = await supabaseClient
       .from('profiles')
       .update({ status: 'approved' })
       .eq('id', profileId);
 
-    if (error) throw error;
+    if (profileError) throw profileError;
 
-    // 2. (Optionnel) Si tu as une table 'stores', la mettre à jour aussi
-    // await supabaseClient.from('stores').update({ status: 'active' }).eq('user_id', profileId);
+    // 2. ✅ CORRECTION CRITIQUE : Mettre à jour la table 'stores' aussi !
+    // On lie le commerce à l'utilisateur via user_id
+    const { error: storeError } = await supabaseClient
+      .from('stores')
+      .update({ status: 'active' }) // On le passe en actif
+      .eq('user_id', profileId);
+
+    if (storeError) {
+      console.warn("⚠️ Profile mis à jour, mais attention à la table stores:", storeError.message);
+    }
 
     showToast('✅ Commerce approuvé avec succès !');
     
-    // 3. Rafraîchir la liste
-    renderPendingStores();
+    // 3. Rafraîchir les listes de l'admin
+    if (typeof renderPendingStores === 'function') {
+      renderPendingStores(); // Enlève le commerce de la liste d'attente
+    }
+    if (typeof renderAllStores === 'function') {
+      renderAllStores(); // Ajoute le commerce dans la liste "Mes commerces"
+    }
     
   } catch (err) {
     console.error('Erreur approbation:', err);
     showToast('❌ Erreur lors de l\'approbation : ' + err.message);
-    console.log("ID essayé :", profileId);
   }
+}
+async function renderAllStores() {
+  const container = document.getElementById('stores-table-container');
+  if (!container) return;
+
+  // 1. Récupérer seulement les commerces actifs ou approuvés
+  const { data, error } = await supabaseClient
+    .from('stores')
+    .select('*')
+    .in('status', ['active', 'approved'])
+    .order('created_at', { ascending: false });
+
+  // 2. Si vide ou erreur, afficher un message simple
+  if (error || !data || data.length === 0) {
+    container.innerHTML = '<div style="padding:1rem;text-align:center;color:#666">Aucun commerce actif pour le moment.</div>';
+    return;
+  }
+
+  // 3. Afficher une liste simple et propre
+  container.innerHTML = data.map(store => `
+    <div style="background:white; padding:1rem; border-radius:8px; margin-bottom:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <strong style="color:#0a1929; font-size:1.1rem;">${store.name}</strong>
+        <div style="font-size:0.85rem; color:#666; margin-top:4px;">
+          ${store.type || 'Commerce'} • ${store.address || 'Adresse non spécifiée'}
+        </div>
+      </div>
+      <span style="background:#10b981; color:white; padding:4px 8px; border-radius:4px; font-size:0.8rem; font-weight:bold;">
+        ✅ Actif
+      </span>
+    </div>
+  `).join('');
 }
 
 async function rejectStore(profileId) {
