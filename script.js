@@ -1054,37 +1054,33 @@ function showUserInterface() {
   document.getElementById('user-role').textContent = labels[currentUser.role] || currentUser.role;
   
   // 3. ✅ GESTION STRICTE DU WALLET : UNIQUEMENT POUR LES CLIENTS
-  const isClient = currentUser.role === 'client';
-  
-  const walletSection = document.getElementById('user-wallet-section');
-  const storeWalletSection = document.getElementById('store-wallet-section');
-  const walletButtons = document.querySelector('.wallet-buttons');
-  
-  if (isClient) {
-    // ✅ AFFICHER le wallet uniquement pour le client
-    if (walletSection) walletSection.style.display = 'block';
-    if (walletButtons) walletButtons.style.display = 'flex';
+  if (currentUser.role === 'client') {
+    // ✅ AFFICHER le wallet pour les clients
+    const walletElements = [
+      'user-wallet-section',
+      'store-wallet-section',
+      'wallet-balance',
+      'recharge-btn'
+    ];
     
-    ['wallet-btn', 'recharge-btn'].forEach(id => {
+    walletElements.forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.style.display = 'inline-block'; // ou 'flex' selon ton design
+      if (el) el.style.display = 'block';
     });
     
-    // Charger le solde
-    if (typeof updateWalletDisplay === 'function') {
-      updateWalletDisplay();
-    }
-  } else {
-    // 🚫 CACHER le wallet pour TOUT LE MONDE (Livreur, Admin, Commerce)
-    if (walletSection) walletSection.style.display = 'none';
-    if (storeWalletSection) storeWalletSection.style.display = 'none';
-    if (walletButtons) walletButtons.style.display = 'none';
-    
-    ['wallet-btn', 'recharge-btn', 'store-wallet-section'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
+    // Afficher aussi les classes
+    document.querySelectorAll('.wallet-section, .wallet-buttons, .recharge-button').forEach(el => {
+      el.style.display = 'flex';
     });
+    
+    // Charger le solde après un court délai
+    setTimeout(() => {
+      if (typeof updateWalletDisplay === 'function') {
+        updateWalletDisplay();
+      }
+    }, 500);
   }
+  // ❌ POUR TOUS LES AUTRES (admin, livreur, commerce) : le wallet reste caché par le CSS
 
   // 4. Réinitialiser l'affichage des menus de navigation
   document.getElementById('nav-client').style.display = 'none';
@@ -1094,21 +1090,13 @@ function showUserInterface() {
   if (navStore) navStore.style.display = 'none';
 
   // 5. Afficher l'interface spécifique au rôle
-
-if (currentUser.role === 'client') {
-  document.getElementById('nav-client').style.display = 'block';
-  document.getElementById('client-firstname').textContent = currentUser.name.split(' ')[0];
-  if (typeof updateDeliveryAddress === 'function') updateDeliveryAddress();
-  switchView('view-client');
-  if (typeof showClientStores === 'function') showClientStores();
-  
-  // ✅ AJOUTE CETTE LIGNE : Attendre que l'interface soit affichée, puis charger le solde
-  setTimeout(() => {
-    if (typeof updateWalletDisplay === 'function') {
-      updateWalletDisplay();
-    }
-  }, 500); // 500ms pour laisser le temps au DOM de se charger
-
+  if (currentUser.role === 'client') {
+    document.getElementById('nav-client').style.display = 'block';
+    document.getElementById('client-firstname').textContent = currentUser.name.split(' ')[0];
+    if (typeof updateDeliveryAddress === 'function') updateDeliveryAddress();
+    switchView('view-client');
+    if (typeof showClientStores === 'function') showClientStores();
+    
   } else if (currentUser.role === 'driver') {
     document.getElementById('nav-driver').style.display = 'block';
     document.getElementById('driver-firstname').textContent = currentUser.name.split(' ')[0];
