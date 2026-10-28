@@ -1053,25 +1053,23 @@ function showUserInterface() {
   const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
   document.getElementById('user-role').textContent = labels[currentUser.role] || currentUser.role;
   
-  // 3. ✅ GESTION STRICTE DU WALLET : UNIQUEMENT POUR LES CLIENTS
-  if (currentUser.role === 'client') {
-    // ✅ AFFICHER le wallet pour les clients
-    const walletElements = [
-      'user-wallet-section',
-      'store-wallet-section',
-      'wallet-balance',
-      'recharge-btn'
-    ];
+  // 3. ✅ APPROCHE BRUTALE : Cacher TOUS les éléments liés au wallet pour les non-clients
+  if (currentUser.role !== 'client') {
+    // Chercher TOUS les éléments dont l'ID ou la classe contient wallet/balance/recharge/transaction
+    const allWalletElements = document.querySelectorAll(
+      '[id*="wallet"], [id*="balance"], [id*="recharge"], [id*="transaction"], ' +
+      '[class*="wallet"], [class*="balance"], [class*="recharge"], [class*="transaction"]'
+    );
     
-    walletElements.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'block';
+    allWalletElements.forEach(el => {
+      el.style.display = 'none';
     });
     
-    // Afficher aussi les classes
-    document.querySelectorAll('.wallet-section, .wallet-buttons, .recharge-button').forEach(el => {
-      el.style.display = 'flex';
-    });
+    console.log(`✅ ${allWalletElements.length} éléments wallet cachés pour ${currentUser.role}`);
+  } else {
+    // ✅ Pour les clients : s'assurer que le wallet est visible
+    const walletBalance = document.getElementById('wallet-balance');
+    if (walletBalance) walletBalance.style.display = 'inline';
     
     // Charger le solde après un court délai
     setTimeout(() => {
@@ -1080,7 +1078,6 @@ function showUserInterface() {
       }
     }, 500);
   }
-  // ❌ POUR TOUS LES AUTRES (admin, livreur, commerce) : le wallet reste caché par le CSS
 
   // 4. Réinitialiser l'affichage des menus de navigation
   document.getElementById('nav-client').style.display = 'none';
