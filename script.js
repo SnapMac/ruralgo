@@ -51,7 +51,7 @@ async function updateNotifBadge() {
     const { data, error } = await supabaseClient
       .from('notifications')
       .select('id')
-      .eq('owner_id', currentUser.id)
+      .eq('user_id', currentUser.id)
       .eq('is_read', false);
     
     if (error) throw error;
@@ -1053,48 +1053,30 @@ function showUserInterface() {
   const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
   document.getElementById('user-role').textContent = labels[currentUser.role] || currentUser.role;
   
-  // 3. ✅ GESTION DU WALLET : UNIQUEMENT POUR LES CLIENTS
-  // Liste de TOUS les IDs et classes possibles liés au wallet
-  const walletSelectors = [
-    '#user-wallet-section',
-    '#store-wallet-section', 
-    '#wallet-balance',
-    '#recharge-btn',
-    '.wallet-section',
-    '.wallet-buttons',
-    '.recharge-button',
-    '[id*="wallet"]',
-    '[id*="balance"]',
-    '[id*="recharge"]',
-    '[id*="transaction"]',
-    '[class*="wallet"]',
-    '[class*="balance"]',
-    '[class*="recharge"]',
-    '[class*="transaction"]'
-  ];
-
-  if (currentUser.role === 'client') {
-    // ✅ AFFICHER le wallet pour les clients
-    walletSelectors.forEach(selector => {
-      document.querySelectorAll(selector).forEach(el => {
-        el.style.display = ''; // Réinitialiser le display (laisse le CSS décider)
-      });
+  // 3. ✅ APPROCHE BRUTALE : Cacher TOUS les éléments liés au wallet pour les non-clients
+  if (currentUser.role !== 'client') {
+    // Chercher TOUS les éléments dont l'ID ou la classe contient wallet/balance/recharge/transaction
+    const allWalletElements = document.querySelectorAll(
+      '[id*="wallet"], [id*="balance"], [id*="recharge"], [id*="transaction"], ' +
+      '[class*="wallet"], [class*="balance"], [class*="recharge"], [class*="transaction"]'
+    );
+    
+    allWalletElements.forEach(el => {
+      el.style.display = 'none';
     });
     
-    // Charger le solde
+    console.log(`✅ ${allWalletElements.length} éléments wallet cachés pour ${currentUser.role}`);
+  } else {
+    // ✅ Pour les clients : s'assurer que le wallet est visible
+    const walletBalance = document.getElementById('wallet-balance');
+    if (walletBalance) walletBalance.style.display = 'inline';
+    
+    // Charger le solde après un court délai
     setTimeout(() => {
       if (typeof updateWalletDisplay === 'function') {
         updateWalletDisplay();
       }
     }, 500);
-    
-  } else {
-    // ❌ CACHER le wallet pour admin, livreur, commerce
-    walletSelectors.forEach(selector => {
-      document.querySelectorAll(selector).forEach(el => {
-        el.style.display = 'none';
-      });
-    });
   }
 
   // 4. Réinitialiser l'affichage des menus de navigation
@@ -1140,7 +1122,7 @@ function showUserInterface() {
     }
   }
   
-  // 6. Mettre à jour le badge de la cloche
+  // 6. Mettre à jour le badge de la cloche de notification
   if (typeof updateNotifBadge === 'function') {
     updateNotifBadge();
   }
@@ -2681,69 +2663,26 @@ async function approveStore(profileId) {
     showToast('⏳ Approbation en cours...');
     
     // 1. Mettre à jour le statut dans profiles
-    const { error: profileError } = await supabaseClient
+    const { error } = await supabaseClient
       .from('profiles')
       .update({ status: 'approved' })
       .eq('id', profileId);
 
-    if (profileError) throw profileError;
+    if (error) throw error;
 
-    // 2. ✅ CORRECTION CRITIQUE : Mettre à jour la table 'stores' aussi !
-    // On lie le commerce à l'utilisateur via user_id
-    const { error: storeError } = await supabaseClient
-      .from('stores')
-      .update({ status: 'active' }) // On le passe en actif
-      .eq('user_id', profileId);
-
-    if (storeError) {
-      console.warn("⚠️ Profile mis à jour, mais attention à la table stores:", storeError.message);
-    }
+    // 2. (Optionnel) Si tu as une table 'stores', la mettre à jour aussi
+    // await supabaseClient.from('stores').update({ status: 'active' }).eq('user_id', profileId);
 
     showToast('✅ Commerce approuvé avec succès !');
     
-    // 3. Rafraîchir les listes de l'admin
-    if (typeof renderPendingStores === 'function') {
-      renderPendingStores(); // Enlève le commerce de la liste d'attente
-    }
-    if (typeof renderAllStores === 'function') {
-      renderAllStores(); // Ajoute le commerce dans la liste "Mes commerces"
-    }
+    // 3. Rafraîchir la liste
+    renderPendingStores();
     
   } catch (err) {
     console.error('Erreur approbation:', err);
     showToast('❌ Erreur lors de l\'approbation : ' + err.message);
+    console.log("ID essayé :", profileId);
   }
-}
-async function renderAllStores() {
-  const container = document.getElementById('stores-table-container');
-  if (!container) return;
-
-  // ✅ LIRE DIRECTEMENT DANS 'profiles' au lieu de 'stores'
-  const { data, error } = await supabaseClient
-    .from('profiles')
-    .select('*')
-    .eq('role', 'store')
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Erreur:', error);
-    container.innerHTML = '<div style="padding:1rem;color:red">Erreur de chargement</div>';
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    container.innerHTML = '<div style="padding:1rem;text-align:center;color:#666">Aucun commerce approuvé.</div>';
-    return;
-  }
-
-  container.innerHTML = data.map(store => `
-    <div style="background:white; padding:1rem; border-radius:8px; margin-bottom:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.1);">
-      <strong style="color:#0a1929;">${store.name || 'Commerce'}</strong>
-      <span style="background:#10b981; color:white; padding:4px 8px; border-radius:4px; font-size:0.8rem; margin-left:10px;">✅ Approuvé</span>
-      <div style="font-size:0.85rem; color:#666; margin-top:4px;">${store.email || ''}</div>
-    </div>
-  `).join('');
 }
 
 async function rejectStore(profileId) {
@@ -4445,119 +4384,4 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
   checkPaymentSuccess();
 } else {
   window.addEventListener('DOMContentLoaded', checkPaymentSuccess);
-}
-// ==========================================
-// ✅ TABLEAU DE BORD DU COMMERCE (DÉJÀ CORRIGÉ AVEC owner_id)
-// ==========================================
-
-async function showStoreDashboard() {
-  if (!currentUser || currentUser.role !== 'store') return;
-
-  try {
-    // 1. Récupérer les infos du commerce en utilisant owner_id
-    const { data: store, error } = await supabaseClient
-      .from('stores')
-      .select('*')
-      .eq('owner_id', currentUser.id) // ✅ C'est ici que c'est corrigé !
-      .maybeSingle();
-
-    if (error || !store) {
-      const container = document.getElementById('store-dashboard-content');
-      if (container) {
-        container.innerHTML = `
-          <div style="text-align:center; padding:2rem; color:red;">
-            ❌ Impossible de trouver les informations de votre commerce. Veuillez contacter le support.
-          </div>`;
-      }
-      return;
-    }
-
-    // 2. Afficher les infos du commerce + Bouton pour ajouter un produit
-    const dashboardHTML = `
-      <div style="background:white; padding:1.5rem; border-radius:12px; margin-bottom:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-        <h3 style="color:#0a1929; margin-top:0;">🏪 Mon Commerce : ${store.name}</h3>
-        <p><strong>Type :</strong> ${store.type || 'Non spécifié'}</p>
-        <p><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
-        <p><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
-        <p><strong>Statut :</strong> <span style="color:${store.status === 'approved' || store.status === 'active' ? '#10b981' : '#f59e0b'}; font-weight:bold;">
-          ${store.status === 'approved' || store.status === 'active' ? '✅ Approuvé' : '⏳ En attente'}
-        </span></p>
-        
-        <hr style="margin:1.5rem 0; border:0; border-top:1px solid #eee;">
-        
-        <h4 style="color:#0a1929;">📦 Mes Produits</h4>
-        <button class="btn-sm btn-green" onclick="openAddProductModal('${store.id}')" style="margin-bottom:1rem; padding:8px 16px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer;">➕ Ajouter un produit</button>
-        <div id="store-products-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:1rem;">
-          <!-- Les produits s'afficheront ici -->
-        </div>
-      </div>
-    `;
-
-    const container = document.getElementById('store-dashboard-content');
-    if (container) {
-      container.innerHTML = dashboardHTML;
-      // Charger les produits juste après
-      loadStoreProducts(store.id);
-    }
-
-  } catch (err) {
-    console.error('Erreur showStoreDashboard:', err);
-  }
-}
-
-// Fonction pour charger les produits du commerce
-async function loadStoreProducts(storeId) {
-  const container = document.getElementById('store-products-list');
-  if (!container) return;
-
-  const { data: products, error } = await supabaseClient
-    .from('products')
-    .select('*')
-    .eq('store_id', storeId)
-    .order('created_at', { ascending: false });
-
-  if (error || !products || products.length === 0) {
-    container.innerHTML = '<p style="color:#666; grid-column:1/-1;">Aucun produit ajouté pour le moment.</p>';
-    return;
-  }
-
-  container.innerHTML = products.map(product => `
-    <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee;">
-      <h5 style="margin:0 0 0.5rem 0; color:#0a1929;">${product.name}</h5>
-      <p style="margin:0; color:#10b981; font-weight:bold;">${product.price} $</p>
-      <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#666;">${product.description || 'Aucune description'}</p>
-    </div>
-  `).join('');
-}
-
-// Fonction pour ajouter un produit simplement
-async function openAddProductModal(storeId) {
-  const name = prompt("Nom du produit :");
-  if (!name) return;
-  
-  const price = prompt("Prix du produit (ex: 15.99) :");
-  if (!price || isNaN(price)) {
-    showToast("❌ Prix invalide");
-    return;
-  }
-
-  const description = prompt("Description du produit (optionnel) :") || "";
-
-  try {
-    showToast("⏳ Ajout du produit...");
-    const { error } = await supabaseClient.from('products').insert({
-      store_id: storeId,
-      name: name,
-      price: parseFloat(price),
-      description: description
-    });
-
-    if (error) throw error;
-
-    showToast("✅ Produit ajouté avec succès !");
-    loadStoreProducts(storeId); // Rafraîchir la liste
-  } catch (err) {
-    console.error(err);
-    showToast("❌ Erreur lors de l'ajout : " + err.message);
-  }
 }
