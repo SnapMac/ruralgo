@@ -3926,48 +3926,45 @@ async function loadUserWallet() {
 // Mettre à jour l'affichage du solde dans l'interface
 // ✅ Affiche le wallet UNIQUEMENT pour les clients et commerces (pas livreurs/admins)
 async function updateWalletDisplay() {
-  if (!currentUser || !currentUser.id) return;
-
-  // 🚫 CACHER pour les livreurs et admins
-  const walletSection = document.getElementById('user-wallet-section');
-  if (walletSection) {
-    if (currentUser.role === 'driver' || currentUser.role === 'admin') {
-      walletSection.style.display = 'none';
-      return; // On arrête ici, pas besoin de charger le solde
-    } else {
-      walletSection.style.display = 'block'; // ✅ Afficher pour clients et commerces
-    }
-  }
+  // Ne s'exécute que si c'est un client connecté
+  if (!currentUser || !currentUser.id || currentUser.role !== 'client') return;
 
   try {
+    console.log("🔍 Chargement du solde pour l'utilisateur:", currentUser.id);
+    
     const { data: wallet, error } = await supabaseClient
       .from('wallets')
       .select('balance')
       .eq('user_id', currentUser.id)
       .maybeSingle();
 
-    if (error) throw error;
-
-    if (wallet) {
-      const balance = parseFloat(wallet.balance || 0).toFixed(2);
-      const balanceEl = document.getElementById('user-wallet-balance');
-      if (balanceEl) balanceEl.textContent = balance + ' $';
-      
-      if (typeof userWalletBalance !== 'undefined') {
-        userWalletBalance = parseFloat(wallet.balance || 0);
-      }
-    } else {
-      // Créer le wallet à 0$ s'il n'existe pas
-      await supabaseClient.from('wallets').insert({
-        user_id: currentUser.id,
-        balance: 0.00
-      });
-      
-      const balanceEl = document.getElementById('user-wallet-balance');
-      if (balanceEl) balanceEl.textContent = '0.00 $';
+    if (error) {
+      console.error("❌ Erreur Supabase lors de la lecture du wallet:", error);
+      return;
     }
+
+    // Calculer le solde (0.00 si vide)
+    const balance = wallet ? parseFloat(wallet.balance || 0).toFixed(2) : "0.00";
+    console.log("✅ Solde réel récupéré de la base de données :", balance, "$");
+
+    // 1. Mettre à jour l'élément principal par son ID
+    const balanceEl = document.getElementById('user-wallet-balance');
+    if (balanceEl) {
+      balanceEl.textContent = balance + ' $';
+      // Astuce : mettre à jour l'attribut title au cas où ton "hover" utilise ça
+      balanceEl.setAttribute('title', 'Solde actuel : ' + balance + ' $'); 
+    } else {
+      console.warn("⚠️ L'élément avec l'ID 'user-wallet-balance' est introuvable dans le HTML !");
+    }
+
+    // 2. Mettre à jour la variable globale si elle existe dans ton code
+    if (typeof userWalletBalance !== 'undefined') {
+      userWalletBalance = parseFloat(balance);
+    }
+
   } catch (err) {
-    console.error('Erreur lecture portefeuille:', err);
+    console.error('Erreur critique lecture portefeuille:', err);
+    showToast('❌ Erreur de chargement du solde');
   }
 }
 
@@ -4314,6 +4311,12 @@ const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('payment_success') === 'true') {
   showToast('✅ Paiement effectué. Ton solde va être mis à jour automatiquement.');
   window.history.replaceState({}, document.title, window.location.pathname);
+  
+  // ✅ AJOUTE CES LIGNES : Attendre 2 secondes pour le webhook Stripe, puis rafraîchir
+  setTimeout(async () => {
+    await updateWalletDisplay();
+    showToast('💰 Solde mis à jour : ' + document.getElementById('user-wallet-balance').textContent);
+  }, 2000);
 }
 
 if (urlParams.get('payment_canceled') === 'true') {
