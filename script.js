@@ -1094,13 +1094,21 @@ function showUserInterface() {
   if (navStore) navStore.style.display = 'none';
 
   // 5. Afficher l'interface spécifique au rôle
-  if (currentUser.role === 'client') {
-    document.getElementById('nav-client').style.display = 'block';
-    document.getElementById('client-firstname').textContent = currentUser.name.split(' ')[0];
-    if (typeof updateDeliveryAddress === 'function') updateDeliveryAddress();
-    switchView('view-client');
-    if (typeof showClientStores === 'function') showClientStores();
-    
+
+if (currentUser.role === 'client') {
+  document.getElementById('nav-client').style.display = 'block';
+  document.getElementById('client-firstname').textContent = currentUser.name.split(' ')[0];
+  if (typeof updateDeliveryAddress === 'function') updateDeliveryAddress();
+  switchView('view-client');
+  if (typeof showClientStores === 'function') showClientStores();
+  
+  // ✅ AJOUTE CETTE LIGNE : Attendre que l'interface soit affichée, puis charger le solde
+  setTimeout(() => {
+    if (typeof updateWalletDisplay === 'function') {
+      updateWalletDisplay();
+    }
+  }, 500); // 500ms pour laisser le temps au DOM de se charger
+
   } else if (currentUser.role === 'driver') {
     document.getElementById('nav-driver').style.display = 'block';
     document.getElementById('driver-firstname').textContent = currentUser.name.split(' ')[0];
