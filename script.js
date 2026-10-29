@@ -2878,11 +2878,11 @@ async function showStoreDashboard() {
     return;
   }
 
-  // Trouver le conteneur
-  const container = document.getElementById('store-dashboard-content');
+  // ✅ CORRECTION : Utiliser le bon ID
+  const container = document.getElementById('store-info-content');
   
   if (!container) {
-    console.error("❌ Conteneur 'store-dashboard-content' introuvable");
+    console.error("❌ Conteneur 'store-info-content' introuvable");
     return;
   }
 
@@ -2900,9 +2900,9 @@ async function showStoreDashboard() {
       container.innerHTML = `
         <div style="padding:2rem; text-align:center; background:#fef3c7; border-radius:8px;">
           <h3>⏳ Abonnement non actif</h3>
-          <p>Votre abonnement n'est pas encore actif. Veuillez compléter le paiement.</p>
+          <p>Votre abonnement n'est pas encore actif.</p>
         </div>`;
-      return; // ✅ On arrête ici, PAS d'appel à switchView
+      return;
     }
 
     console.log("✅ Abonnement actif trouvé");
@@ -2921,17 +2921,18 @@ async function showStoreDashboard() {
           <h3>❌ Commerce introuvable</h3>
           <p>Contactez l'administrateur.</p>
         </div>`;
-      return; // ✅ On arrête ici, PAS d'appel à switchView
+      return;
     }
 
     console.log("✅ Commerce trouvé :", store.name);
 
-    // 3. Afficher le dashboard (SANS appeler switchView)
+    // 3. Afficher le dashboard
     container.innerHTML = `
       <div style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
         <h2 style="color:#0a1929; margin-top:0;">🏪 ${store.name}</h2>
         <p><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
         <p><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
+        <p><strong>Email :</strong> ${store.email || 'Non spécifié'}</p>
         <p><strong>Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
         
         <hr style="margin:1.5rem 0;">
