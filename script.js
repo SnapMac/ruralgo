@@ -4071,11 +4071,12 @@ function renderNotifications(notifs) {
   
   list.innerHTML = notifs.map(n => {
     const icon = n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : n.type === 'warning' ? '⚠️' : 'ℹ️';
-    const date = new Date(n.created_at).toLocaleDateString('fr-CA', { 
+        const date = new Date(n.created_at).toLocaleDateString('fr-CA', { 
       day: 'numeric', 
       month: 'short', 
       hour: '2-digit', 
-      minute: '2-digit' 
+      minute: '2-digit',
+      timeZone: 'America/Montreal' 
     });
     return `
       <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markAsRead('${n.id}')">
@@ -5008,7 +5009,8 @@ function goToMyStore() {
   if (typeof showStoreDashboard === 'function') {
     showStoreDashboard();
   }
-} // <-- Ajoute cette accolade ici au cas où il en manquerait une
+}
+ // <-- Ajoute cette accolade ici au cas où il en manquerait une
 
 function goToMyStore() {
   // 1. Cacher les sections catégories et produits
