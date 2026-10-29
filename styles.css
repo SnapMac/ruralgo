@@ -1393,3 +1393,99 @@ html, body {
     box-sizing: border-box;
   }
 }
+
+/* ✅ FIX HEADER MOBILE (Pour voir Login/Logout et éviter le débordement) */
+@media (max-width: 768px) {
+  /* 1. Le conteneur principal s'adapte et empile les éléments */
+  header .nav {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    padding: 0.8rem 0.5rem !important;
+    gap: 0.8rem !important;
+  }
+
+  /* 2. Logo centré et plus petit */
+  .logo {
+    width: 100% !important;
+    justify-content: center !important;
+    margin-bottom: 0.2rem !important;
+  }
+  .logo-icon svg {
+    width: 35px !important;
+    height: 35px !important;
+  }
+  .logo-name {
+    font-size: 1.1rem !important;
+  }
+  .logo-tagline {
+    font-size: 0.7rem !important;
+  }
+
+  /* 3. Menus de navigation compacts et centrés */
+  nav ul {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  nav ul li a {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.6rem !important;
+  }
+
+  /* 4. Section Auth (Connexion/Inscription) bien visible */
+  #auth-section {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+  }
+  .auth-btn {
+    font-size: 0.85rem !important;
+    padding: 0.5rem 1rem !important;
+  }
+
+  /* 5. Section Utilisateur Connecté (Wallet + Déconnexion) */
+  #user-section {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+  }
+  
+  /* On cache le nom/avatar sur mobile pour gagner de la place, le wallet suffit */
+  .user-info {
+    display: none !important; 
+  }
+  
+  .wallet-widget {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
+  }
+  
+  .wallet-btn {
+    font-size: 0.8rem !important;
+    padding: 0.4rem 0.6rem !important;
+  }
+  
+  .logout-btn {
+    font-size: 0.85rem !important;
+    padding: 0.5rem 1rem !important;
+    width: 100% !important;
+    max-width: 200px !important;
+    margin-top: 0.3rem !important;
+  }
+
+  /* 6. Cloche de notification */
+  #notif-bell-container {
+    position: absolute !important;
+    top: 1rem !important;
+    right: 1rem !important;
+  }
+}
+
