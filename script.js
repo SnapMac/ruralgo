@@ -44,32 +44,23 @@ async function showNotification(title, message, type = 'info', targetUserId = nu
 }
 
 // Met à jour le chiffre rouge sur la cloche
-async function updateNotifBadge() {
-  if (!currentUser || !currentUser.id) return;
+// ✅ NOUVELLE FONCTION : Mettre à jour le badge rouge (Version Blindée)
+function updateNotifBadge(notifications) {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
   
-  try {
-    const { data, error } = await supabaseClient
-      .from('notifications')
-      .select('id')
-      .eq('user_id', currentUser.id)
-      .eq('is_read', false);
-    
-    if (error) throw error;
-    
-    const count = data ? data.length : 0;
-    const badge = document.getElementById('notif-badge');
-    
-    if (badge) {
-      if (count > 0) {
-        badge.textContent = count > 99 ? '99+' : count;
-        badge.style.display = 'inline-block';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-    
-  } catch (err) {
-    console.error('Erreur updateNotifBadge:', err);
+  // Si aucun paramètre n'est passé, on ne fait rien
+  if (!notifications || !Array.isArray(notifications)) {
+    return;
+  }
+  
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+  
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
   }
 }
 
@@ -149,19 +140,6 @@ async function loadNotifPanel() {
 }
 
 // ✅ NOUVELLE FONCTION : Mettre à jour le badge rouge
-function updateNotifBadge(notifications) {
-  const badge = document.getElementById('notif-badge');
-  if (!badge) return;
-  
-  const unreadCount = notifications.filter(n => !n.is_read).length;
-  
-  if (unreadCount > 0) {
-    badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
-    badge.style.display = 'flex';
-  } else {
-    badge.style.display = 'none';
-  }
-}
 
 // ✅ NOUVELLE FONCTION : Marquer une notif comme lue au clic
 async function markAsRead(notifId) {
