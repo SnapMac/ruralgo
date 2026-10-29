@@ -2871,85 +2871,86 @@ function confirmDelete(type, id) {
 // ==========================================
 
 async function showStoreDashboard() {
-  console.log("🔍 1. showStoreDashboard démarré");
+  console.log("🔍 showStoreDashboard démarré");
   
   if (!currentUser || currentUser.role !== 'store') {
-    console.log("⚠️ Utilisateur non valide pour ce dashboard");
+    console.log("⚠️ Pas un commerce");
     return;
   }
 
-  // Trouver le conteneur, peu importe où il est
-  let container = document.getElementById('store-dashboard-content');
+  // Trouver le conteneur
+  const container = document.getElementById('store-dashboard-content');
   
-  // Si le conteneur n'existe pas, on le crée de force pour éviter l'écran blanc
   if (!container) {
-    console.error("❌ Conteneur 'store-dashboard-content' introuvable dans le HTML !");
-    const viewStore = document.getElementById('view-store');
-    if (viewStore) {
-      viewStore.innerHTML = '<div style="padding:2rem; text-align:center; color:red; font-size:1.2rem;">⚠️ ERREUR : Le conteneur du dashboard est manquant dans le HTML. Contactez le développeur.</div>';
-    }
+    console.error("❌ Conteneur 'store-dashboard-content' introuvable");
     return;
   }
 
   try {
-    console.log("🔍 2. Recherche du commerce pour owner_id :", currentUser.id);
-    
+    // 1. Vérifier l'abonnement
+    console.log("🔍 Vérification abonnement...");
+    const { data: sub } = await supabaseClient
+      .from('subscriptions')
+      .select('status')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+
+    if (!sub || sub.status !== 'active') {
+      console.warn("⚠️ Pas d'abonnement actif");
+      container.innerHTML = `
+        <div style="padding:2rem; text-align:center; background:#fef3c7; border-radius:8px;">
+          <h3>⏳ Abonnement non actif</h3>
+          <p>Votre abonnement n'est pas encore actif. Veuillez compléter le paiement.</p>
+        </div>`;
+      return; // ✅ On arrête ici, PAS d'appel à switchView
+    }
+
+    console.log("✅ Abonnement actif trouvé");
+
+    // 2. Récupérer le commerce
     const { data: store, error } = await supabaseClient
       .from('stores')
       .select('*')
       .eq('owner_id', currentUser.id)
       .maybeSingle();
 
-    if (error) {
-      console.error("❌ 3. Erreur Supabase :", error);
-      container.innerHTML = `<div style="padding:2rem; text-align:center; color:red;">❌ Erreur de base de données : ${error.message}</div>`;
-      return;
-    }
-
-    if (!store) {
-      console.warn("⚠️ 3. Aucun commerce trouvé pour cet utilisateur dans la table 'stores'");
+    if (error || !store) {
+      console.error("❌ Commerce introuvable");
       container.innerHTML = `
-        <div style="padding:2rem; text-align:center; color:#d97706; background:#fef3c7; border-radius:8px;">
-          <h3>⚠️ Commerce introuvable</h3>
-          <p>Votre profil est approuvé, mais votre fiche commerce n'a pas été créée.</p>
-          <p>Veuillez contacter l'administrateur pour qu'il ré-approuve votre compte.</p>
-          <p><small>(ID Utilisateur: ${currentUser.id})</small></p>
+        <div style="padding:2rem; text-align:center; background:#fee2e2; border-radius:8px;">
+          <h3>❌ Commerce introuvable</h3>
+          <p>Contactez l'administrateur.</p>
         </div>`;
-      return;
+      return; // ✅ On arrête ici, PAS d'appel à switchView
     }
 
-    console.log("✅ 3. Commerce trouvé :", store.name);
+    console.log("✅ Commerce trouvé :", store.name);
 
-    // 4. Afficher le dashboard avec les vraies données
+    // 3. Afficher le dashboard (SANS appeler switchView)
     container.innerHTML = `
       <div style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-          <h2 style="color:#0a1929; margin:0;">🏪 ${store.name}</h2>
-          <button onclick="editStoreName('${store.id}', '${store.name}')" style="padding:8px 16px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer;">✏️ Modifier le nom</button>
-        </div>
+        <h2 style="color:#0a1929; margin-top:0;">🏪 ${store.name}</h2>
+        <p><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
+        <p><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
+        <p><strong>Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
         
-        <p><strong>📍 Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
-        <p><strong>📞 Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
-        <p><strong>📧 Email :</strong> ${store.email || 'Non spécifié'}</p>
-        <p><strong>📊 Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
+        <hr style="margin:1.5rem 0;">
         
-        <hr style="margin:1.5rem 0; border:0; border-top:1px solid #eee;">
+        <h3>📦 Mon Inventaire</h3>
+        <button onclick="openAddProductModal('${store.id}')" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">➕ Ajouter un produit</button>
         
-        <h3 style="color:#0a1929;">📦 Mon Inventaire (Produits)</h3>
-        <button onclick="openAddProductModal('${store.id}')" style="margin-bottom:1rem; padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">➕ Ajouter un produit</button>
-        
-        <div id="store-products-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
-          <!-- Les produits seront injectés ici -->
+        <div id="store-products-list" style="margin-top:1rem; display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
+          <!-- Produits ici -->
         </div>
       </div>
     `;
 
-    // 5. Charger les produits
+    // 4. Charger les produits
     loadStoreProducts(store.id);
 
   } catch (err) {
-    console.error("❌ ERREUR CRITIQUE DANS showStoreDashboard :", err);
-    container.innerHTML = `<div style="padding:2rem; text-align:center; color:red;">❌ Erreur critique : ${err.message}</div>`;
+    console.error("❌ Erreur critique:", err);
+    container.innerHTML = `<div style="padding:2rem; color:red;">❌ Erreur : ${err.message}</div>`;
   }
 }
 
