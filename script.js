@@ -2825,12 +2825,73 @@ function confirmDelete(type, id) {
 // GESTION DU TABLEAU DE BORD COMMERCE
 // ==========================================
 
-function showStoreDashboard() {
-  switchView('view-store');
-  document.getElementById('store-dashboard-section').style.display = 'block';
-  document.getElementById('store-categories-section').style.display = 'none';
-  document.getElementById('store-products-section').style.display = 'none';
-  renderStoreDashboard();
+async function showStoreDashboard() {
+  if (!currentUser || currentUser.role !== 'store') return;
+
+  try {
+    // 1. Vérifier l'abonnement dans la table 'subscriptions'
+    const { data: sub, error: subError } = await supabaseClient
+      .from('subscriptions')
+      .select('status, plan_id')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+
+    // 2. Si pas d'abonnement OU statut incomplet/annulé -> Rediriger vers le paiement
+    if (!sub || sub.status === 'incomplete' || sub.status === 'canceled') {
+      console.log("⚠️ Pas d'abonnement actif, redirection vers le paiement...");
+      
+      // Adapte le nom de la fonction ou de la vue selon ton code (ex: 'view-payment' ou 'showPaymentScreen')
+      if (typeof showPaymentScreen === 'function') {
+        showPaymentScreen();
+      } else {
+        switchView('view-payment'); // Change 'view-payment' par le vrai ID de ta vue de paiement
+      }
+      return; // On arrête tout, on ne charge pas le dashboard
+    }
+
+    // 3. Si l'abonnement est 'active' ou 'trialing', on affiche le dashboard
+    console.log("✅ Abonnement actif trouvé :", sub.status);
+
+    // Récupérer les infos du commerce
+    const { data: store, error: storeError } = await supabaseClient
+      .from('stores')
+      .select('*')
+      .eq('owner_id', currentUser.id)
+      .maybeSingle();
+
+    const container = document.getElementById('store-dashboard-content');
+    if (!container) return;
+
+    if (!store) {
+      container.innerHTML = `<div style="text-align:center;padding:2rem;color:red;">❌ Commerce introuvable. Contactez l'admin.</div>`;
+      return;
+    }
+
+    // Afficher le dashboard
+    container.innerHTML = `
+      <div style="background:white;padding:1.5rem;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <h3 style="color:#0a1929;margin-top:0;">🏪 ${store.name}</h3>
+        <p><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
+        <p><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
+        <p><strong>Statut du compte :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif (Abonnement: ${sub.status})</span></p>
+        
+        <hr style="margin:1.5rem 0;border:0;border-top:1px solid #eee;">
+        
+        <h4 style="color:#0a1929;">📦 Mes Produits</h4>
+        <button onclick="addProductSimple('${store.id}')" style="padding:10px 20px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">➕ Ajouter un produit</button>
+        
+        <div id="store-products-list" style="margin-top:1rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:1rem;">
+          <!-- Les produits s'afficheront ici -->
+        </div>
+      </div>
+    `;
+
+    // Charger les produits
+    loadStoreProducts(store.id);
+
+  } catch (err) {
+    console.error('❌ Erreur showStoreDashboard:', err);
+  }
 }
 
 function renderStoreDashboard() {
