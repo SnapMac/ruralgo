@@ -4072,9 +4072,10 @@ function renderNotifications(notifs) {
   list.innerHTML = notifs.map(n => {
     const icon = n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : n.type === 'warning' ? '⚠️' : 'ℹ️';
     
-    // ✅ CORRECTION ULTIME DE L'HEURE (Force le fuseau horaire du Québec)
     let dateStr = 'À l\'instant';
     if (n.created_at) {
+      console.log("🔍 Heure brute reçue de Supabase :", n.created_at);
+      
       try {
         const dateObj = new Date(n.created_at);
         dateStr = dateObj.toLocaleString('fr-CA', { 
@@ -4082,10 +4083,11 @@ function renderNotifications(notifs) {
           month: 'short', 
           hour: '2-digit', 
           minute: '2-digit',
-          timeZone: 'America/Montreal' // Force l'heure du Québec (UTC-4/UTC-5)
+          timeZone: 'America/Montreal'
         });
+        console.log("✅ Heure affichée après conversion :", dateStr);
       } catch (e) {
-        console.error("Erreur formatage date:", e);
+        console.error("❌ Erreur formatage date:", e);
       }
     }
 
