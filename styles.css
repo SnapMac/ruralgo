@@ -1141,3 +1141,174 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   padding-bottom: 5rem;
 }
 
+/* ==========================================
+   ✅ OPTIMISATION MOBILE PARFAITE (RESPONSIVE)
+   ========================================== */
+
+/* Empêcher le scroll horizontal */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
+@media (max-width: 768px) {
+  /* ===== HEADER ===== */
+  header .nav {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    padding: 0.8rem 0.5rem !important;
+    gap: 0.8rem !important;
+  }
+
+  /* Logo centré et compact */
+  .logo {
+    width: 100% !important;
+    justify-content: center !important;
+    margin-bottom: 0.2rem !important;
+  }
+  .logo-icon svg {
+    width: 35px !important;
+    height: 35px !important;
+  }
+  .logo-name { font-size: 1.1rem !important; }
+  .logo-tagline { font-size: 0.7rem !important; }
+
+  /* Menus de navigation compacts */
+  nav ul {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  nav ul li a {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.6rem !important;
+  }
+
+  /* Boutons Connexion/Inscription (respecte le display:none du HTML) */
+  #auth-section {
+    width: 100% !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+  }
+  .auth-btn {
+    font-size: 0.85rem !important;
+    padding: 0.5rem 1rem !important;
+  }
+
+  /* Section Utilisateur Connecté (respecte le display:none du HTML) */
+  #user-section {
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+  }
+  
+  /* Cache le nom/avatar pour gagner de la place */
+  .user-info { 
+    display: none !important; 
+  }
+  
+  .wallet-widget {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
+  }
+  .wallet-btn {
+    font-size: 0.8rem !important;
+    padding: 0.4rem 0.6rem !important;
+  }
+  .logout-btn {
+    font-size: 0.85rem !important;
+    padding: 0.5rem 1rem !important;
+    width: 100% !important;
+    max-width: 200px !important;
+  }
+
+  /* Cloche de notification */
+  #notif-bell-container {
+    position: absolute !important;
+    top: 1rem !important;
+    right: 1rem !important;
+  }
+
+  /* ===== BANNIÈRE HERO ===== */
+  .hero-modern, .hero, .hero-commercial {
+    padding: 2.5rem 1rem 3rem 1rem !important;
+  }
+  .hero-modern h1, .hero h1, .hero-commercial h1 {
+    font-size: 1.8rem !important;
+  }
+  .hero-subtitle, .hero p, .hero-commercial p {
+    font-size: 1rem !important;
+  }
+
+  /* ===== BARRE DE RECHERCHE ===== */
+  #search-section input, #global-search {
+    padding: 0.9rem 1.2rem !important;
+    font-size: 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  #search-section .container > div {
+    max-width: 100% !important;
+    padding: 0 1rem !important;
+  }
+
+  /* ===== PRODUITS : 1 colonne lisible ===== */
+  #products-grid-detail, .products-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.2rem !important;
+    padding-bottom: 6rem !important;
+    width: 100% !important;
+  }
+  
+  .modern-product-card, .product-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  .product-image-area, .product-card-img {
+    width: 100% !important;
+    height: 150px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    border-right: none !important;
+  }
+  
+  .product-icon { font-size: 3rem; }
+  .product-details { padding: 1.2rem; }
+  .product-name { font-size: 1.1rem; margin-bottom: 0.5rem; }
+  .product-desc { 
+    font-size: 0.9rem; 
+    margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .product-price { font-size: 1.2rem; }
+  .modern-add-btn, .add-cart-btn { 
+    padding: 0.6rem 1rem; 
+    font-size: 0.9rem; 
+    width: 100%;
+  }
+
+  /* ===== PANIER STICKY ===== */
+  .sticky-cart-bar {
+    padding: 0.8rem 1rem;
+    bottom: env(safe-area-inset-bottom, 0);
+  }
+  .btn-checkout {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.95rem;
+  }
+
+  /* ===== PANIER INLINE ===== */
+  #inline-cart-container {
+    margin-left: 1rem !important;
+    margin-right: 1rem !important;
+  }
+}
