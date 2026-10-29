@@ -1,6 +1,15 @@
+// @ts-ignore Deno resolves URL imports at runtime; TypeScript language servers may not.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// @ts-ignore Deno resolves URL imports at runtime; TypeScript language servers may not.
 import Stripe from "https://esm.sh/stripe@13.6.0?target=deno";
+// @ts-ignore Deno resolves URL imports at runtime; TypeScript language servers may not.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+declare const Deno: {
+  env: {
+    get(name: string): string | undefined;
+  };
+};
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   apiVersion: '2023-10-16',
@@ -12,7 +21,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-serve(async (req) => {
+serve(async (req: Request) => {
   const signature = req.headers.get('stripe-signature');
   const body = await req.text();
 
@@ -68,8 +77,9 @@ serve(async (req) => {
       status: 200,
     });
   } catch (err) {
-    console.error('Erreur webhook:', err.message);
-    return new Response(JSON.stringify({ error: err.message }), {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error('Erreur webhook:', errorMessage);
+    return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { 'Content-Type': 'application/json' },
       status: 400,
     });
