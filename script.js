@@ -1198,10 +1198,80 @@ function showClientStores() {
   document.getElementById('client-orders-section').style.display = 'none';
   document.getElementById('client-order-detail-section').style.display = 'none';
   document.getElementById('client-profile-section').style.display = 'none';
-  // ✅ CORRECTION : Remettre le panier en visible
-  document.getElementById('cart-section').style.display = 'block';
+  
+  // ❌ ON ENLÈVE CETTE LIGNE pour que le panier reste caché par défaut
+  // document.getElementById('cart-section').style.display = 'block';
+  
   renderClientStores();
   setTimeout(() => document.getElementById('stores-section').scrollIntoView({ behavior: 'smooth' }), 200);
+}
+// ==========================================
+// ✅ FILTRAGE DES COMMERCES PAR CATÉGORIE
+// ==========================================
+
+function renderClientStores(categoryFilter = 'all') {
+  const grid = document.getElementById('stores-grid');
+  const filtersContainer = document.getElementById('category-filters');
+  
+  if (!grid || !stores) return;
+
+  // 1. Générer les boutons de catégories (seulement si c'est 'all' pour éviter de les recréer à chaque fois)
+  if (categoryFilter === 'all' && filtersContainer) {
+    // Récupérer toutes les catégories uniques des commerces
+    const categories = [...new Set(stores.map(s => s.type).filter(Boolean))];
+    
+    // Vider et remettre le bouton "Tous"
+    filtersContainer.innerHTML = '<button class="category-pill active" onclick="filterStores(\'all\', this)">🏪 Tous</button>';
+    
+    // Ajouter un bouton pour chaque catégorie avec une icône générique
+    categories.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = 'category-pill';
+      btn.innerHTML = `🏷️ ${cat}`; // Tu pourras changer l'icône plus tard si tu veux
+      btn.onclick = function() { filterStores(cat, this); };
+      filtersContainer.appendChild(btn);
+    });
+  }
+
+  // 2. Filtrer les commerces
+  const filteredStores = categoryFilter === 'all' 
+    ? stores 
+    : stores.filter(s => s.type === categoryFilter);
+
+  // 3. Afficher les commerces (on réutilise ta logique d'affichage existante si tu en as une, sinon on fait un rendu simple)
+  grid.innerHTML = '';
+  
+  if (filteredStores.length === 0) {
+    grid.innerHTML = '<p style="text-align:center; color:#666; grid-column:1/-1;">Aucun commerce dans cette catégorie pour le moment.</p>';
+ is
+    return;
+  }
+
+  filteredStores.forEach(store => {
+    const card = document.createElement('div');
+    card.className = 'store-card'; // Assure-toi d'avoir du CSS pour .store-card ou utilise ton rendu actuel
+    card.style.cssText = 'background:white; border-radius:12px; padding:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:pointer; transition:transform 0.2s; border:1px solid #f0f0f0;';
+    card.onmouseenter = () => card.style.transform = 'translateY(-4px)';
+    card.onmouseleave = () => card.style.transform = 'translateY(0)';
+    card.onclick = () => openStoreDetail(store.id);
+    
+    card.innerHTML = `
+      <div style="font-size:2rem; margin-bottom:0.5rem;">${store.icon || '🏪'}</div>
+      <h3 style="margin:0 0 0.5rem 0; color:#0a1929;">${store.name}</h3>
+      <p style="margin:0; color:#666; font-size:0.9rem;">${store.type || 'Commerce'}</p>
+      <p style="margin:0.5rem 0 0 0; color:#888; font-size:0.85rem;">📍 ${store.address || 'Adresse non spécifiée'}</p>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function filterStores(category, btnElement) {
+  // Mettre à jour l'apparence des boutons
+  document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
+  btnElement.classList.add('active');
+  
+  // Re-rendre la grille avec le filtre
+  renderClientStores(category);
 }
 
 function renderClientStores() {
@@ -1256,9 +1326,55 @@ function openStoreDetail(storeId) {
     });
     html += `</div>`;
   }
-  html += `<div class="products-grid" id="products-grid-detail"></div>`;
+    html += `<div class="products-grid" id="products-grid-detail"></div>`;
+  
+  // ✅ NOUVEAU : Barre de panier sticky en bas de l'écran
+  html += `
+    <div id="sticky-cart-bar" class="sticky-cart-bar" style="display:none;">
+      <div class="cart-summary">
+        <span class="cart-count" id="sticky-cart-count">0 article</span>
+        <span class="cart-total" id="sticky-cart-total">0.00 $</span>
+      </div>
+      <button class="btn-checkout" onclick="showCart()">🛒 Passer commande</button>
+    </div>
+  `;
+  
   document.getElementById('store-detail-content').innerHTML = html;
   renderClientProductGrid(storeId, 'all');
+  
+  // Mettre à jour la barre au cas où le panier n'est pas vide
+  updateStickyCartBar();
+}
+
+// ==========================================
+// ✅ MISE À JOUR DE LA BARRE DE PANIER STICKY
+// ==========================================
+function updateStickyCartBar() {
+  const bar = document.getElementById('sticky-cart-bar');
+  if (!bar) return;
+  
+  let total = 0;
+  let count = 0;
+  
+  // Calculer le total et le nombre d'articles (adapte 'cart' si ta variable s'appelle autrement)
+  if (typeof cart !== 'undefined' && Array.isArray(cart)) {
+    cart.forEach(item => {
+      count += item.quantity || 1;
+      const product = products.find(p => String(p.id) === String(item.productId));
+      if (product) {
+        total += product.price * (item.quantity || 1);
+      }
+    });
+  }
+  
+  // Afficher ou cacher la barre
+  if (count > 0) {
+    bar.style.display = 'flex';
+    document.getElementById('sticky-cart-count').textContent = `${count} article${count > 1 ? 's' : ''}`;
+    document.getElementById('sticky-cart-total').textContent = `${total.toFixed(2)} $`;
+  } else {
+    bar.style.display = 'none';
+  }
 }
 
 function filterProducts(storeId, catId, btn) {
@@ -1268,26 +1384,34 @@ function filterProducts(storeId, catId, btn) {
 }
 
 function renderClientProductGrid(storeId, catId) {
-  // ✅ CORRECTION : Comparaison sécurisée avec String()
   let prods = products.filter(p => String(p.storeId) === String(storeId) && p.available);
   if (catId !== 'all') prods = prods.filter(p => String(p.categoryId) === String(catId));
 
   const g = document.getElementById('products-grid-detail');
   if (!prods.length) {
-    g.innerHTML = '<div class="no-products"><p>😕 Aucun produit dans cette catégorie</p></div>';
+    g.innerHTML = '<div style="text-align:center; padding:3rem; color:#666;"><p style="font-size:3rem; margin-bottom:1rem;">😕</p><p>Aucun produit dans cette catégorie</p></div>';
     return;
   }
+
   g.innerHTML = prods.map(p => {
     const cat = categories.find(c => String(c.id) === String(p.categoryId));
-    return `<div class="product-card">
-    <div class="product-card-img">${p.icon}</div>
-    <div class="product-card-info">
-    ${cat ? `<span style="display:inline-block;background:#f5f1e8;color:#5c3a21;padding:0.15rem 0.5rem;border-radius:10px;font-size:0.75rem;margin-bottom:0.5rem">${cat.icon} ${cat.name}</span>` : ''}
-    <h4>${p.name}</h4>
-    <p style="color:#666;font-size:0.85rem">${p.desc || ''}</p>
-    <div class="product-price">${p.price.toFixed(2)} $</div>
-    <button class="add-cart-btn" onclick="addToCart(${p.id})">🛒 Ajouter</button>
-    </div>
+    
+    return `
+    <div class="modern-product-card">
+      <div class="product-image-area">
+        <div class="product-icon">${p.icon || '📦'}</div>
+        ${cat ? `<span class="product-category-badge">${cat.icon} ${cat.name}</span>` : ''}
+      </div>
+      <div class="product-details">
+        <h4 class="product-name">${p.name}</h4>
+        <p class="product-desc">${p.desc || 'Aucune description disponible'}</p>
+        <div class="product-footer">
+          <span class="product-price">${p.price.toFixed(2)} $</span>
+          <button class="modern-add-btn" onclick="addToCart(${p.id})">
+            <span>+</span> Ajouter
+          </button>
+        </div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1300,6 +1424,7 @@ function addToCart(prodId) {
   else cart.push({ productId: prodId, name: p.name, icon: p.icon, price: p.price, qty: 1 });
   updateCart();
   showToast('✅ ' + p.name + ' ajouté !');
+     updateStickyCartBar();
 }
 
 // ============ MISE À JOUR DU PANIER AVEC FRAIS DYNAMIQUES ============
@@ -2880,6 +3005,8 @@ function confirmDelete(type, id) {
 // ==========================================
 
 async function showStoreDashboard() {
+document.getElementById('stores-section').style.display = 'none';
+document.getElementById('cart-section').style.display = 'none';
   console.log("🔍 showStoreDashboard démarré");
   
   if (!currentUser || currentUser.role !== 'store') {
