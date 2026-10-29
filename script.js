@@ -4071,20 +4071,31 @@ function renderNotifications(notifs) {
   
   list.innerHTML = notifs.map(n => {
     const icon = n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : n.type === 'warning' ? '⚠️' : 'ℹ️';
-        const date = new Date(n.created_at).toLocaleDateString('fr-CA', { 
-      day: 'numeric', 
-      month: 'short', 
-      hour: '2-digit', 
-      minute: '2-digit',
-      timeZone: 'America/Montreal' 
-    });
+    
+    // ✅ CORRECTION ULTIME DE L'HEURE (Force le fuseau horaire du Québec)
+    let dateStr = 'À l\'instant';
+    if (n.created_at) {
+      try {
+        const dateObj = new Date(n.created_at);
+        dateStr = dateObj.toLocaleString('fr-CA', { 
+          day: 'numeric', 
+          month: 'short', 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZone: 'America/Montreal' // Force l'heure du Québec (UTC-4/UTC-5)
+        });
+      } catch (e) {
+        console.error("Erreur formatage date:", e);
+      }
+    }
+
     return `
       <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markAsRead('${n.id}')">
         <div style="font-size:1.3rem">${icon}</div>
         <div style="flex:1">
           <div style="font-weight:bold;font-size:0.9rem">${n.title}</div>
           <div style="font-size:0.85rem;color:#666">${n.message}</div>
-          <div style="font-size:0.75rem;color:#999;margin-top:0.2rem">${date}</div>
+          <div style="font-size:0.75rem;color:#999;margin-top:0.2rem">${dateStr}</div>
         </div>
       </div>`;
   }).join('');
