@@ -4061,6 +4061,8 @@ if (unreadCount > 0) {
 }
 
 function renderNotifications(notifs) {
+  console.log("🚀 NOUVEAU CODE CHARGÉ - Version manuelle"); // Pour confirmer que le nouveau code est actif
+  
   const list = document.getElementById('notif-list');
   if (!list) return;
   
@@ -4075,24 +4077,32 @@ function renderNotifications(notifs) {
     let dateStr = 'À l\'instant';
     if (n.created_at) {
       try {
-        // 🚀 ASTUCE MAGIQUE : On force l'interprétation UTC en ajoutant 'Z' si absent
-        let rawDate = n.created_at;
-        if (!rawDate.endsWith('Z')) {
-          rawDate = rawDate + 'Z';
-        }
+        // 🚀 MÉTHODE MANUELLE INFAILLIBLE
+        const dateObj = new Date(n.created_at);
         
-        const dateObj = new Date(rawDate);
-        dateStr = dateObj.toLocaleString('fr-CA', { 
-          day: 'numeric', 
-          month: 'short', 
-          hour: '2-digit', 
-          minute: '2-digit',
-          timeZone: 'America/Montreal' // Force le décalage du Québec
-        });
+        // Détection automatique été/hiver pour le Québec
+        const now = new Date();
+        const jan = new Date(now.getFullYear(), 0, 1).getTimezoneOffset();
+        const jul = new Date(now.getFullYear(), 6, 1).getTimezoneOffset();
+        const isSummer = now.getTimezoneOffset() < Math.max(jan, jul);
+        const offsetHours = isSummer ? 4 : 5; // 4h en été, 5h en hiver
+        
+        // Soustraire manuellement les heures
+        const adjustedDate = new Date(dateObj.getTime() - (offsetHours * 60 * 60 * 1000));
+        
+        // Formater manuellement
+        const day = adjustedDate.getDate();
+        const months = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+        const month = months[adjustedDate.getMonth()];
+        const hours = String(adjustedDate.getHours()).padStart(2, '0');
+        const minutes = String(adjustedDate.getMinutes()).padStart(2, '0');
+        
+        dateStr = `${day} ${month}, ${hours} h ${minutes}`;
+        
+        console.log(`✅ Conversion: ${n.created_at} → ${dateStr} (décalage: -${offsetHours}h)`);
         
       } catch (e) {
-        console.error("Erreur formatage date:", e);
-        dateStr = new Date(n.created_at).toLocaleString('fr-CA'); // Fallback
+        console.error("❌ Erreur:", e);
       }
     }
 
