@@ -2875,6 +2875,10 @@ function confirmDelete(type, id) {
 // ✅ DASHBOARD COMMERCE (Synchronisé avec le site)
 // ==========================================
 
+// ==========================================
+// ✅ DASHBOARD COMMERCE (Version Finale et Stable)
+// ==========================================
+
 async function showStoreDashboard() {
   console.log("🔍 showStoreDashboard démarré");
   
@@ -2885,27 +2889,26 @@ async function showStoreDashboard() {
 
   const container = document.getElementById('store-info-content');
   if (!container) {
-    console.error("❌ Conteneur 'store-info-content' introuvable");
+    console.error("❌ Conteneur 'store-info-content' introuvable dans le HTML");
     return;
   }
 
   try {
-    const { data: store } = await supabaseClient
+    const { data: store, error } = await supabaseClient
       .from('stores')
       .select('*')
       .eq('owner_id', currentUser.id)
       .maybeSingle();
 
-    if (!store) {
+    if (error || !store) {
       container.innerHTML = `
         <div style="padding:2rem; text-align:center; background:#fee2e2; border-radius:8px;">
-          <h3>⏳ Chargement en cours...</h3>
-          <p>Veuillez rafraîchir la page (F5)</p>
+          <h3>⏳ Chargement en cours ou commerce introuvable</h3>
+          <p>Veuillez rafraîchir la page (F5) ou contacter l'administrateur.</p>
         </div>`;
       return;
     }
 
-    // ✅ Affichage avec bouton pour "Voir mon commerce" (comme un client)
     container.innerHTML = `
       <div style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
@@ -2926,7 +2929,6 @@ async function showStoreDashboard() {
         <button onclick="openAddProductModal('${store.id}')" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">➕ Ajouter un produit</button>
         
         <div id="store-products-list" style="margin-top:1rem; display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
-          <!-- Les produits s'affichent ici -->
         </div>
       </div>
     `;
@@ -2936,6 +2938,112 @@ async function showStoreDashboard() {
   } catch (err) {
     console.error("❌ Erreur:", err);
     container.innerHTML = `<div style="padding:2rem; color:red;">❌ Erreur : ${err.message}</div>`;
+  }
+}
+
+async function openAddProductModal(storeId) {
+  const name = prompt("Nom du produit :");
+  if (!name) return;
+  
+  const price = prompt("Prix du produit (ex: 15.99) :");
+  if (!price || isNaN(price)) {
+    alert("❌ Prix invalide");
+    return;
+  }
+
+  const description = prompt("Description (optionnel) :") || "Produit du commerce";
+  const categoryIdInput = prompt("ID de la catégorie (ex: 1, 2... ou laisse vide) :") || null;
+  const categoryId = categoryIdInput ? parseInt(categoryIdInput) : null;
+
+  try {
+    const { error } = await supabaseClient.from('products').insert({
+      store_id: storeId,
+      category_id: categoryId,
+      name: name,
+      price: parseFloat(price),
+      description: description,
+      available: true
+    });
+
+    if (error) throw error;
+
+    if (typeof products !== 'undefined' && Array.isArray(products)) {
+      products.push({
+        storeId: storeId,
+        categoryId: categoryId,
+        name: name,
+        price: parseFloat(price),
+        description: description,
+        available: true,
+        id: Date.now()
+      });
+    }
+
+    alert("✅ Produit ajouté ! Il est maintenant visible pour les clients.");
+    loadStoreProducts(storeId);
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Erreur lors de l'ajout : " + err.message);
+  }
+}
+
+async function loadStoreProducts(storeId) {
+  const container = document.getElementById('store-products-list');
+  if (!container) return;
+
+  const { data: productsData, error } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('store_id', storeId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    container.innerHTML = `<p style="color:red;">Erreur: ${error.message}</p>`;
+    return;
+  }
+
+  if (!productsData || productsData.length === 0) {
+    container.innerHTML = '<p style="color:#666; grid-column:1/-1; text-align:center; padding:1rem;">Aucun produit pour le moment. Cliquez sur "➕ Ajouter un produit".</p>';
+    return;
+  }
+
+  container.innerHTML = productsData.map(p => `
+    <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee;">
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <h5 style="margin:0 0 0.5rem 0; color:#0a1929;">${p.name}</h5>
+        <span style="color:${p.available ? '#10b981' : '#ef4444'}; font-size:0.8rem; font-weight:bold;">
+          ${p.available ? '✅ Dispo' : '❌ Indispo'}
+        </span>
+      </div>
+      <p style="margin:0; color:#10b981; font-weight:bold; font-size:1.2rem;">${p.price} $</p>
+      <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#666;">${p.description || 'Aucune description'}</p>
+      <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+        <button onclick="toggleProductAvailability(${p.id}, ${!p.available}, '${storeId}')" style="padding:4px 8px; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+          ${p.available ? 'Désactiver' : 'Activer'}
+        </button>
+        <button onclick="deleteProduct(${p.id}, '${storeId}')" style="padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleProductAvailability(productId, newStatus, storeId) {
+  try {
+    await supabaseClient.from('products').update({ available: newStatus }).eq('id', productId);
+    loadStoreProducts(storeId);
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
+  }
+}
+
+async function deleteProduct(productId, storeId) {
+  if (!confirm("Supprimer ce produit définitivement ?")) return;
+  try {
+    await supabaseClient.from('products').delete().eq('id', productId);
+    loadStoreProducts(storeId);
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
   }
 }
 
