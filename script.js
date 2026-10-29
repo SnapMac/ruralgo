@@ -5060,3 +5060,120 @@ function goToMyStore() {
     showStoreDashboard();
   }
 }
+
+// ==========================================
+// ✅ RECHERCHE GLOBALE (Produits + Commerces)
+// ==========================================
+
+let searchTimeout;
+
+function handleSearch(query) {
+  clearTimeout(searchTimeout);
+  
+  const suggestionsDiv = document.getElementById('search-suggestions');
+  if (!suggestionsDiv) return;
+  
+  if (!query || query.length < 2) {
+    suggestionsDiv.style.display = 'none';
+    return;
+  }
+  
+  // Attendre 300ms après que l'utilisateur arrête de taper
+  searchTimeout = setTimeout(() => {
+    performSearch(query.toLowerCase());
+  }, 300);
+}
+
+async function performSearch(query) {
+  const suggestionsDiv = document.getElementById('search-suggestions');
+  if (!suggestionsDiv) return;
+  
+  let results = [];
+  
+  // 1. Rechercher dans les produits
+  if (typeof products !== 'undefined' && Array.isArray(products)) {
+    const matchingProducts = products.filter(p => 
+      p.available && (
+        p.name.toLowerCase().includes(query) ||
+        (p.description && p.description.toLowerCase().includes(query))
+      )
+    ).slice(0, 5); // Limiter à 5 résultats
+    
+    matchingProducts.forEach(p => {
+      const store = stores.find(s => String(s.id) === String(p.storeId));
+      results.push({
+        type: 'product',
+        id: p.id,
+        storeId: p.storeId,
+        icon: '🛍️',
+        title: p.name,
+        subtitle: `${store ? store.name : 'Commerce'} • ${p.price} $`
+      });
+    });
+  }
+  
+  // 2. Rechercher dans les commerces
+  if (typeof stores !== 'undefined' && Array.isArray(stores)) {
+    const matchingStores = stores.filter(s => 
+      s.name.toLowerCase().includes(query) ||
+      (s.type && s.type.toLowerCase().includes(query))
+    ).slice(0, 3); // Limiter à 3 résultats
+    
+    matchingStores.forEach(s => {
+      results.push({
+        type: 'store',
+        id: s.id,
+        icon: s.icon || '🏪',
+        title: s.name,
+        subtitle: s.type || 'Commerce'
+      });
+    });
+  }
+  
+  // 3. Afficher les résultats
+  if (results.length === 0) {
+    suggestionsDiv.innerHTML = '<div class="search-item" style="text-align:center; color:#999;">Aucun résultat trouvé</div>';
+  } else {
+    suggestionsDiv.innerHTML = results.map(r => `
+      <div class="search-item" onclick="handleSearchClick('${r.type}', '${r.id}', '${r.storeId || ''}')" style="display:flex; align-items:center;">
+        <div class="search-item-icon">${r.icon}</div>
+        <div class="search-item-content">
+          <div class="search-item-title">${r.title}</div>
+          <div class="search-item-subtitle">${r.subtitle}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  suggestionsDiv.style.display = 'block';
+}
+
+function handleSearchClick(type, id, storeId) {
+  const suggestionsDiv = document.getElementById('search-suggestions');
+  if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+  
+  const searchInput = document.getElementById('global-search');
+  if (searchInput) searchInput.value = '';
+  
+  if (type === 'product') {
+    // Ouvrir le commerce qui contient ce produit
+    if (typeof openStoreDetail === 'function') {
+      openStoreDetail(storeId);
+    }
+  } else if (type === 'store') {
+    // Ouvrir directement le commerce
+    if (typeof openStoreDetail === 'function') {
+      openStoreDetail(id);
+    }
+  }
+}
+
+// Fermer les suggestions quand on clique ailleurs
+document.addEventListener('click', function(e) {
+  const suggestionsDiv = document.getElementById('search-suggestions');
+  const searchInput = document.getElementById('global-search');
+  
+  if (suggestionsDiv && searchInput && !suggestionsDiv.contains(e.target) && e.target !== searchInput) {
+    suggestionsDiv.style.display = 'none';
+  }
+});
