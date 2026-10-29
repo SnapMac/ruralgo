@@ -803,6 +803,7 @@ async function registerDriver(e) {
 }
 
 async function loginUser(event) {
+  await ensureStoreExists();
   event.preventDefault();
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-pass').value;
@@ -4384,4 +4385,59 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
   checkPaymentSuccess();
 } else {
   window.addEventListener('DOMContentLoaded', checkPaymentSuccess);
+}
+// ✅ Créer le commerce dans 'stores' à la connexion s'il n'existe pas encore
+async function ensureStoreExists() {
+  if (!currentUser || currentUser.role !== 'store') return;
+
+  try {
+    // 1. Vérifier si le store existe déjà
+    const { data: existingStore } = await supabaseClient
+      .from('stores')
+      .select('id')
+      .eq('owner_id', currentUser.id)
+      .maybeSingle();
+
+    if (existingStore) {
+      console.log("✅ Le commerce existe déjà");
+      return;
+    }
+
+    // 2. Sinon, le créer avec les infos du profile
+    console.log("🔍 Création du commerce dans stores...");
+    
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', currentUser.id)
+      .single();
+
+    if (!profile) {
+      console.error("❌ Profile introuvable");
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from('stores')
+      .insert({
+        owner_id: currentUser.id,
+        name: profile.name || 'Mon Commerce',
+        type: 'Commerce',
+        address: profile.address || '',
+        phone: profile.phone || '',
+        email: profile.email || '',
+        province: profile.province || '',
+        status: profile.status || 'pending',
+        forfait: profile.selected_plan_id || 1
+      });
+
+    if (error) {
+      console.error("❌ Erreur création store:", error);
+    } else {
+      console.log("✅ Commerce créé avec succès !");
+    }
+
+  } catch (err) {
+    console.error("❌ Erreur ensureStoreExists:", err);
+  }
 }
