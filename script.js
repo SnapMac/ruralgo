@@ -695,9 +695,10 @@ async function registerClient(e) {
     return;
   }
 
-  await supabaseClient.from('profiles').insert({
+    await supabaseClient.from('profiles').insert({
     id: authData.user.id,
     role: 'client',
+    email: email, // ✅ CORRECTION : On ajoute l'email ici !
     name,
     phone,
     address: addressInput.value,
