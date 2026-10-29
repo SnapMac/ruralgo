@@ -375,21 +375,6 @@
     <p>Vos essentiels livrés directement chez vous</p>
     <button class="btn" onclick="showClientStores()">🛍️ Voir les commerces</button>
   </section>
-  <!-- ✅ NOUVELLE BARRE DE RECHERCHE MODERNE -->
-<section id="search-section" style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:2rem 0;">
-  <div class="container">
-    <div style="max-width:600px; margin:0 auto; position:relative;">
-      <input 
-        type="text" 
-        id="global-search" 
-        placeholder="🔍 Rechercher un produit ou un commerce..." 
-        oninput="handleSearch(this.value)"
-        style="width:100%; padding:1.2rem 1.5rem; font-size:1.1rem; border:none; border-radius:50px; box-shadow:0 8px 24px rgba(0,0,0,0.15); outline:none;"
-      >
-      <div id="search-suggestions" style="position:absolute; top:100%; left:0; right:0; background:white; border-radius:12px; margin-top:0.5rem; box-shadow:0 8px 24px rgba(0,0,0,0.15); display:none; max-height:400px; overflow-y:auto; z-index:1000;"></div>
-    </div>
-  </div>
-</section>
   <section id="stores-section" style="background:white">
     <div class="container">
       <h2 class="title">🏪 Nos Commerces</h2>
@@ -851,7 +836,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- SCRIPTS -->
-
+   <script src="script.js?v=99"></script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 const supabase = createClient('https://shopfllntsigjmayqrre.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU')
