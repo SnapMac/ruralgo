@@ -2873,7 +2873,7 @@ function confirmDelete(type, id) {
 async function showStoreDashboard() {
   console.log("🔍 1. showStoreDashboard démarré");
   console.log("🔍 currentUser:", currentUser);
-  
+  console.log("🔍 currentUser.id =", currentUser.id);
   if (!currentUser || currentUser.role !== 'store') {
     console.log("⚠️ Pas un commerce, on arrête");
     return;
