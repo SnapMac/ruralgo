@@ -2661,28 +2661,73 @@ function getPlanName(planId) {
 // Approuver un commerce
 async function approveStore(profileId) {
   try {
-    showToast('⏳ Approbation en cours...');
+    showToast('⏳ Approbation et création du commerce en cours...');
     
-    // 1. Mettre à jour le statut dans profiles
-    const { error } = await supabaseClient
+    // 1. Approuver le profil utilisateur
+    const { error: profileError } = await supabaseClient
       .from('profiles')
       .update({ status: 'approved' })
       .eq('id', profileId);
-
-    if (error) throw error;
-
-    // 2. (Optionnel) Si tu as une table 'stores', la mettre à jour aussi
-    // await supabaseClient.from('stores').update({ status: 'active' }).eq('user_id', profileId);
-
-    showToast('✅ Commerce approuvé avec succès !');
     
-    // 3. Rafraîchir la liste
-    renderPendingStores();
+    if (profileError) throw profileError;
+
+    // 2. Récupérer les infos du profil pour créer le commerce
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', profileId)
+      .single();
+
+    if (!profile) throw new Error("Profil introuvable");
+
+    // 3. Vérifier si le commerce existe déjà dans la table 'stores'
+    const { data: existingStore } = await supabaseClient
+      .from('stores')
+      .select('id')
+      .eq('owner_id', profileId)
+      .maybeSingle();
+
+    // 4. SI LE COMMERCE N'EXISTE PAS, ON LE CRÉE AUTOMATIQUEMENT
+    if (!existingStore) {
+      const { error: storeError } = await supabaseClient
+        .from('stores')
+        .insert({
+          owner_id: profileId,
+          name: profile.name || 'Mon Commerce',
+          type: profile.type || 'Commerce',
+          address: profile.address || 'Adresse non spécifiée',
+          phone: profile.phone || 'Non spécifié',
+          email: profile.email || '',
+          province: profile.province || '',
+          status: 'active', // ✅ Approuvé = Actif
+          forfait: profile.selected_plan_id || 1,
+          icon: '🏪'
+        });
+      
+      if (storeError) {
+        console.error("⚠️ Erreur création store:", storeError);
+        // On affiche un avertissement mais on ne bloque pas tout
+        showToast('⚠️ Profil approuvé, mais erreur création fiche commerce. Voir console.');
+      } else {
+        console.log("✅ Commerce créé automatiquement dans la table stores !");
+      }
+    } else {
+      // 5. Si le commerce existe déjà, on s'assure juste que son statut est 'active'
+      await supabaseClient
+        .from('stores')
+        .update({ status: 'active' })
+        .eq('owner_id', profileId);
+    }
+
+    showToast('✅ Commerce approuvé et prêt à l\'emploi !');
+    
+    // Rafraîchir les vues admin
+    if (typeof renderPendingStores === 'function') renderPendingStores();
+    if (typeof renderAllStores === 'function') renderAllStores();
     
   } catch (err) {
-    console.error('Erreur approbation:', err);
-    showToast('❌ Erreur lors de l\'approbation : ' + err.message);
-    console.log("ID essayé :", profileId);
+    console.error('❌ Erreur approbation:', err);
+    showToast('❌ Erreur : ' + err.message);
   }
 }
 
