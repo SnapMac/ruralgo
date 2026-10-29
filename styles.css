@@ -376,6 +376,93 @@ section{padding:3rem 2rem}
   .account-type-icon {
     font-size: 3rem;
   }
+
+  /* ==========================================
+   ✅ OPTIMISATION MOBILE COMPLÈTE
+   ========================================== */
+
+@media (max-width: 768px) {
+  /* Bannière Hero plus compacte */
+  .hero-modern, .hero {
+    padding: 2.5rem 1rem 3rem 1rem !important;
+  }
+  .hero-modern h1, .hero h1 {
+    font-size: 1.8rem !important;
+  }
+  .hero-subtitle, .hero p {
+    font-size: 1rem !important;
+  }
+
+  /* Barre de recherche */
+  #search-section input {
+    padding: 0.9rem 1.2rem !important;
+    font-size: 1rem !important;
+  }
+
+  /* Filtres catégories */
+  .category-filter-container {
+    gap: 0.6rem;
+    padding-bottom: 1rem;
+  }
+  .category-pill {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Produits : format vertical lisible */
+  #products-grid-detail {
+    grid-template-columns: 1fr !important;
+    gap: 1.2rem !important;
+    padding-bottom: 6rem !important;
+  }
+  
+  .modern-product-card {
+    flex-direction: column !important;
+  }
+  
+  .product-image-area {
+    width: 100% !important;
+    height: 150px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    border-right: none !important;
+  }
+  
+  .product-icon {
+    font-size: 3rem;
+  }
+  
+  .product-details {
+    padding: 1.2rem;
+  }
+  
+  .product-name {
+    font-size: 1.1rem;
+  }
+  
+  .product-desc {
+    font-size: 0.9rem;
+    -webkit-line-clamp: 3;
+  }
+
+  .product-price {
+    font-size: 1.2rem;
+  }
+  
+  .modern-add-btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* Panier sticky */
+  .sticky-cart-bar {
+    padding: 0.8rem 1rem;
+  }
+  
+  .btn-checkout {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.95rem;
+  }
+}
 }
 .icon-picker{display:grid;grid-template-columns:repeat(8,1fr);gap:0.4rem;margin-top:0.4rem}
 .icon-option{width:40px;height:40px;border:2px solid #eee;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer;transition:all 0.3s}
@@ -1141,3 +1228,168 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   padding-bottom: 5rem;
 }
 
+
+/* ==========================================
+   ✅ OPTIMISATION MOBILE (Responsive)
+   ========================================== */
+
+@media (max-width: 768px) {
+  /* 1. Bannière Hero plus compacte */
+  .hero-modern, .hero {
+    padding: 2.5rem 1rem 3rem 1rem !important;
+  }
+  .hero-modern h1, .hero h1 {
+    font-size: 1.8rem !important;
+  }
+  .hero-subtitle, .hero p {
+    font-size: 1rem !important;
+  }
+
+  /* 2. Barre de recherche adaptée au tactile */
+  #search-section input {
+    padding: 0.9rem 1.2rem !important;
+    font-size: 1rem !important; /* Empêche le zoom auto sur iPhone */
+  }
+
+  /* 3. Filtres de catégories : défilement horizontal fluide */
+  .category-filter-container {
+    gap: 0.6rem;
+    padding-bottom: 1rem;
+    -webkit-overflow-scrolling: touch; /* Défilement fluide sur iOS */
+  }
+  .category-pill {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* 4. Grille de produits : 1 colonne pour une meilleure lisibilité */
+  #products-grid-detail {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+    padding-bottom: 6rem !important; /* Espace pour la barre sticky */
+  }
+  
+  .modern-product-card {
+    flex-direction: row; /* Image à gauche, texte à droite sur mobile (style compact) */
+    align-items: center;
+  }
+  
+  .product-image-area {
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+    border-bottom: none;
+    border-right: 1px solid #f0f0f0;
+  }
+  
+  .product-icon {
+    font-size: 2.5rem;
+  }
+  
+  .product-details {
+    padding: 1rem;
+  }
+  
+  .product-name {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+  }
+  
+  .product-desc {
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Limite à 2 lignes de description */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .product-footer {
+    padding-top: 0.5rem;
+  }
+  
+  .product-price {
+    font-size: 1.1rem;
+  }
+  
+  .modern-add-btn {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  /* 5. Barre de panier sticky optimisée pour le pouce */
+  .sticky-cart-bar {
+    padding: 0.8rem 1rem;
+    bottom: env(safe-area-inset-bottom, 0); /* Respecte la barre de geste des iPhone récents */
+  }
+  
+  .cart-total {
+    font-size: 1.1rem;
+  }
+  
+  .btn-checkout {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* ✅ FIX DÉBORDEMENT HORIZONTAL MOBILE */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
+/* Empêche tout élément de dépasser */
+* {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Conteneur principal */
+.container {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+  box-sizing: border-box !important;
+}
+
+/* Hero : cacher les icônes flottantes qui peuvent déborder */
+@media (max-width: 768px) {
+  .floating-icon {
+    display: none !important;
+  }
+  
+  /* Barre de recherche pleine largeur */
+  #search-section .container > div {
+    max-width: 100% !important;
+    padding: 0 1rem;
+    box-sizing: border-box;
+  }
+  
+  #global-search {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+  
+  /* Grille produits pleine largeur */
+  #products-grid-detail {
+    width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  
+  /* Cartes produits adaptées */
+  .modern-product-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Filtres catégories */
+  .category-filter-container {
+    width: 100% !important;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    box-sizing: border-box;
+  }
+}
