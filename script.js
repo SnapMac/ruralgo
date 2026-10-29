@@ -5002,3 +5002,10 @@ async function diagnosticComplet() {
     console.error("❌ Erreur diagnostic:", err);
   }
 }
+
+function goToMyStore() {
+  switchView('view-store');
+  if (typeof showStoreDashboard === 'function') {
+    showStoreDashboard();
+  }
+}
