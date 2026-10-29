@@ -876,6 +876,7 @@ async function loginUser(event) {
 
     // Si ce n'est pas un commerce, ou si le commerce a déjà payé
     await initNotifications();
+    await diagnosticComplet();
     showUserInterface();
     showToast('✅ Connexion réussie, bienvenue ' + currentUser.name + ' !');
 
@@ -2871,119 +2872,63 @@ function confirmDelete(type, id) {
 // ==========================================
 
 async function showStoreDashboard() {
-  console.log("🔍 1. showStoreDashboard démarré");
-  console.log("🔍 currentUser:", currentUser);
-  console.log("🔍 currentUser.id =", currentUser.id);
+  console.log("🔍 showStoreDashboard démarré");
+  
   if (!currentUser || currentUser.role !== 'store') {
-    console.log("⚠️ Pas un commerce, on arrête");
+    console.log("⚠️ Pas un commerce");
     return;
   }
 
-  // ✅ Utiliser le bon ID (store-info-content)
   const container = document.getElementById('store-info-content');
-  
   if (!container) {
-    console.error("❌ Conteneur 'store-info-content' introuvable");
+    console.error("❌ Conteneur introuvable");
     return;
   }
 
   try {
-    // 1. Vérifier l'abonnement avec logs détaillés
-    console.log("🔍 2. Vérification abonnement pour user_id:", currentUser.id);
-    
-    const { data: sub, error: subError } = await supabaseClient
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .maybeSingle();
+    // Attendre 500ms pour être sûr que tout est chargé
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    console.log("🔍 3. Résultat requête abonnement:", { sub, subError });
-
-    if (subError) {
-      console.error("❌ Erreur SQL abonnement:", subError);
-    }
-
-    if (!sub) {
-      console.warn("⚠️ Aucun abonnement trouvé dans la table");
-      container.innerHTML = `
-        <div style="padding:2rem; text-align:center; background:#fef3c7; border-radius:8px;">
-          <h3>⏳ Aucun abonnement trouvé</h3>
-          <p>Votre abonnement n'a pas été enregistré.</p>
-          <p><small>(ID Utilisateur: ${currentUser.id})</small></p>
-        </div>`;
-      return;
-    }
-
-    console.log("✅ 4. Abonnement trouvé:", sub);
-
-    if (sub.status !== 'active') {
-      console.warn("⚠️ Abonnement trouvé mais statut =", sub.status);
-      container.innerHTML = `
-        <div style="padding:2rem; text-align:center; background:#fef3c7; border-radius:8px;">
-          <h3>⏳ Abonnement non actif</h3>
-          <p>Statut actuel : <strong>${sub.status}</strong></p>
-        </div>`;
-      return;
-    }
-
-    console.log("✅ 5. Abonnement actif confirmé !");
-
-    // 2. Récupérer le commerce
-    console.log("🔍 6. Recherche du commerce pour owner_id:", currentUser.id);
-    
-    const { data: store, error: storeError } = await supabaseClient
+    // Récupérer le commerce
+    const { data: store } = await supabaseClient
       .from('stores')
       .select('*')
       .eq('owner_id', currentUser.id)
       .maybeSingle();
 
-    if (storeError) {
-      console.error("❌ Erreur SQL commerce:", storeError);
-    }
-
     if (!store) {
-      console.warn("⚠️ Commerce introuvable");
       container.innerHTML = `
         <div style="padding:2rem; text-align:center; background:#fee2e2; border-radius:8px;">
-          <h3>❌ Commerce introuvable</h3>
-          <p>Contactez l'administrateur.</p>
+          <h3>⏳ Chargement en cours...</h3>
+          <p>Veuillez rafraîchir la page (F5)</p>
         </div>`;
       return;
     }
 
-    console.log("✅ 7. Commerce trouvé :", store.name);
-
-    // 3. Afficher le dashboard
+    // Afficher le dashboard
     container.innerHTML = `
       <div style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-          <h2 style="color:#0a1929; margin:0;">🏪 ${store.name}</h2>
-          <button onclick="editStoreName('${store.id}', '${store.name}')" style="padding:8px 16px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer;">✏️ Modifier le nom</button>
-        </div>
+        <h2 style="color:#0a1929; margin-top:0;">🏪 ${store.name}</h2>
+        <p><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
+        <p><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
+        <p><strong>Email :</strong> ${store.email || 'Non spécifié'}</p>
+        <p><strong>Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
         
-        <p><strong>📍 Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
-        <p><strong>📞 Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
-        <p><strong>📧 Email :</strong> ${store.email || 'Non spécifié'}</p>
-        <p><strong>📊 Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
+        <hr style="margin:1.5rem 0;">
         
-        <hr style="margin:1.5rem 0; border:0; border-top:1px solid #eee;">
+        <h3>📦 Mon Inventaire</h3>
+        <button onclick="openAddProductModal('${store.id}')" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">➕ Ajouter un produit</button>
         
-        <h3 style="color:#0a1929;">📦 Mon Inventaire (Produits)</h3>
-        <button onclick="openAddProductModal('${store.id}')" style="margin-bottom:1rem; padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">➕ Ajouter un produit</button>
-        
-        <div id="store-products-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
-          <!-- Les produits seront injectés ici -->
+        <div id="store-products-list" style="margin-top:1rem; display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
         </div>
       </div>
     `;
 
-    // 4. Charger les produits
-    console.log("🔍 8. Chargement des produits...");
     loadStoreProducts(store.id);
 
   } catch (err) {
-    console.error("❌ ERREUR CRITIQUE:", err);
-    container.innerHTML = `<div style="padding:2rem; text-align:center; color:red;">❌ Erreur : ${err.message}</div>`;
+    console.error("❌ Erreur:", err);
+    container.innerHTML = `<div style="padding:2rem; color:red;">❌ Erreur : ${err.message}</div>`;
   }
 }
 
@@ -4798,5 +4743,104 @@ async function ensureStoreExists() {
 
   } catch (err) {
     console.error("❌ Erreur ensureStoreExists:", err);
+  }
+}
+// ==========================================
+// ✅ DIAGNOSTIC COMPLET - STABILISE TOUT LE SYSTÈME
+// ==========================================
+
+async function diagnosticComplet() {
+  console.log("🔍 ===== DIAGNOSTIC COMPLET DÉMARRÉ =====");
+  
+  if (!currentUser) {
+    console.log("⚠️ Pas d'utilisateur connecté");
+    return;
+  }
+
+  console.log("🔍 Utilisateur:", currentUser.email, "Rôle:", currentUser.role);
+
+  try {
+    // 1. VÉRIFIER LE PROFIL
+    console.log("🔍 1. Vérification du profil...");
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', currentUser.id)
+      .single();
+
+    if (profileError || !profile) {
+      console.error("❌ Profil introuvable!");
+      return;
+    }
+    console.log("✅ Profil OK:", profile.status);
+
+    // 2. VÉRIFIER LE COMMERCE (si rôle = store)
+    if (currentUser.role === 'store') {
+      console.log("🔍 2. Vérification du commerce...");
+      const { data: store } = await supabaseClient
+        .from('stores')
+        .select('*')
+        .eq('owner_id', currentUser.id)
+        .maybeSingle();
+
+      if (!store) {
+        console.warn("⚠️ Commerce manquant, création automatique...");
+        const { error } = await supabaseClient
+          .from('stores')
+          .insert({
+            owner_id: currentUser.id,
+            name: profile.name || 'Mon Commerce',
+            type: 'Commerce',
+            address: profile.address || 'Adresse non spécifiée',
+            phone: profile.phone || 'Non spécifié',
+            email: profile.email || '',
+            status: 'active',
+            forfait: profile.selected_plan_id || 1,
+            icon: '🏪'
+          });
+        
+        if (error) {
+          console.error("❌ Erreur création commerce:", error);
+        } else {
+          console.log("✅ Commerce créé automatiquement!");
+        }
+      } else {
+        console.log("✅ Commerce OK:", store.name);
+      }
+
+      // 3. VÉRIFIER L'ABONNEMENT
+      console.log("🔍 3. Vérification de l'abonnement...");
+      const { data: sub } = await supabaseClient
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (!sub) {
+        console.warn("⚠️ Abonnement manquant, création automatique...");
+        const { error } = await supabaseClient
+          .from('subscriptions')
+          .insert({
+            user_id: currentUser.id,
+            plan_id: profile.selected_plan_id || 1,
+            status: 'active',
+            current_period_start: new Date(),
+            current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          });
+        
+        if (error) {
+          console.error("❌ Erreur création abonnement:", error);
+        } else {
+          console.log("✅ Abonnement créé automatiquement!");
+        }
+      } else {
+        console.log("✅ Abonnement OK:", sub.status);
+      }
+    }
+
+    console.log("🔍 ===== DIAGNOSTIC TERMINÉ =====");
+
+  } catch (err) {
+    console.error("❌ Erreur diagnostic:", err);
   }
 }
