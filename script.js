@@ -2871,14 +2871,15 @@ function confirmDelete(type, id) {
 // ==========================================
 
 async function showStoreDashboard() {
-  console.log("🔍 showStoreDashboard démarré");
+  console.log("🔍 1. showStoreDashboard démarré");
+  console.log("🔍 currentUser:", currentUser);
   
   if (!currentUser || currentUser.role !== 'store') {
-    console.log("⚠️ Pas un commerce");
+    console.log("⚠️ Pas un commerce, on arrête");
     return;
   }
 
-  // ✅ CORRECTION : Utiliser le bon ID
+  // ✅ Utiliser le bon ID (store-info-content)
   const container = document.getElementById('store-info-content');
   
   if (!container) {
@@ -2887,35 +2888,61 @@ async function showStoreDashboard() {
   }
 
   try {
-    // 1. Vérifier l'abonnement
-    console.log("🔍 Vérification abonnement...");
-    const { data: sub } = await supabaseClient
+    // 1. Vérifier l'abonnement avec logs détaillés
+    console.log("🔍 2. Vérification abonnement pour user_id:", currentUser.id);
+    
+    const { data: sub, error: subError } = await supabaseClient
       .from('subscriptions')
-      .select('status')
+      .select('*')
       .eq('user_id', currentUser.id)
       .maybeSingle();
 
-    if (!sub || sub.status !== 'active') {
-      console.warn("⚠️ Pas d'abonnement actif");
+    console.log("🔍 3. Résultat requête abonnement:", { sub, subError });
+
+    if (subError) {
+      console.error("❌ Erreur SQL abonnement:", subError);
+    }
+
+    if (!sub) {
+      console.warn("⚠️ Aucun abonnement trouvé dans la table");
       container.innerHTML = `
         <div style="padding:2rem; text-align:center; background:#fef3c7; border-radius:8px;">
-          <h3>⏳ Abonnement non actif</h3>
-          <p>Votre abonnement n'est pas encore actif.</p>
+          <h3>⏳ Aucun abonnement trouvé</h3>
+          <p>Votre abonnement n'a pas été enregistré.</p>
+          <p><small>(ID Utilisateur: ${currentUser.id})</small></p>
         </div>`;
       return;
     }
 
-    console.log("✅ Abonnement actif trouvé");
+    console.log("✅ 4. Abonnement trouvé:", sub);
+
+    if (sub.status !== 'active') {
+      console.warn("⚠️ Abonnement trouvé mais statut =", sub.status);
+      container.innerHTML = `
+        <div style="padding:2rem; text-align:center; background:#fef3c7; border-radius:8px;">
+          <h3>⏳ Abonnement non actif</h3>
+          <p>Statut actuel : <strong>${sub.status}</strong></p>
+        </div>`;
+      return;
+    }
+
+    console.log("✅ 5. Abonnement actif confirmé !");
 
     // 2. Récupérer le commerce
-    const { data: store, error } = await supabaseClient
+    console.log("🔍 6. Recherche du commerce pour owner_id:", currentUser.id);
+    
+    const { data: store, error: storeError } = await supabaseClient
       .from('stores')
       .select('*')
       .eq('owner_id', currentUser.id)
       .maybeSingle();
 
-    if (error || !store) {
-      console.error("❌ Commerce introuvable");
+    if (storeError) {
+      console.error("❌ Erreur SQL commerce:", storeError);
+    }
+
+    if (!store) {
+      console.warn("⚠️ Commerce introuvable");
       container.innerHTML = `
         <div style="padding:2rem; text-align:center; background:#fee2e2; border-radius:8px;">
           <h3>❌ Commerce introuvable</h3>
@@ -2924,34 +2951,141 @@ async function showStoreDashboard() {
       return;
     }
 
-    console.log("✅ Commerce trouvé :", store.name);
+    console.log("✅ 7. Commerce trouvé :", store.name);
 
     // 3. Afficher le dashboard
     container.innerHTML = `
       <div style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-        <h2 style="color:#0a1929; margin-top:0;">🏪 ${store.name}</h2>
-        <p><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
-        <p><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
-        <p><strong>Email :</strong> ${store.email || 'Non spécifié'}</p>
-        <p><strong>Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h2 style="color:#0a1929; margin:0;">🏪 ${store.name}</h2>
+          <button onclick="editStoreName('${store.id}', '${store.name}')" style="padding:8px 16px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer;">✏️ Modifier le nom</button>
+        </div>
         
-        <hr style="margin:1.5rem 0;">
+        <p><strong>📍 Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
+        <p><strong>📞 Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
+        <p><strong>📧 Email :</strong> ${store.email || 'Non spécifié'}</p>
+        <p><strong>📊 Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
         
-        <h3>📦 Mon Inventaire</h3>
-        <button onclick="openAddProductModal('${store.id}')" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">➕ Ajouter un produit</button>
+        <hr style="margin:1.5rem 0; border:0; border-top:1px solid #eee;">
         
-        <div id="store-products-list" style="margin-top:1rem; display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
-          <!-- Produits ici -->
+        <h3 style="color:#0a1929;">📦 Mon Inventaire (Produits)</h3>
+        <button onclick="openAddProductModal('${store.id}')" style="margin-bottom:1rem; padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">➕ Ajouter un produit</button>
+        
+        <div id="store-products-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
+          <!-- Les produits seront injectés ici -->
         </div>
       </div>
     `;
 
     // 4. Charger les produits
+    console.log("🔍 8. Chargement des produits...");
     loadStoreProducts(store.id);
 
   } catch (err) {
-    console.error("❌ Erreur critique:", err);
-    container.innerHTML = `<div style="padding:2rem; color:red;">❌ Erreur : ${err.message}</div>`;
+    console.error("❌ ERREUR CRITIQUE:", err);
+    container.innerHTML = `<div style="padding:2rem; text-align:center; color:red;">❌ Erreur : ${err.message}</div>`;
+  }
+}
+
+// Fonctions utilitaires pour le dashboard
+async function loadStoreProducts(storeId) {
+  const container = document.getElementById('store-products-list');
+  if (!container) return;
+
+  const { data: products, error } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('store_id', storeId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    container.innerHTML = `<p style="color:red;">Erreur: ${error.message}</p>`;
+    return;
+  }
+
+  if (!products || products.length === 0) {
+    container.innerHTML = '<p style="color:#666; grid-column:1/-1; text-align:center;">Aucun produit pour le moment.</p>';
+    return;
+  }
+
+  container.innerHTML = products.map(p => `
+    <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee;">
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <h5 style="margin:0 0 0.5rem 0; color:#0a1929;">${p.name}</h5>
+        <span style="color:${p.available ? '#10b981' : '#ef4444'}; font-size:0.8rem; font-weight:bold;">
+          ${p.available ? '✅ Dispo' : '❌ Indispo'}
+        </span>
+      </div>
+      <p style="margin:0; color:#10b981; font-weight:bold; font-size:1.2rem;">${p.price} $</p>
+      <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#666;">${p.description || 'Aucune description'}</p>
+      <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+        <button onclick="toggleProductAvailability(${p.id}, ${!p.available}, '${storeId}')" style="padding:4px 8px; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+          ${p.available ? 'Désactiver' : 'Activer'}
+        </button>
+        <button onclick="deleteProduct(${p.id}, '${storeId}')" style="padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function openAddProductModal(storeId) {
+  const name = prompt("Nom du produit :");
+  if (!name) return;
+  
+  const price = prompt("Prix du produit (ex: 15.99) :");
+  if (!price || isNaN(price)) {
+    alert("❌ Prix invalide");
+    return;
+  }
+
+  const description = prompt("Description du produit (optionnel) :") || "";
+
+  try {
+    const { error } = await supabaseClient.from('products').insert({
+      store_id: storeId,
+      name: name,
+      price: parseFloat(price),
+      description: description,
+      available: true
+    });
+
+    if (error) throw error;
+    alert("✅ Produit ajouté !");
+    loadStoreProducts(storeId);
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
+  }
+}
+
+async function toggleProductAvailability(productId, newStatus, storeId) {
+  try {
+    await supabaseClient.from('products').update({ available: newStatus }).eq('id', productId);
+    loadStoreProducts(storeId);
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
+  }
+}
+
+async function deleteProduct(productId, storeId) {
+  if (!confirm("Supprimer ce produit ?")) return;
+  try {
+    await supabaseClient.from('products').delete().eq('id', productId);
+    loadStoreProducts(storeId);
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
+  }
+}
+
+async function editStoreName(storeId, currentName) {
+  const newName = prompt("Nouveau nom du commerce :", currentName);
+  if (!newName || newName === currentName) return;
+  try {
+    const { error } = await supabaseClient.from('stores').update({ name: newName }).eq('id', storeId);
+    if (error) throw error;
+    alert("✅ Nom modifié !");
+    showStoreDashboard();
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
   }
 }
 
