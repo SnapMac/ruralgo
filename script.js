@@ -1351,16 +1351,28 @@ function openStoreDetail(storeId) {
 // ==========================================
 function updateStickyCartBar() {
   const bar = document.getElementById('sticky-cart-bar');
-  if (!bar) return;
+  if (!bar) return; // Si la barre n'est pas dans le HTML, on ne fait rien
   
   let total = 0;
   let count = 0;
   
-  // Calculer le total et le nombre d'articles (adapte 'cart' si ta variable s'appelle autrement)
+  // Essayer de trouver le panier (variable globale 'cart' OU localStorage)
+  let currentCart = [];
   if (typeof cart !== 'undefined' && Array.isArray(cart)) {
-    cart.forEach(item => {
+    currentCart = cart;
+  } else {
+    const storedCart = localStorage.getItem('cart');
+    if (storedCart) {
+      try { currentCart = JSON.parse(storedCart); } catch(e) {}
+    }
+  }
+
+  // Calculer le total et le nombre d'articles
+  if (Array.isArray(currentCart) && currentCart.length > 0) {
+    currentCart.forEach(item => {
       count += item.quantity || 1;
-      const product = products.find(p => String(p.id) === String(item.productId));
+      // Chercher le prix du produit (adapte 'p.id' si ton ID s'appelle autrement)
+      const product = products.find(p => String(p.id) === String(item.productId) || String(p.id) === String(item.id));
       if (product) {
         total += product.price * (item.quantity || 1);
       }
@@ -1370,8 +1382,10 @@ function updateStickyCartBar() {
   // Afficher ou cacher la barre
   if (count > 0) {
     bar.style.display = 'flex';
-    document.getElementById('sticky-cart-count').textContent = `${count} article${count > 1 ? 's' : ''}`;
-    document.getElementById('sticky-cart-total').textContent = `${total.toFixed(2)} $`;
+    const countEl = document.getElementById('sticky-cart-count');
+    const totalEl = document.getElementById('sticky-cart-total');
+    if (countEl) countEl.textContent = `${count} article${count > 1 ? 's' : ''}`;
+    if (totalEl) totalEl.textContent = `${total.toFixed(2)} $`;
   } else {
     bar.style.display = 'none';
   }
