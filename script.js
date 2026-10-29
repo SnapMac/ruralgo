@@ -5008,4 +5008,25 @@ function goToMyStore() {
   if (typeof showStoreDashboard === 'function') {
     showStoreDashboard();
   }
+} // <-- Ajoute cette accolade ici au cas où il en manquerait une
+
+function goToMyStore() {
+  // 1. Cacher les sections catégories et produits
+  const catSection = document.getElementById('store-categories-section');
+  if (catSection) catSection.style.display = 'none';
+  
+  const prodSection = document.getElementById('store-products-section');
+  if (prodSection) prodSection.style.display = 'none';
+  
+  // 2. Afficher la section dashboard
+  const dashSection = document.getElementById('store-dashboard-section');
+  if (dashSection) dashSection.style.display = 'block';
+  
+  // 3. Afficher la vue commerce
+  switchView('view-store');
+  
+  // 4. Lancer le dashboard avec l'inventaire
+  if (typeof showStoreDashboard === 'function') {
+    showStoreDashboard();
+  }
 }
