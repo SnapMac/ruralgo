@@ -375,6 +375,20 @@
     <p>Vos essentiels livrés directement chez vous</p>
     <button class="btn" onclick="showClientStores()">🛍️ Voir les commerces</button>
   </section>
+<section id="search-section" style="background: #d8d6d6;box-shadow: 0 2px 8px rgba(223, 218, 218, 0.08);
+  <div class="container">
+    <div style="max-width:600px; margin:0 auto; position:relative;">
+      <input 
+        type="text" 
+        id="global-search" 
+        placeholder="🔍 Rechercher un produit ou un commerce..." 
+        oninput="handleSearch(this.value)"
+        style="width:100%; padding:1.2rem 1.5rem; font-size:1.1rem; border:none; border-radius:50px; box-shadow:0 8px 24px rgba(0,0,0,0.15); outline:none;"
+      >
+      <div id="search-suggestions" style="position:absolute; top:100%; left:0; right:0; background:white; border-radius:12px; margin-top:0.5rem; box-shadow:0 8px 24px rgba(0,0,0,0.15); display:none; max-height:400px; overflow-y:auto; z-index:1000;"></div>
+    </div>
+  </div>
+</section>
   <section id="stores-section" style="background:white">
     <div class="container">
       <h2 class="title">🏪 Nos Commerces</h2>
