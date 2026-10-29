@@ -88,6 +88,22 @@ async function toggleNotifPanel() {
 }
 
 // Charger les notifications dans le panneau
+// ==========================================
+// ✅ SYSTÈME DE NOTIFICATIONS AMÉLIORÉ
+// ==========================================
+
+async function toggleNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  
+  if (panel.style.display === 'none' || !panel.style.display) {
+    panel.style.display = 'flex'; // Changed to flex for proper layout
+    await loadNotifPanel();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
 async function loadNotifPanel() {
   if (!currentUser || !currentUser.id) return;
   
@@ -105,27 +121,77 @@ async function loadNotifPanel() {
     if (!list) return;
     
     if (!data || data.length === 0) {
-      list.innerHTML = '<div style="padding:1rem;text-align:center;color:#666">Aucune notification</div>';
+      list.innerHTML = '<div style="padding:2rem;text-align:center;color:#9ca3af;">🔔 Aucune notification</div>';
       return;
     }
     
     list.innerHTML = data.map(notif => {
-      const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌' };
+      const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', order: '📦', delivery: '🚚' };
       const icon = icons[notif.type] || 'ℹ️';
-      const date = new Date(notif.created_at).toLocaleString('fr-CA');
-      const bg = notif.is_read ? '#f9f9f9' : '#fff9f0';
+      const date = new Date(notif.created_at).toLocaleString('fr-CA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      const unreadClass = notif.is_read ? 'read' : 'unread';
       
       return `
-        <div style="padding:0.8rem;border-bottom:1px solid #eee;background:${bg}">
-          <div style="font-weight:bold;color:#0a1929">${icon} ${notif.title}</div>
-          <div style="font-size:0.9rem;color:#666;margin-top:0.3rem">${notif.message}</div>
-          <div style="font-size:0.75rem;color:#999;margin-top:0.3rem">${date}</div>
+        <div class="notif-item ${unreadClass}" onclick="markAsRead(${notif.id})">
+          <div class="notif-title">${icon} ${notif.title}</div>
+          <div class="notif-message">${notif.message}</div>
+          <div class="notif-date">${date}</div>
         </div>
       `;
     }).join('');
     
+    // Mettre à jour le badge après le chargement
+    updateNotifBadge(data);
+    
   } catch (err) {
     console.error('Erreur loadNotifPanel:', err);
+  }
+}
+
+// ✅ NOUVELLE FONCTION : Mettre à jour le badge rouge
+function updateNotifBadge(notifications) {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+  
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ✅ NOUVELLE FONCTION : Marquer une notif comme lue au clic
+async function markAsRead(notifId) {
+  try {
+    await supabaseClient
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notifId);
+    
+    // Recharger le panneau pour mettre à jour l'UI
+    await loadNotifPanel();
+  } catch (err) {
+    console.error('Erreur markAsRead:', err);
+  }
+}
+
+// ✅ NOUVELLE FONCTION : Tout marquer comme lu
+async function markAllRead() {
+  if (!currentUser || !currentUser.id) return;
+  
+  try {
+    await supabaseClient
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', currentUser.id)
+      .eq('is_read', false);
+    
+    await loadNotifPanel();
+  } catch (err) {
+    console.error('Erreur markAllRead:', err);
   }
 }
 
@@ -877,6 +943,7 @@ async function loginUser(event) {
     // Si ce n'est pas un commerce, ou si le commerce a déjà payé
     await initNotifications();
     await diagnosticComplet();
+    
     showUserInterface();
     showToast('✅ Connexion réussie, bienvenue ' + currentUser.name + ' !');
 
@@ -1300,11 +1367,11 @@ function renderClientStores() {
 function openStoreDetail(storeId) {
   const store = stores.find(s => String(s.id) === String(storeId));
   if (!store) return;
+  
   switchView('view-client');
   document.getElementById('stores-section').style.display = 'none';
   document.getElementById('store-detail-section').style.display = 'block';
 
-  // ✅ CORRECTION : Comparaison sécurisée avec String()
   const storeProducts = products.filter(p => String(p.storeId) === String(storeId) && p.available);
   const storeCats = [...new Set(storeProducts.map(p => p.categoryId))].map(cid => categories.find(c => String(c.id) === String(cid))).filter(Boolean);
 
@@ -1326,53 +1393,48 @@ function openStoreDetail(storeId) {
     });
     html += `</div>`;
   }
-    html += `<div class="products-grid" id="products-grid-detail"></div>`;
   
-  // ✅ NOUVEAU : Barre de panier sticky en bas de l'écran
+  html += `<div class="products-grid" id="products-grid-detail"></div>`;
+  
+  // ✅ BOUTON SIMPLE POUR ALLER AU PANIER (en bas des articles)
   html += `
-    <div id="sticky-cart-bar" class="sticky-cart-bar" style="display:none;">
-      <div class="cart-summary">
-        <span class="cart-count" id="sticky-cart-count">0 article</span>
-        <span class="cart-total" id="sticky-cart-total">0.00 $</span>
-      </div>
-      <button class="btn-checkout" onclick="showCart()">🛒 Passer commande</button>
+    <div style="margin-top:2rem; text-align:center;">
+      <button onclick="scrollToCart()" style="background:linear-gradient(135deg, #0a1929 0%, #1e3c72 100%); color:white; border:none; padding:1rem 2rem; border-radius:10px; font-size:1.1rem; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(10,25,41,0.2);">
+        🛒 Voir mon panier (<span id="inline-cart-count">0</span> articles)
+      </button>
     </div>
   `;
   
   document.getElementById('store-detail-content').innerHTML = html;
   renderClientProductGrid(storeId, 'all');
   
-  // Mettre à jour la barre au cas où le panier n'est pas vide
-  updateStickyCartBar();
+  // Mettre à jour le compteur inline
+  updateInlineCartCount();
 }
 
+// ✅ Mettre à jour le compteur d'articles en bas de page
+function updateInlineCartCount() {
+  const countEl = document.getElementById('inline-cart-count');
+  if (countEl && cart) {
+    const totalQty = cart.reduce((s, c) => s + c.qty, 0);
+    countEl.textContent = totalQty;
+  }
+}
 // ==========================================
 // ✅ MISE À JOUR DE LA BARRE DE PANIER STICKY
 // ==========================================
 function updateStickyCartBar() {
   const bar = document.getElementById('sticky-cart-bar');
-  if (!bar) return; // Si la barre n'est pas dans le HTML, on ne fait rien
+  if (!bar) return;
   
   let total = 0;
   let count = 0;
   
-  // Essayer de trouver le panier (variable globale 'cart' OU localStorage)
-  let currentCart = [];
+  // Calculer le total et le nombre d'articles (adapte 'cart' si ta variable s'appelle autrement)
   if (typeof cart !== 'undefined' && Array.isArray(cart)) {
-    currentCart = cart;
-  } else {
-    const storedCart = localStorage.getItem('cart');
-    if (storedCart) {
-      try { currentCart = JSON.parse(storedCart); } catch(e) {}
-    }
-  }
-
-  // Calculer le total et le nombre d'articles
-  if (Array.isArray(currentCart) && currentCart.length > 0) {
-    currentCart.forEach(item => {
+    cart.forEach(item => {
       count += item.quantity || 1;
-      // Chercher le prix du produit (adapte 'p.id' si ton ID s'appelle autrement)
-      const product = products.find(p => String(p.id) === String(item.productId) || String(p.id) === String(item.id));
+      const product = products.find(p => String(p.id) === String(item.productId));
       if (product) {
         total += product.price * (item.quantity || 1);
       }
@@ -1382,10 +1444,8 @@ function updateStickyCartBar() {
   // Afficher ou cacher la barre
   if (count > 0) {
     bar.style.display = 'flex';
-    const countEl = document.getElementById('sticky-cart-count');
-    const totalEl = document.getElementById('sticky-cart-total');
-    if (countEl) countEl.textContent = `${count} article${count > 1 ? 's' : ''}`;
-    if (totalEl) totalEl.textContent = `${total.toFixed(2)} $`;
+    document.getElementById('sticky-cart-count').textContent = `${count} article${count > 1 ? 's' : ''}`;
+    document.getElementById('sticky-cart-total').textContent = `${total.toFixed(2)} $`;
   } else {
     bar.style.display = 'none';
   }
@@ -1431,14 +1491,19 @@ function renderClientProductGrid(storeId, catId) {
 }
 
 function addToCart(prodId) {
-  const p = products.find(x => x.id === prodId);
+  const p = products.find(x => String(x.id) === String(prodId));
   if (!p) return;
-  const ex = cart.find(c => c.productId === prodId);
-  if (ex) ex.qty++;
-  else cart.push({ productId: prodId, name: p.name, icon: p.icon, price: p.price, qty: 1 });
-  updateCart();
+  
+  const ex = cart.find(c => String(c.productId) === String(prodId));
+  if (ex) {
+    ex.qty++;
+  } else {
+    cart.push({ productId: prodId, name: p.name, icon: p.icon, price: p.price, qty: 1 });
+  }
+  
+  updateCart(); // ✅ Met à jour le panier principal du header
   showToast('✅ ' + p.name + ' ajouté !');
-     updateStickyCartBar();
+  updateInlineCartCount(); // ✅ Met à jour le compteur en bas
 }
 
 // ============ MISE À JOUR DU PANIER AVEC FRAIS DYNAMIQUES ============
@@ -5311,3 +5376,4 @@ document.addEventListener('click', function(e) {
     suggestionsDiv.style.display = 'none';
   }
 });
+
