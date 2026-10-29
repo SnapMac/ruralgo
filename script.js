@@ -2870,6 +2870,10 @@ function confirmDelete(type, id) {
 // ==========================================
 // GESTION DU TABLEAU DE BORD COMMERCE
 // ==========================================
+// Fonctions utilitaires pour le dashboard
+// ==========================================
+// ✅ DASHBOARD COMMERCE (Synchronisé avec le site)
+// ==========================================
 
 async function showStoreDashboard() {
   console.log("🔍 showStoreDashboard démarré");
@@ -2881,15 +2885,11 @@ async function showStoreDashboard() {
 
   const container = document.getElementById('store-info-content');
   if (!container) {
-    console.error("❌ Conteneur introuvable");
+    console.error("❌ Conteneur 'store-info-content' introuvable");
     return;
   }
 
   try {
-    // Attendre 500ms pour être sûr que tout est chargé
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Récupérer le commerce
     const { data: store } = await supabaseClient
       .from('stores')
       .select('*')
@@ -2905,21 +2905,28 @@ async function showStoreDashboard() {
       return;
     }
 
-    // Afficher le dashboard
+    // ✅ Affichage avec bouton pour "Voir mon commerce" (comme un client)
     container.innerHTML = `
       <div style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-        <h2 style="color:#0a1929; margin-top:0;">🏪 ${store.name}</h2>
-        <p><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
-        <p><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
-        <p><strong>Email :</strong> ${store.email || 'Non spécifié'}</p>
-        <p><strong>Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h2 style="color:#0a1929; margin:0;">🏪 ${store.name}</h2>
+          <button onclick="openStoreDetail('${store.id}')" style="padding:8px 16px; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer;">
+            👁️ Voir mon commerce (Vue Client)
+          </button>
+        </div>
         
-        <hr style="margin:1.5rem 0;">
+        <p><strong>📍 Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
+        <p><strong>📞 Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
+        <p><strong>📧 Email :</strong> ${store.email || 'Non spécifié'}</p>
+        <p><strong>📊 Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
         
-        <h3>📦 Mon Inventaire</h3>
+        <hr style="margin:1.5rem 0; border:0; border-top:1px solid #eee;">
+        
+        <h3 style="color:#0a1929;">📦 Mon Inventaire</h3>
         <button onclick="openAddProductModal('${store.id}')" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">➕ Ajouter un produit</button>
         
         <div id="store-products-list" style="margin-top:1rem; display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
+          <!-- Les produits s'affichent ici -->
         </div>
       </div>
     `;
@@ -2932,12 +2939,63 @@ async function showStoreDashboard() {
   }
 }
 
-// Fonctions utilitaires pour le dashboard
+async function openAddProductModal(storeId) {
+  const name = prompt("Nom du produit :");
+  if (!name) return;
+  
+  const price = prompt("Prix du produit (ex: 15.99) :");
+  if (!price || isNaN(price)) {
+    alert("❌ Prix invalide");
+    return;
+  }
+
+  const description = prompt("Description (optionnel) :") || "Produit du commerce";
+  
+  // Demander l'ID de la catégorie pour qu'il apparaisse dans les onglets du client
+  const categoryIdInput = prompt("ID de la catégorie (ex: 1, 2... ou laisse vide) :") || null;
+  const categoryId = categoryIdInput ? parseInt(categoryIdInput) : null;
+
+  try {
+    // 1. Sauvegarder dans Supabase (avec les noms de colonnes de ta table)
+    const { error } = await supabaseClient.from('products').insert({
+      store_id: storeId,
+      category_id: categoryId,
+      name: name,
+      price: parseFloat(price),
+      description: description,
+      available: true
+    });
+
+    if (error) throw error;
+
+    // 2. ASTUCE : Ajouter aussi à la liste locale 'products' pour un affichage immédiat
+    // Cela correspond EXACTEMENT à ce que openStoreDetail cherche (p.storeId, p.categoryId)
+    if (typeof products !== 'undefined' && Array.isArray(products)) {
+      products.push({
+        storeId: storeId,
+        categoryId: categoryId,
+        name: name,
+        price: parseFloat(price),
+        description: description,
+        available: true,
+        id: Date.now() // ID temporaire pour l'affichage local immédiat
+      });
+    }
+
+    alert("✅ Produit ajouté ! Il est maintenant visible pour les clients.");
+    loadStoreProducts(storeId); // Rafraîchir la liste du dashboard
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Erreur lors de l'ajout : " + err.message);
+  }
+}
+
 async function loadStoreProducts(storeId) {
   const container = document.getElementById('store-products-list');
   if (!container) return;
 
-  const { data: products, error } = await supabaseClient
+  const { data: productsData, error } = await supabaseClient
     .from('products')
     .select('*')
     .eq('store_id', storeId)
@@ -2948,12 +3006,12 @@ async function loadStoreProducts(storeId) {
     return;
   }
 
-  if (!products || products.length === 0) {
+  if (!productsData || productsData.length === 0) {
     container.innerHTML = '<p style="color:#666; grid-column:1/-1; text-align:center;">Aucun produit pour le moment.</p>';
     return;
   }
 
-  container.innerHTML = products.map(p => `
+  container.innerHTML = productsData.map(p => `
     <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee;">
       <div style="display:flex; justify-content:space-between; align-items:start;">
         <h5 style="margin:0 0 0.5rem 0; color:#0a1929;">${p.name}</h5>
@@ -2973,34 +3031,26 @@ async function loadStoreProducts(storeId) {
   `).join('');
 }
 
-async function openAddProductModal(storeId) {
-  const name = prompt("Nom du produit :");
-  if (!name) return;
-  
-  const price = prompt("Prix du produit (ex: 15.99) :");
-  if (!price || isNaN(price)) {
-    alert("❌ Prix invalide");
-    return;
-  }
-
-  const description = prompt("Description du produit (optionnel) :") || "";
-
+async function toggleProductAvailability(productId, newStatus, storeId) {
   try {
-    const { error } = await supabaseClient.from('products').insert({
-      store_id: storeId,
-      name: name,
-      price: parseFloat(price),
-      description: description,
-      available: true
-    });
-
-    if (error) throw error;
-    alert("✅ Produit ajouté !");
+    await supabaseClient.from('products').update({ available: newStatus }).eq('id', productId);
     loadStoreProducts(storeId);
   } catch (err) {
     alert("❌ Erreur : " + err.message);
   }
 }
+
+async function deleteProduct(productId, storeId) {
+  if (!confirm("Supprimer ce produit définitivement ?")) return;
+  try {
+    await supabaseClient.from('products').delete().eq('id', productId);
+    loadStoreProducts(storeId);
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
+  }
+}
+
+
 
 async function toggleProductAvailability(productId, newStatus, storeId) {
   try {
