@@ -2871,71 +2871,188 @@ function confirmDelete(type, id) {
 // ==========================================
 
 async function showStoreDashboard() {
-  if (!currentUser || currentUser.role !== 'store') return;
+  console.log("🔍 1. showStoreDashboard démarré");
+  
+  if (!currentUser || currentUser.role !== 'store') {
+    console.log("⚠️ Utilisateur non valide pour ce dashboard");
+    return;
+  }
+
+  // Trouver le conteneur, peu importe où il est
+  let container = document.getElementById('store-dashboard-content');
+  
+  // Si le conteneur n'existe pas, on le crée de force pour éviter l'écran blanc
+  if (!container) {
+    console.error("❌ Conteneur 'store-dashboard-content' introuvable dans le HTML !");
+    const viewStore = document.getElementById('view-store');
+    if (viewStore) {
+      viewStore.innerHTML = '<div style="padding:2rem; text-align:center; color:red; font-size:1.2rem;">⚠️ ERREUR : Le conteneur du dashboard est manquant dans le HTML. Contactez le développeur.</div>';
+    }
+    return;
+  }
 
   try {
-    // 1. Vérifier l'abonnement dans la table 'subscriptions'
-    const { data: sub, error: subError } = await supabaseClient
-      .from('subscriptions')
-      .select('status, plan_id')
-      .eq('user_id', currentUser.id)
-      .maybeSingle();
-
-    // 2. Si pas d'abonnement OU statut incomplet/annulé -> Rediriger vers le paiement
-    if (!sub || sub.status === 'incomplete' || sub.status === 'canceled') {
-      console.log("⚠️ Pas d'abonnement actif, redirection vers le paiement...");
-      
-      // Adapte le nom de la fonction ou de la vue selon ton code (ex: 'view-payment' ou 'showPaymentScreen')
-      if (typeof showPaymentScreen === 'function') {
-        showPaymentScreen();
-      } else {
-        switchView('view-payment'); // Change 'view-payment' par le vrai ID de ta vue de paiement
-      }
-      return; // On arrête tout, on ne charge pas le dashboard
-    }
-
-    // 3. Si l'abonnement est 'active' ou 'trialing', on affiche le dashboard
-    console.log("✅ Abonnement actif trouvé :", sub.status);
-
-    // Récupérer les infos du commerce
-    const { data: store, error: storeError } = await supabaseClient
+    console.log("🔍 2. Recherche du commerce pour owner_id :", currentUser.id);
+    
+    const { data: store, error } = await supabaseClient
       .from('stores')
       .select('*')
       .eq('owner_id', currentUser.id)
       .maybeSingle();
 
-    const container = document.getElementById('store-dashboard-content');
-    if (!container) return;
-
-    if (!store) {
-      container.innerHTML = `<div style="text-align:center;padding:2rem;color:red;">❌ Commerce introuvable. Contactez l'admin.</div>`;
+    if (error) {
+      console.error("❌ 3. Erreur Supabase :", error);
+      container.innerHTML = `<div style="padding:2rem; text-align:center; color:red;">❌ Erreur de base de données : ${error.message}</div>`;
       return;
     }
 
-    // Afficher le dashboard
+    if (!store) {
+      console.warn("⚠️ 3. Aucun commerce trouvé pour cet utilisateur dans la table 'stores'");
+      container.innerHTML = `
+        <div style="padding:2rem; text-align:center; color:#d97706; background:#fef3c7; border-radius:8px;">
+          <h3>⚠️ Commerce introuvable</h3>
+          <p>Votre profil est approuvé, mais votre fiche commerce n'a pas été créée.</p>
+          <p>Veuillez contacter l'administrateur pour qu'il ré-approuve votre compte.</p>
+          <p><small>(ID Utilisateur: ${currentUser.id})</small></p>
+        </div>`;
+      return;
+    }
+
+    console.log("✅ 3. Commerce trouvé :", store.name);
+
+    // 4. Afficher le dashboard avec les vraies données
     container.innerHTML = `
-      <div style="background:white;padding:1.5rem;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-        <h3 style="color:#0a1929;margin-top:0;">🏪 ${store.name}</h3>
-        <p><strong>Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
-        <p><strong>Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
-        <p><strong>Statut du compte :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif (Abonnement: ${sub.status})</span></p>
+      <div style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h2 style="color:#0a1929; margin:0;">🏪 ${store.name}</h2>
+          <button onclick="editStoreName('${store.id}', '${store.name}')" style="padding:8px 16px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer;">✏️ Modifier le nom</button>
+        </div>
         
-        <hr style="margin:1.5rem 0;border:0;border-top:1px solid #eee;">
+        <p><strong>📍 Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
+        <p><strong>📞 Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
+        <p><strong>📧 Email :</strong> ${store.email || 'Non spécifié'}</p>
+        <p><strong>📊 Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
         
-        <h4 style="color:#0a1929;">📦 Mes Produits</h4>
-        <button onclick="addProductSimple('${store.id}')" style="padding:10px 20px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">➕ Ajouter un produit</button>
+        <hr style="margin:1.5rem 0; border:0; border-top:1px solid #eee;">
         
-        <div id="store-products-list" style="margin-top:1rem;display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:1rem;">
-          <!-- Les produits s'afficheront ici -->
+        <h3 style="color:#0a1929;">📦 Mon Inventaire (Produits)</h3>
+        <button onclick="openAddProductModal('${store.id}')" style="margin-bottom:1rem; padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">➕ Ajouter un produit</button>
+        
+        <div id="store-products-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
+          <!-- Les produits seront injectés ici -->
         </div>
       </div>
     `;
 
-    // Charger les produits
+    // 5. Charger les produits
     loadStoreProducts(store.id);
 
   } catch (err) {
-    console.error('❌ Erreur showStoreDashboard:', err);
+    console.error("❌ ERREUR CRITIQUE DANS showStoreDashboard :", err);
+    container.innerHTML = `<div style="padding:2rem; text-align:center; color:red;">❌ Erreur critique : ${err.message}</div>`;
+  }
+}
+
+// --- Fonctions utilitaires pour le dashboard ---
+
+async function loadStoreProducts(storeId) {
+  const container = document.getElementById('store-products-list');
+  if (!container) return;
+
+  const { data: products, error } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('store_id', storeId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    container.innerHTML = `<p style="color:red;">Erreur chargement produits: ${error.message}</p>`;
+    return;
+  }
+
+  if (!products || products.length === 0) {
+    container.innerHTML = '<p style="color:#666; grid-column:1/-1; text-align:center; padding:1rem;">Aucun produit dans votre inventaire pour le moment.</p>';
+    return;
+  }
+
+  container.innerHTML = products.map(p => `
+    <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee;">
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <h5 style="margin:0 0 0.5rem 0; color:#0a1929;">${p.name}</h5>
+        <span style="color:${p.available ? '#10b981' : '#ef4444'}; font-size:0.8rem; font-weight:bold;">
+          ${p.available ? '✅ Dispo' : '❌ Indispo'}
+        </span>
+      </div>
+      <p style="margin:0; color:#10b981; font-weight:bold; font-size:1.2rem;">${p.price} $</p>
+      <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#666;">${p.description || 'Aucune description'}</p>
+      <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+        <button onclick="toggleProductAvailability(${p.id}, ${!p.available}, '${storeId}')" style="padding:4px 8px; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+          ${p.available ? 'Désactiver' : 'Activer'}
+        </button>
+        <button onclick="deleteProduct(${p.id}, '${storeId}')" style="padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function openAddProductModal(storeId) {
+  const name = prompt("Nom du produit :");
+  if (!name) return;
+  
+  const price = prompt("Prix du produit (ex: 15.99) :");
+  if (!price || isNaN(price)) {
+    alert("❌ Prix invalide");
+    return;
+  }
+
+  const description = prompt("Description du produit (optionnel) :") || "";
+
+  try {
+    const { error } = await supabaseClient.from('products').insert({
+      store_id: storeId,
+      name: name,
+      price: parseFloat(price),
+      description: description,
+      available: true
+    });
+
+    if (error) throw error;
+    alert("✅ Produit ajouté !");
+    loadStoreProducts(storeId);
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
+  }
+}
+
+async function toggleProductAvailability(productId, newStatus, storeId) {
+  try {
+    await supabaseClient.from('products').update({ available: newStatus }).eq('id', productId);
+    loadStoreProducts(storeId);
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
+  }
+}
+
+async function deleteProduct(productId, storeId) {
+  if (!confirm("Supprimer ce produit définitivement ?")) return;
+  try {
+    await supabaseClient.from('products').delete().eq('id', productId);
+    loadStoreProducts(storeId);
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
+  }
+}
+
+async function editStoreName(storeId, currentName) {
+  const newName = prompt("Nouveau nom du commerce :", currentName);
+  if (!newName || newName === currentName) return;
+  try {
+    const { error } = await supabaseClient.from('stores').update({ name: newName }).eq('id', storeId);
+    if (error) throw error;
+    alert("✅ Nom modifié !");
+    showStoreDashboard();
+  } catch (err) {
+    alert("❌ Erreur : " + err.message);
   }
 }
 
