@@ -4074,20 +4074,25 @@ function renderNotifications(notifs) {
     
     let dateStr = 'À l\'instant';
     if (n.created_at) {
-      console.log("🔍 Heure brute reçue de Supabase :", n.created_at);
-      
       try {
-        const dateObj = new Date(n.created_at);
+        // 🚀 ASTUCE MAGIQUE : On force l'interprétation UTC en ajoutant 'Z' si absent
+        let rawDate = n.created_at;
+        if (!rawDate.endsWith('Z')) {
+          rawDate = rawDate + 'Z';
+        }
+        
+        const dateObj = new Date(rawDate);
         dateStr = dateObj.toLocaleString('fr-CA', { 
           day: 'numeric', 
           month: 'short', 
           hour: '2-digit', 
           minute: '2-digit',
-          timeZone: 'America/Montreal'
+          timeZone: 'America/Montreal' // Force le décalage du Québec
         });
-        console.log("✅ Heure affichée après conversion :", dateStr);
+        
       } catch (e) {
-        console.error("❌ Erreur formatage date:", e);
+        console.error("Erreur formatage date:", e);
+        dateStr = new Date(n.created_at).toLocaleString('fr-CA'); // Fallback
       }
     }
 
