@@ -1285,6 +1285,7 @@ html, body {
     font-size: 0.9rem; 
     margin-bottom: 1rem;
     display: -webkit-box;
+    line-clamp: 3;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
