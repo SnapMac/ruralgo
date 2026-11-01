@@ -40,17 +40,6 @@ nav a:hover::after{width:80%}
 .view{display:none}.view.active{display:block}
 .mini-car{display:inline-block;vertical-align:middle;line-height:0}
 .mini-car svg{display:block}
-.notif-bell{position:relative;cursor:pointer;font-size:1.3rem;padding:0.3rem 0.6rem}
-.notif-badge{position:absolute;top:-5px;right:-5px;background:#dc2626;color:white;font-size:0.7rem;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold}
-.notif-panel{position:absolute;top:60px;right:20px;background:white;color:#333;width:350px;max-height:400px;overflow-y:auto;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,0.2);z-index:200;display:none}
-.notif-panel.show{display:block}
-.notif-panel-header{background:#0a1929;color:white;padding:1rem;font-weight:bold;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center}
-.notif-item{padding:0.8rem 1rem;border-bottom:1px solid #eee;cursor:pointer;transition:background 0.2s}
-.notif-item:hover{background:#f5f1e8}
-.notif-item.unread{background:#fff3cd}
-.notif-item-title{font-weight:bold;color:#0a1929;font-size:0.9rem}
-.notif-item-msg{font-size:0.85rem;color:#666;margin-top:0.2rem}
-.notif-item-time{font-size:0.75rem;color:#999;margin-top:0.2rem}
 .autocomplete-wrapper{position:relative}
 .autocomplete-input{width:100%;padding:0.7rem;border:2px solid #eee;border-radius:6px;font-size:1rem;transition:border 0.3s}
 .autocomplete-input:focus{outline:none;border-color:#0a1929}
@@ -485,111 +474,14 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
 .icon-picker{grid-template-columns:repeat(6,1fr)}
 .account-types{grid-template-columns:1fr}
 .store-detail-header{flex-direction:column;text-align:center}
-.notif-panel{width:90%;right:5%}
 }
 
-/* ===== NOTIFICATIONS ===== */
-.notif-bell {
-  cursor: pointer;
-  position: relative;
-  font-size: 1.5rem;
-  padding: 0.5rem;
-  transition: transform 0.2s;
-}
-.notif-bell:hover { transform: scale(1.1); }
 
-.notif-badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: #e74c3c;
-  color: white;
-  font-size: 0.7rem;
-  font-weight: bold;
-  padding: 0.15rem 0.4rem;
-  border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
-}
 
-.notif-panel {
-  display: none;
-  position: absolute;
-  top: 100%;
-  right: 0;
-  width: 350px;
-  max-height: 450px;
-  overflow-y: auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-  z-index: 1000;
-  margin-top: 0.5rem;
-}
 
-.notif-panel-header {
-  padding: 1rem;
-  background: #0a1929;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-radius: 12px 12px 0 0;
-  font-weight: bold;
-}
 
-.notif-item {
-  display: flex;
-  gap: 0.8rem;
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.notif-item:hover { background: #f9f9f9; }
-.notif-item.unread { background: #fff8e1; }
-.notif-item.unread:hover { background: #fff3c4; }
-/* Le conteneur de la cloche doit être en position relative pour que le panneau se place par rapport à lui */
-#notif-bell-container {
-  position: relative;
-  display: block; /* ou flex, selon ton header */
-}
 
-/* La cloche elle-même */
-.notif-bell {
-  cursor: pointer;
-  font-size: 1.5rem;
-  padding: 0.5rem;
-}
 
-/* Le panneau de notifications (caché par défaut) */
-.notif-panel {
-  display: none; /* Caché au départ */
-  position: absolute;
-  top: 100%; /* Juste en dessous de la cloche */
-  right: 0; /* Aligné à droite */
-  width: 300px;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  z-index: 9999; /* Très important : pour qu'il soit AU-DESSUS de tout le reste */
-  margin-top: 10px;
-}
-
-.notif-panel-header {
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: bold;
-}
-
-#notif-list {
-  max-height: 300px;
-  overflow-y: auto;
-}
 /* ============ SECTION UTILISATEUR CONNECTÉ (ALIGNEMENT PRO) ============ */
 
 /* ============ WIDGET PORTEFEUILLE (DESIGN PRO) ============ */
@@ -706,7 +598,7 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
 
 /* Responsive mobile */
 
-
+@media (max-width: 768px) {
   .wallet-widget {
     width: 100%;
     justify-content: center;
@@ -716,6 +608,7 @@ footer{background:#0a1929;color:white;padding:2rem;text-align:center}
   .wallet-balance-btn {
     width: 120px;
   }
+}
 
  /* === ALIGNEMENT À DROITE === */
 .nav {
@@ -1226,12 +1119,8 @@ html, body {
     max-width: 200px !important;
   }
 
-  /* Cloche de notification */
-  #notif-bell-container {
-    position: absolute !important;
-    top: 1rem !important;
-    right: 1rem !important;
-  }
+  
+  
 
   /* ===== BANNIÈRE HERO ===== */
   .hero-modern, .hero, .hero-commercial {
@@ -1311,5 +1200,157 @@ html, body {
   #inline-cart-container {
     margin-left: 1rem !important;
     margin-right: 1rem !important;
+  }
+}
+/* ==========================================
+   ✅ SYSTÈME DE NOTIFICATIONS (UNIFIÉ ET PROPRE)
+   ========================================== */
+
+#notif-bell-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.notif-bell {
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 0.5rem;
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.notif-bell:hover {
+  transform: scale(1.1);
+}
+
+.notif-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid white;
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.notif-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 340px;
+  max-height: 450px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid #f0f0f0;
+  z-index: 9999;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.notif-panel.show {
+  display: flex;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.notif-panel-header {
+  padding: 1rem;
+  background: #0a1929;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.notif-panel-header span:last-child {
+  font-weight: 500;
+  color: #f5a623;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+#notif-list {
+  overflow-y: auto;
+  max-height: 390px;
+}
+
+.notif-item {
+  padding: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+.notif-item:hover {
+  background: #f9fafb;
+}
+
+.notif-item.unread {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+}
+
+.notif-item.read {
+  background: white;
+  opacity: 0.8;
+}
+
+.notif-title {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.notif-message {
+  font-size: 0.85rem;
+  color: #4b5563;
+  line-height: 1.4;
+  margin-bottom: 0.4rem;
+}
+
+.notif-date {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+@media (max-width: 768px) {
+  .notif-panel {
+    width: 90vw;
+    right: -5vw;
+    max-height: 60vh;
+  }
+  
+  #notif-bell-container {
+    position: absolute !important;
+    top: 1rem !important;
+    right: 1rem !important;
   }
 }

@@ -43,40 +43,6 @@ async function showNotification(title, message, type = 'info', targetUserId = nu
   }
 }
 
-// Met à jour le chiffre rouge sur la cloche
-// ✅ NOUVELLE FONCTION : Mettre à jour le badge rouge (Version Blindée)
-function updateNotifBadge(notifications) {
-  const badge = document.getElementById('notif-badge');
-  if (!badge) return;
-  
-  // Si aucun paramètre n'est passé, on ne fait rien
-  if (!notifications || !Array.isArray(notifications)) {
-    return;
-  }
-  
-  const unreadCount = notifications.filter(n => !n.is_read).length;
-  
-  if (unreadCount > 0) {
-    badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
-    badge.style.display = 'flex';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
-// Ouvrir/fermer le panneau des notifications
-async function toggleNotifPanel() {
-  const panel = document.getElementById('notif-panel');
-  if (!panel) return;
-  
-  // Si le panneau est caché, l'ouvrir et charger les notifications
-  if (panel.style.display === 'none' || !panel.style.display) {
-    panel.style.display = 'block';
-    await loadNotifPanel();
-  } else {
-    panel.style.display = 'none';
-  }
-}
 
 // Charger les notifications dans le panneau
 // ==========================================
@@ -5356,3 +5322,41 @@ document.addEventListener('click', function(e) {
   }
 });
 
+// ==========================================
+// ✅ FONCTION DE MISE À JOUR DU BADGE (NOUVELLE)
+// ==========================================
+async function updateNotifBadge(notifications) {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return; // Sécurité : si le badge n'existe pas dans le HTML, on ne fait rien.
+
+  let unreadCount = 0;
+
+  // CAS 1 : On reçoit un tableau (ex: quand on ouvre le panneau de notifications)
+  if (notifications && Array.isArray(notifications)) {
+    unreadCount = notifications.filter(n => !n.is_read).length;
+  } 
+  // CAS 2 : On l'appelle sans argument (ex: juste après un toast), on va chercher le vrai chiffre dans Supabase
+  else if (currentUser && currentUser.id) {
+    try {
+      const { data, error } = await supabaseClient
+        .from('notifications')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .eq('is_read', false);
+
+      if (!error && data) {
+        unreadCount = data.length;
+      }
+    } catch (err) {
+      console.error('Erreur mise à jour badge:', err);
+    }
+  }
+
+  // Mise à jour visuelle du badge
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+    badge.style.display = 'flex'; // Force l'affichage du rond rouge
+  } else {
+    badge.style.display = 'none'; // Cache le rond rouge si tout est lu
+  }
+}
