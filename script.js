@@ -1855,6 +1855,10 @@ async function placeOrder() {
 
     const { data: newOrder, error } = await supabaseClient.from('orders').insert(orderData).select().single();
     if (error) throw error;
+    // ✅ VIDER LE PANIER APRÈS UNE COMMANDE RÉUSSIE
+    cart = []; // Vide la variable globale
+    localStorage.removeItem('cart'); // ✅ Supprime définitivement le panier du navigateur
+    updateCart(); // Met à jour l'affichage (compteur à 0, total à 0)
 
     // ✅ NOTIFICATIONS : Commerce + Admin
     await showNotification('Nouvelle commande', `Commande ${newOrder.order_number} de ${currentUser.name} (${total.toFixed(2)}$)`, 'order', store.id);
