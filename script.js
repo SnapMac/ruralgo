@@ -2310,24 +2310,137 @@ async function adminUpdateStoreName(store_id, newStoreName) {
   }
 }
 
-function renderAdminDashboard() {
-  document.getElementById('stat-clients').textContent = clients.length;
-  document.getElementById('stat-drivers').textContent = drivers.filter(d => d.status === 'approved').length;
-  document.getElementById('stat-stores').textContent = stores.filter(s => s.status === 'active').length;
-  document.getElementById('stat-orders').textContent = orders.length;
-  const totalRevenue = orders.filter(o => o.status === 'delivered').reduce((s, o) => s + o.total, 0);
-  document.getElementById('stat-revenue').textContent = totalRevenue.toFixed(2) + ' $';
-  document.getElementById('stat-pending').textContent = orders.filter(o => ['pending','confirmed','searching_driver'].includes(o.status)).length;
+async function showAdminClients() {
+  console.log("👥 [ADMIN] Chargement de la liste des clients...");
 
-  const recent = orders.slice(-5).reverse();
-  const recentDiv = document.getElementById('admin-recent-orders');
-  if (recent.length === 0) {
-    recentDiv.innerHTML = '<div class="empty-state"><p>Aucune commande</p></div>';
-  } else {
-    recentDiv.innerHTML = `<table class="admin-table"><thead><tr><th>#</th><th>Client</th><th>Commerce</th><th>Livraison</th><th>Statut</th><th>Total</th></tr></thead><tbody>${recent.map(o => {
-      const st = STATUS_LABELS[o.status];
-      return `<tr><td>${o.orderNumber}</td><td>${o.clientName}</td><td>${o.storeName || '-'}</td><td>${o.deliveryFee.toFixed(2)}$ (${(o.deliveryDistanceKm || 0).toFixed(1)}km)</td><td><span class="status-badge ${st.class}">${st.label}</span></td><td><strong>${o.total.toFixed(2)} $</strong></td></tr>`;
-    }).join('')}</tbody></table>`;
+  try {
+    // 🔥 REQUÊTE SIMPLIFIÉE : Charger TOUS les clients
+    const { data: clients, error } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('role', 'client')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("❌ Erreur requête clients:", error);
+      showToast('❌ Erreur : ' + error.message);
+      return;
+    }
+
+    console.log("📊 [ADMIN] Nombre de clients trouvés :", clients?.length || 0);
+
+    const container = document.getElementById('admin-clients-list'); // ⚠️ ADAPTE L'ID SELON TON HTML
+    if (!container) {
+      console.error("❌ Conteneur 'admin-clients-list' introuvable dans le HTML");
+      return;
+    }
+
+    if (!clients || clients.length === 0) {
+      container.innerHTML = '<p style="text-align:center; color:#666; padding:2rem;">👥 Aucun client enregistré pour le moment</p>';
+      return;
+    }
+
+    // 🔥 AFFICHER LES CLIENTS
+    container.innerHTML = clients.map(client => {
+      const hasGPS = client.lat && client.lng ? '✅' : '❌';
+      
+      return `
+        <div style="background:white; padding:1.5rem; border-radius:12px; margin-bottom:1rem; border:1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
+            <div>
+              <h3 style="margin:0; color:#0a1929;">${client.name || 'Client sans nom'}</h3>
+              <p style="margin:0.3rem 0; color:#666; font-size:0.9rem;">📧 ${client.email || 'Pas d\'email'}</p>
+              <p style="margin:0.3rem 0; color:#666; font-size:0.9rem;">📞 ${client.phone || 'Pas de téléphone'}</p>
+            </div>
+            <span style="background:${hasGPS === '✅' ? '#10b981' : '#ef4444'}; color:white; padding:0.4rem 0.8rem; border-radius:20px; font-size:0.8rem; font-weight:bold;">
+              GPS ${hasGPS}
+            </span>
+          </div>
+          
+          ${client.address ? `
+            <div style="background:#f9fafb; padding:1rem; border-radius:8px; margin-bottom:1rem;">
+              <strong>📍 Adresse :</strong>
+              <p style="margin:0.5rem 0; color:#333; font-size:0.9rem;">${client.address}</p>
+              ${client.lat && client.lng ? `<p style="margin:0.3rem 0; color:#666; font-size:0.8rem;">GPS: ${client.lat}, ${client.lng}</p>` : ''}
+            </div>
+          ` : ''}
+
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button onclick="viewClientOrders('${client.id}')" style="background:#3b82f6; color:white; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem;">
+              📦 Voir commandes
+            </button>
+            <button onclick="editClient('${client.id}')" style="background:#f59e0b; color:white; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem;">
+              ✏️ Modifier
+            </button>
+            <button onclick="deleteClient('${client.id}')" style="background:#ef4444; color:white; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem;">
+              🗑️ Supprimer
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    console.log("✅ [ADMIN] Liste des clients affichée avec succès !");
+
+  } catch (err) {
+    console.error('❌ Erreur showAdminClients:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+// ✅ VOIR LES COMMANDES D'UN CLIENT
+async function viewClientOrders(clientId) {
+  console.log("📦 Chargement des commandes du client:", clientId);
+  
+  try {
+    const { data: orders, error } = await supabaseClient
+      .from('orders')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    if (!orders || orders.length === 0) {
+      showToast('📭 Ce client n\'a aucune commande');
+      return;
+    }
+
+    console.log("📦 Commandes trouvées:", orders.length);
+    showToast(`📦 Ce client a ${orders.length} commande(s)`);
+    
+    // Ici tu peux afficher les commandes dans une modale ou une nouvelle vue
+    // Pour l'instant, on log juste dans la console
+
+  } catch (err) {
+    console.error('❌ Erreur viewClientOrders:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ✅ MODIFIER UN CLIENT
+function editClient(clientId) {
+  console.log("✏️ Modification du client:", clientId);
+  showToast('✏️ Fonctionnalité à venir');
+}
+
+// ✅ SUPPRIMER UN CLIENT
+async function deleteClient(clientId) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible.')) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from('profiles')
+      .delete()
+      .eq('id', clientId);
+
+    if (error) throw error;
+
+    showToast('✅ Client supprimé avec succès');
+    showAdminClients(); // Rafraîchir la liste
+
+  } catch (err) {
+    console.error('❌ Erreur deleteClient:', err);
+    showToast('❌ Erreur : ' + err.message);
   }
 }
 
@@ -6519,3 +6632,4 @@ async function completeDelivery(orderId) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
+
