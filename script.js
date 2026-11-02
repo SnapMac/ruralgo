@@ -375,7 +375,7 @@ async function load() {
       supabaseClient.from('stores').select('*'),
       supabaseClient.from('categories').select('*'),
       supabaseClient.from('products').select('*'),
-      supabaseClient.from('clients').select('*'), // ✅ TABLE CORRIGÉE
+      supabaseClient.from('profiles').select('*'), // ✅ TABLE CORRIGÉE
       supabaseClient.from('profiles').select('*').eq('role', 'driver'), // (Garde profiles pour les livreurs si tu n'as pas changé cette table)
       supabaseClient.from('orders').select('*'),
       supabaseClient.from('settings').select('*').maybeSingle()
@@ -431,7 +431,7 @@ async function load() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
       // ✅ TABLE CORRIGÉE ICI AUSSI (ou garde 'profiles' si c'est une table globale, mais adapte selon ta structure)
-      const { data: profile } = await supabaseClient.from('clients').select('*').eq('id', session.user.id).maybeSingle();
+      const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
       
       // Si le profil n'est pas dans 'clients', on essaie 'profiles' (pour admin/driver)
       const finalProfile = profile || (await supabaseClient.from('profiles').select('*').eq('id', session.user.id).maybeSingle()).data;
@@ -519,17 +519,27 @@ function selectAddress(inputId, suggestionsId, index) {
   const suggestions = document.getElementById(suggestionsId);
   const input = document.getElementById(inputId);
   const data = suggestions._data;
+  
   if (!data || !data[index]) return;
+  
   const item = data[index];
   input.value = item.display_name;
+  
+  // ✅ STOCKER LES COORDONNÉES GPS DANS L'INPUT
   if (item.lat && item.lon) {
     input._lat = parseFloat(item.lat);
     input._lng = parseFloat(item.lon);
-    userPosition = { lat: input._lat, lng: input._lng };
+    console.log("✅ Coordonnées GPS stockées :", input._lat, input._lng);
+  } else {
+    console.warn("⚠️ Pas de coordonnées GPS pour cette adresse");
   }
+  
   suggestions.classList.remove('show');
   showToast('✅ Adresse sélectionnée !');
-  if (currentUser && currentUser.role === 'client') updateCart();
+  
+  if (currentUser && currentUser.role === 'client') {
+    updateCart();
+  }
 }
 
 function geolocateAddress(fieldId) {
@@ -641,7 +651,7 @@ async function registerClient(e) {
   }
 
   // 3. ✅ CORRECTION MAJEURE : Insertion dans la table 'clients' (et non 'profiles')
-  const { error: dbError } = await supabaseClient.from('clients').insert({
+  const { error: dbError } = await supabaseClient.from('profiles').insert({
     id: authData.user.id,
     role: 'client',
     email: email,
@@ -3736,52 +3746,83 @@ function closeModal(modalId) {
 // ✅ SAUVEGARDE DU PROFIL CLIENT (TABLE : clients)
 // ==========================================
 async function saveProfile(e) {
+  console.log("🔍 ÉTAPE 1 : saveProfile déclenchée");
+  
   if (e) e.preventDefault();
 
-  console.log("💾 [PROFIL] Sauvegarde en cours...");
-
-  // 1. Vérification
   if (!currentUser || !currentUser.id) {
-    showToast('❌ Erreur : Vous devez être connecté.');
+    alert("❌ Vous n'êtes pas connecté.");
     return;
   }
 
-  // 2. Récupérer les valeurs
-  const addrInput = document.getElementById('ep-address');
-  const newName = document.getElementById('ep-name')?.value || currentUser.name;
-  const newPhone = document.getElementById('ep-phone')?.value || currentUser.phone;
-  const newAddress = addrInput?.value || currentUser.address;
+  const nameField = document.getElementById('ep-name');
+  const phoneField = document.getElementById('ep-phone');
+  const addrField = document.getElementById('ep-address');
 
-  // 3. Mettre à jour la mémoire locale
-  currentUser.name = newName;
-  currentUser.phone = newPhone;
-  currentUser.address = newAddress;
-  if (addrInput?._lat) currentUser.lat = addrInput._lat;
+  if (!nameField || !phoneField || !addrField) {
+    alert("❌ Champs du formulaire introuvables.");
+    return;
+  }
+
+  const newName = nameField.value.trim();
+  const newPhone = phoneField.value.trim();
+  const newAddress = addrField.value.trim();
+  
+  // ✅ Récupérer les coordonnées GPS si elles existent
+  const newLat = addrField._lat || null;
+  const newLng = addrField._lng || null;
+
+  console.log("📋 DONNÉES À ENVOYER :");
+  console.log("  - Nom :", newName);
+  console.log("  - Téléphone :", newPhone);
+  console.log("  - Adresse :", newAddress);
+  console.log("  - Latitude :", newLat);
+  console.log("  - Longitude :", newLng);
+  console.log("  - ID utilisateur :", currentUser.id);
+
+  // Vérification minimale
+  if (!newName) {
+    alert("❌ Le nom ne peut pas être vide.");
+    return;
+  }
 
   try {
-    // 4. ✅ Sauvegarder dans la table CLIENTS (pas profiles)
-    const { error } = await supabaseClient
-      .from('clients') // ✅ NOUVELLE TABLE
+    console.log("🚀 Envoi à Supabase...");
+    
+    const { data, error } = await supabaseClient
+      .from('profiles')
       .update({ 
         name: newName, 
         phone: newPhone, 
         address: newAddress,
-        lat: currentUser.lat || null
+        lat: newLat,
+        lng: newLng
       })
       .eq('id', currentUser.id);
 
-    if (error) throw error;
+    if (error) {
+      console.error("🛑 ERREUR SUPABASE :", error);
+      alert("Erreur : " + error.message);
+      throw error;
+    }
 
+    console.log("✅ SUCCÈS ! Mise à jour locale...");
+    
+    // Mise à jour locale
+    currentUser.name = newName;
+    currentUser.phone = newPhone;
+    currentUser.address = newAddress;
+    currentUser.lat = newLat;
+    currentUser.lng = newLng;
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
-    // 6. Fermer le modal
     closeModal('edit-profile-modal');
-
     showToast('✅ Profil sauvegardé avec succès !');
-    console.log("✅ [PROFIL] Sauvegarde terminée.");
+    
+    if (typeof syncUserProfileEverywhere === 'function') syncUserProfileEverywhere();
 
   } catch (err) {
-    console.error("❌ Erreur sauvegarde profil:", err);
-    showToast('❌ Erreur : ' + err.message);
+    console.error("🛑 ÉCHEC TOTAL :", err);
   }
 }
 
@@ -4596,8 +4637,8 @@ async function saveClientEdit(event, id) {
     };
     
     const { error } = await supabaseClient
-      .from('clients')
-      .update(updateData)
+   .from('profiles')
+         .update(updateData)
       .eq('id', id);
     
     if (error) throw error;
@@ -4631,7 +4672,7 @@ async function confirmDeleteClient(id) {
     await supabaseClient.from('notifications').delete().eq('user_id', id);
     
     // 3. Supprimer le profil du client
-    const { error } = await supabaseClient.from('clients').delete().eq('id', id);
+    const { error } = await supabaseClient.from('profiles ').delete().eq('id', id);
     if (error) throw error;
     
     // 4. Mettre à jour le tableau local
@@ -6127,6 +6168,12 @@ function openEditProfileModal() {
 // ✅ COMMERCE : GESTION DU NOM DU COMMERCE
 // ==========================================
 function initStoreNameDisplay() {
+  // ✅ Vérifier que currentUser existe avant d'accéder à ses propriétés
+  if (!currentUser || !currentUser.id) {
+    console.log("ℹ️ initStoreNameDisplay: Pas d'utilisateur connecté");
+    return;
+  }
+
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   const display = document.getElementById('current-store-name-display');
   

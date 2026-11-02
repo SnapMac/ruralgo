@@ -95,6 +95,9 @@
       <div id="wallet-display" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(16,185,129,0.3); cursor: pointer; transition: transform 0.2s;" onclick="showWalletBalance()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
         <span style="font-size: 1.2rem;">💰</span>
         <span id="wallet-balance">0.00</span> $
+        <button onclick="openDepositModal()" style="background:#10b981; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; margin-left:8px; font-weight:bold;">
+  💳 
+</button>
       </div>
     </div>
 
@@ -943,7 +946,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- SCRIPTS -->
-   <script src="script.js?v=99"></script>
+   <script src="script.js?v=101"></script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 const supabase = createClient('https://shopfllntsigjmayqrre.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU')
