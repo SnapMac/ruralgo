@@ -123,41 +123,9 @@ async function markAsRead(notifId) {
 }
 
 // ✅ NOUVELLE FONCTION : Tout marquer comme lu
-async function markAllRead() {
-  if (!currentUser || !currentUser.id) return;
-  
-  try {
-    await supabaseClient
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', currentUser.id)
-      .eq('is_read', false);
-    
-    await loadNotifPanel();
-  } catch (err) {
-    console.error('Erreur markAllRead:', err);
-  }
-}
 
 // Marquer toutes les notifications comme lues
-async function markAllRead() {
-  if (!currentUser || !currentUser.id) return;
-  
-  try {
-    await supabaseClient
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', currentUser.id)
-      .eq('is_read', false);
-    
-    await updateNotifBadge();
-    await loadNotifPanel(); // Rafraîchir le panneau
-    showToast('✅ Toutes les notifications marquées comme lues');
-    
-  } catch (err) {
-    console.error('Erreur markAllRead:', err);
-  }
-}
+
 
 // Initialiser les notifications après connexion
 async function initNotifications() {
@@ -339,8 +307,7 @@ let products = [
 ];
 
 let nextStoreId = 7, nextCatId = 31, nextProdId = 100;
-let cart = [];
-let clients = [], drivers = [], orders = [], notifications = [];
+let cart = JSON.parse(localStorage.getItem('cart')) || [];let clients = [], drivers = [], orders = [], notifications = [];
 let currentUser = null, selectedAccountType = null;
 let selectedStoreIcon = '', selectedCatIcon = '', selectedProdIcon = '';
 let userPosition = null;
@@ -403,40 +370,40 @@ function getCurrentStore() {
 // ============ CHARGEMENT DEPUIS SUPABASE ============
 async function load() {
   try {
-    const { data: storesData } = await supabaseClient.from('stores').select('*');
-    if (storesData && storesData.length > 0) stores = storesData;
+    // ✅ OPTIMISATION : Chargement en parallèle pour plus de rapidité
+    const [storesRes, catsRes, prodsRes, clientsRes, driversRes, ordersRes, settingsRes] = await Promise.all([
+      supabaseClient.from('stores').select('*'),
+      supabaseClient.from('categories').select('*'),
+      supabaseClient.from('products').select('*'),
+      supabaseClient.from('clients').select('*'), // ✅ TABLE CORRIGÉE
+      supabaseClient.from('profiles').select('*').eq('role', 'driver'), // (Garde profiles pour les livreurs si tu n'as pas changé cette table)
+      supabaseClient.from('orders').select('*'),
+      supabaseClient.from('settings').select('*').maybeSingle()
+    ]);
 
-    const { data: catsData } = await supabaseClient.from('categories').select('*');
-    if (catsData && catsData.length > 0) categories = catsData;
+    if (storesRes.data) stores = storesRes.data;
+    if (catsRes.data) categories = catsRes.data;
+    if (prodsRes.data) {
+      products = prodsRes.data.map(p => ({ ...p, store_id: p.store_id, category_id: p.category_id }));
+    }
     
-const { data: prodsData } = await supabaseClient.from('products').select('*');
-if (prodsData && prodsData.length > 0) {
-  products = prodsData.map(p => ({
-    ...p,
-    store_id: p.store_id,
-    category_id: p.category_id
-  }));
-}
-
-    const { data: clientsData } = await supabaseClient.from('profiles').select('*').eq('role', 'client');
-    if (clientsData) {
-      clients = clientsData.map(c => ({
+    // ✅ TABLE CORRIGÉE POUR LES CLIENTS
+    if (clientsRes.data) {
+      clients = clientsRes.data.map(c => ({
         id: c.id, name: c.name, email: c.email || '', phone: c.phone,
         address: c.address, role: c.role, status: c.status, createdAt: c.created_at
       }));
     }
 
-    const { data: driversData } = await supabaseClient.from('profiles').select('*').eq('role', 'driver');
-    if (driversData) {
-      drivers = driversData.map(d => ({
+    if (driversRes.data) {
+      drivers = driversRes.data.map(d => ({
         id: d.id, name: d.name, email: d.email || '', phone: d.phone,
         vehicle: d.vehicle, role: d.role, status: d.status, createdAt: d.created_at
       }));
     }
 
-    const { data: ordersData } = await supabaseClient.from('orders').select('*');
-    if (ordersData) {
-      orders = ordersData.map(o => ({
+    if (ordersRes.data) {
+      orders = ordersRes.data.map(o => ({
         id: o.id, orderNumber: o.order_number, clientId: o.client_id,
         clientName: o.client_name, clientPhone: o.client_phone,
         clientAddress: o.client_address, clientLat: o.client_lat, clientLng: o.client_lng,
@@ -450,27 +417,32 @@ if (prodsData && prodsData.length > 0) {
       }));
     }
 
-    const { data: settingsData } = await supabaseClient.from('settings').select('*').maybeSingle();
-    if (settingsData) {
+    if (settingsRes.data) {
       platformSettings = {
-        deliveryBaseFee: settingsData.delivery_base_fee || 7.00,
-        deliveryPerKm: settingsData.delivery_per_km || 1.00,
-        taxRate: settingsData.tax_rate || 0.14975,
-        driverCommission: settingsData.driver_commission || 0.20,
-        radius: settingsData.radius || 40
+        deliveryBaseFee: settingsRes.data.delivery_base_fee || 7.00,
+        deliveryPerKm: settingsRes.data.delivery_per_km || 1.00,
+        taxRate: settingsRes.data.tax_rate || 0.14975,
+        driverCommission: settingsRes.data.driver_commission || 0.20,
+        radius: settingsRes.data.radius || 40
       };
     }
 
+    // Vérification de la session utilisateur
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
-      const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
-      if (profile) {
+      // ✅ TABLE CORRIGÉE ICI AUSSI (ou garde 'profiles' si c'est une table globale, mais adapte selon ta structure)
+      const { data: profile } = await supabaseClient.from('clients').select('*').eq('id', session.user.id).maybeSingle();
+      
+      // Si le profil n'est pas dans 'clients', on essaie 'profiles' (pour admin/driver)
+      const finalProfile = profile || (await supabaseClient.from('profiles').select('*').eq('id', session.user.id).maybeSingle()).data;
+
+      if (finalProfile) {
         currentUser = {
-          id: profile.id, role: profile.role, name: profile.name,
-          email: session.user.email, phone: profile.phone,
-          address: profile.address, lat: profile.lat, lng: profile.lng,
-          vehicle: profile.vehicle, status: profile.status,
-          createdAt: profile.created_at
+          id: finalProfile.id, role: finalProfile.role, name: finalProfile.name,
+          email: session.user.email, phone: finalProfile.phone,
+          address: finalProfile.address, lat: finalProfile.lat, lng: finalProfile.lng,
+          vehicle: finalProfile.vehicle, status: finalProfile.status,
+          createdAt: finalProfile.created_at
         };
         showUserInterface();
       }
@@ -479,7 +451,6 @@ if (prodsData && prodsData.length > 0) {
     console.error("Erreur de chargement Supabase:", e);
   }
 }
-
 
 
 function formatTime(iso) {
@@ -643,46 +614,69 @@ function continueToRegister() {
 
 function openLoginModal() { openModal('login-modal'); }
 
+// ==========================================
+// ✅ INSCRIPTION CLIENT (TABLE : clients)
+// ==========================================
 async function registerClient(e) {
-  e.preventDefault();
-  const email = document.getElementById('rc-email').value;
+  e.preventDefault(); // Empêche le rechargement de la page
+
+  // 1. Récupération des valeurs du formulaire
+  const email = document.getElementById('rc-email').value.trim();
   const password = correctPassword(document.getElementById('rc-pass').value);
-  const name = document.getElementById('rc-name').value;
-  const phone = document.getElementById('rc-phone').value;
+  const name = document.getElementById('rc-name').value.trim();
+  const phone = document.getElementById('rc-phone').value.trim();
   const addressInput = document.getElementById('rc-address');
 
+  // 2. Création du compte d'authentification Supabase
   const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-    email, password,
+    email, 
+    password,
     options: { data: { name, role: 'client' } }
   });
 
   if (authError) {
+    console.error("❌ Erreur d'inscription auth:", authError);
     showToast('❌ Erreur: ' + authError.message);
     return;
   }
 
-    await supabaseClient.from('profiles').insert({
+  // 3. ✅ CORRECTION MAJEURE : Insertion dans la table 'clients' (et non 'profiles')
+  const { error: dbError } = await supabaseClient.from('clients').insert({
     id: authData.user.id,
     role: 'client',
-    email: email, // ✅ CORRECTION : On ajoute l'email ici !
-    name,
-    phone,
+    email: email,
+    name: name,
+    phone: phone,
     address: addressInput.value,
-    lat: addressInput._lat || userPosition?.lat,
-    lng: addressInput._lng || userPosition?.lng,
-    status: 'approved'
+    lat: addressInput._lat || userPosition?.lat || null,
+    lng: addressInput._lng || userPosition?.lng || null,
+    status: 'approved' // Ou 'pending' selon ta logique d'approbation
   });
 
+  if (dbError) {
+    console.error("❌ Erreur d'insertion dans la table clients:", dbError);
+    showToast('❌ Erreur lors de la sauvegarde du profil: ' + dbError.message);
+    return;
+  }
+
+  // 4. Mise à jour de l'état local de l'utilisateur connecté
   currentUser = {
-    id: authData.user.id, role: 'client', name, email, phone,
+    id: authData.user.id, 
+    role: 'client', 
+    name: name, 
+    email: email, 
+    phone: phone,
     address: addressInput.value,
-    lat: addressInput._lat, lng: addressInput._lng,
-    status: 'approved', createdAt: new Date().toISOString()
+    lat: addressInput._lat || userPosition?.lat, 
+    lng: addressInput._lng || userPosition?.lng,
+    status: 'approved', 
+    createdAt: new Date().toISOString()
   };
 
+  // 5. Finalisation de l'inscription
   closeModal('register-client-modal');
-  showUserInterface();
-  showToast('✅ Bienvenue ' + name.split(' ')[0] + ' !');
+  showUserInterface(); // Met à jour le header et l'interface
+  showToast('✅ Bienvenue ' + name.split(' ')[0] + ' ! Votre compte est créé.');
 }
 
 function correctPassword(pass) {
@@ -1260,61 +1254,7 @@ async function showClientStores() {
 // ✅ FILTRAGE DES COMMERCES PAR CATÉGORIE
 // ==========================================
 
-function renderClientStores(categoryFilter = 'all') {
-  const grid = document.getElementById('stores-grid');
-  const filtersContainer = document.getElementById('category-filters');
-  
-  if (!grid || !stores) return;
 
-  // 1. Générer les boutons de catégories (seulement si c'est 'all' pour éviter de les recréer à chaque fois)
-  if (categoryFilter === 'all' && filtersContainer) {
-    // Récupérer toutes les catégories uniques des commerces
-    const categories = [...new Set(stores.map(s => s.type).filter(Boolean))];
-    
-    // Vider et remettre le bouton "Tous"
-    filtersContainer.innerHTML = '<button class="category-pill active" onclick="filterStores(\'all\', this)">🏪 Tous</button>';
-    
-    // Ajouter un bouton pour chaque catégorie avec une icône générique
-    categories.forEach(cat => {
-      const btn = document.createElement('button');
-      btn.className = 'category-pill';
-      btn.innerHTML = `🏷️ ${cat}`; // Tu pourras changer l'icône plus tard si tu veux
-      btn.onclick = function() { filterStores(cat, this); };
-      filtersContainer.appendChild(btn);
-    });
-  }
-
-  // 2. Filtrer les commerces
-  const filteredStores = categoryFilter === 'all' 
-    ? stores 
-    : stores.filter(s => s.type === categoryFilter);
-
-  // 3. Afficher les commerces (on réutilise ta logique d'affichage existante si tu en as une, sinon on fait un rendu simple)
-  grid.innerHTML = '';
-  
-  if (filteredStores.length === 0) {
-    grid.innerHTML = '<p style="text-align:center; color:#666; grid-column:1/-1;">Aucun commerce dans cette catégorie pour le moment.</p>';
- is
-    return;
-  }
-
-  filteredStores.forEach(store => {
-    const card = document.createElement('div');
-    card.className = 'store-card'; // Assure-toi d'avoir du CSS pour .store-card ou utilise ton rendu actuel
-    card.style.cssText = 'background:white; border-radius:12px; padding:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:pointer; transition:transform 0.2s; border:1px solid #f0f0f0;';
-    card.onmouseenter = () => card.style.transform = 'translateY(-4px)';
-    card.onmouseleave = () => card.style.transform = 'translateY(0)';
-    card.onclick = () => openStoreDetail(store.id);
-    
-    card.innerHTML = `
-      <div style="font-size:2rem; margin-bottom:0.5rem;">${store.icon || '🏪'}</div>
-      <h3 style="margin:0 0 0.5rem 0; color:#0a1929;">${store.name}</h3>
-      <p style="margin:0; color:#666; font-size:0.9rem;">${store.type || 'Commerce'}</p>
-      <p style="margin:0.5rem 0 0 0; color:#888; font-size:0.85rem;">📍 ${store.address || 'Adresse non spécifiée'}</p>
-    `;
-    grid.appendChild(card);
-  });
-}
 
 function filterStores(category, btnElement) {
   // Mettre à jour l'apparence des boutons
@@ -1325,29 +1265,65 @@ function filterStores(category, btnElement) {
   renderClientStores(category);
 }
 
-function renderClientStores() {
-  const g = document.getElementById('stores-grid');
-  const active = stores.filter(s => s.status === 'active');
-  if (!active.length) {
-    g.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏪</div><p>Aucun commerce</p></div>';
+// ==========================================
+// ✅ AFFICHAGE DES COMMERCES (FUSIONNÉ ET OPTIMISÉ)
+// ==========================================
+function renderClientStores(categoryFilter = 'all') {
+  const grid = document.getElementById('stores-grid');
+  const filtersContainer = document.getElementById('category-filters');
+  
+  if (!grid || !stores) return;
+
+  // 1. Générer les boutons de catégories (seulement si c'est 'all')
+  if (categoryFilter === 'all' && filtersContainer) {
+    const categories = [...new Set(stores.filter(s => s.status === 'active').map(s => s.type).filter(Boolean))];
+    filtersContainer.innerHTML = '<button class="category-pill active" onclick="renderClientStores(\'all\')">🏪 Tous</button>';
+    
+    categories.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = 'category-pill';
+      btn.innerHTML = `🏷️ ${cat}`;
+      btn.onclick = () => renderClientStores(cat);
+      filtersContainer.appendChild(btn);
+    });
+  }
+
+  // 2. Filtrer les commerces (uniquement les actifs)
+  let filteredStores = stores.filter(s => s.status === 'active');
+  if (categoryFilter !== 'all') {
+    filteredStores = filteredStores.filter(s => s.type === categoryFilter);
+  }
+
+  // 3. Afficher les commerces
+  if (filteredStores.length === 0) {
+    grid.innerHTML = '<p style="text-align:center; color:#666; grid-column:1/-1; padding:2rem;">Aucun commerce dans cette catégorie pour le moment.</p>';
     return;
   }
-  g.innerHTML = active.map(s => {
-    // ✅ CORRECTION : Utiliser String() pour éviter les bugs de type (Nombre vs Texte)
+
+  // Mise à jour des classes actives des boutons
+  document.querySelectorAll('.category-pill').forEach(btn => {
+    btn.classList.remove('active');
+    if ((categoryFilter === 'all' && btn.textContent.includes('Tous')) || btn.textContent.includes(categoryFilter)) {
+      btn.classList.add('active');
+    }
+  });
+
+  grid.innerHTML = filteredStores.map(s => {
     const count = products.filter(p => String(p.store_id) === String(s.id) && p.available).length;
     const dist = userPosition ? calculateDistance(userPosition.lat, userPosition.lng, s.lat, s.lng) : null;
-    return `<div class="store" onclick="openStoreDetail(${s.id})"><div class="store-img">${s.logo ? `<img src="${s.logo}" alt="${s.name}">` : `<span class="emoji-fallback">${s.icon}</span>`}</div>
-    <div class="store-info">
-    <h3>${s.name}</h3>
-    <p style="color:#666;font-size:0.9rem">${s.type}</p>
-    <p style="color:#999;font-size:0.85rem;margin-top:0.3rem">📍 ${s.address}</p>
-    ${dist ? `<p style="color:#0284c7;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📏 ${dist.toFixed(1)} km de vous</p>` : ''}
-    <p style="color:#0a1929;font-size:0.85rem;margin-top:0.3rem;font-weight:bold">📦 ${count} produit(s)</p>
-    </div>
-    </div>`;
+    
+    return `
+      <div class="store-card" onclick="openStoreDetail('${s.id}')" style="background:white; border-radius:12px; padding:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:pointer; transition:transform 0.2s; border:1px solid #f0f0f0;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
+        <div style="font-size:2.5rem; margin-bottom:0.5rem;">${s.icon || '🏪'}</div>
+        <h3 style="margin:0 0 0.5rem 0; color:#0a1929;">${s.name}</h3>
+        <p style="margin:0; color:#666; font-size:0.9rem;">${s.type || 'Commerce'}</p>
+        <p style="margin:0.5rem 0 0 0; color:#888; font-size:0.85rem;">📍 ${s.address || 'Adresse non spécifiée'}</p>
+        ${dist ? `<p style="color:#0284c7; font-size:0.85rem; margin-top:0.5rem; font-weight:bold;">📏 ${dist.toFixed(1)} km de vous</p>` : ''}
+        <p style="color:#0a1929; font-size:0.85rem; margin-top:0.5rem; font-weight:bold;">📦 ${count} produit(s)</p>
+      </div>
+    `;
   }).join('');
 }
-
 
 
 // ✅ Mettre à jour le compteur d'articles en bas de page
@@ -1526,6 +1502,7 @@ function addToCart(prodId) {
   updateCart(); // ✅ Met à jour le panier principal du header
   showToast('✅ ' + p.name + ' ajouté !');
   updateInlineCartCount(); // ✅ Met à jour le compteur en bas
+  localStorage.setItem('cart', JSON.stringify(cart));
 }
 
 // ============ MISE À JOUR DU PANIER AVEC FRAIS DYNAMIQUES ============
@@ -1606,6 +1583,7 @@ function updateCart() {
   document.getElementById('delivery-fee').textContent = deliveryInfo.totalFee.toFixed(2) + ' $';
   document.getElementById('taxes').textContent = tax.toFixed(2) + ' $';
   document.getElementById('total').textContent = tot.toFixed(2) + ' $';
+localStorage.setItem('cart', JSON.stringify(cart));
 }
 
 function changeQty(i, d) {
@@ -1902,8 +1880,8 @@ async function cancelOrder(orderId) {
       status_history: order.statusHistory
     }).eq('id', orderId);
 
-    await addNotification(currentUser.id, '❌ Commande annulée', `Votre commande ${order.orderNumber} a été annulée`);
-    await addNotification('admin', '❌ Commande annulée', `Commande ${order.orderNumber} annulée par ${currentUser.name}`);
+    await showNotification(currentUser.id, '❌ Commande annulée', `Votre commande ${order.orderNumber} a été annulée`);
+    await showNotification('admin', '❌ Commande annulée', `Commande ${order.orderNumber} annulée par ${currentUser.name}`);
 
     showToast('❌ Commande annulée');
     showClientOrders();
@@ -1914,7 +1892,7 @@ async function cancelOrder(orderId) {
 }
 
 // ============ PROFIL ============
-function showProfiless() {
+function showProfiles() {
   if (!currentUser) return;
   switchView('view-client');
   document.getElementById('stores-section').style.display = 'none';
@@ -1923,10 +1901,10 @@ function showProfiless() {
   document.getElementById('client-orders-section').style.display = 'none';
   document.getElementById('client-order-detail-section').style.display = 'none';
   document.getElementById('client-profile-section').style.display = 'block';
-  renderProfiless();
+  renderProfiles();
 }
 
-function renderProfiless() {
+function renderProfiles() {
   const content = document.getElementById('client-profile-content');
   const myOrders = orders.filter(o => o.clientId === currentUser.id);
   const totalSpent = myOrders.reduce((s, o) => s + o.total, 0);
@@ -1969,84 +1947,11 @@ function openEditProfile() {
 // ==========================================
 // ✅ SAUVEGARDE DU PROFIL AVEC SYNCHRONISATION UNIVERSELLE
 // ==========================================
-async function saveProfile(e) {
-  if (e) e.preventDefault();
-
-  console.log("💾 [PROFIL] Sauvegarde en cours...");
-
-  // 1. Récupérer les valeurs des champs
-  const addrInput = document.getElementById('ep-address');
-  const newName = document.getElementById('ep-name').value;
-  const newPhone = document.getElementById('ep-phone').value;
-  const newAddress = addrInput.value;
-
-  // 2. Mettre à jour la mémoire locale
-  currentUser.name = newName;
-  currentUser.phone = newPhone;
-  currentUser.address = newAddress;
-  if (addrInput._lat) currentUser.lat = addrInput._lat;
-
-  try {
-    // 3. Sauvegarder dans Supabase
-    const { error } = await supabaseClient
-      .from('profiles') // ⚠️ Change en 'users' si ta table s'appelle ainsi
-      .update({ 
-        name: newName, 
-        phone: newPhone, 
-        address: newAddress,
-        lat: currentUser.lat || null
-      })
-      .eq('id', currentUser.id);
-
-    if (error) throw error;
-
-    // 4. ✅ SYNCHRONISER PARTOUT INSTANTANÉMENT
-    syncUserProfileEverywhere();
-
-    showToast('✅ Informations sauvegardées et synchronisées partout !');
-
-  } catch (err) {
-    console.error("❌ Erreur sauvegarde:", err);
-    showToast('❌ Erreur : ' + err.message);
-  }
-}
 
 // ==========================================
 // ✅ FONCTION DE SYNCHRONISATION UNIVERSELLE
 // ==========================================
-function syncUserProfileEverywhere() {
-  console.log("🔄 [SYNC] Mise à jour du profil partout...");
 
-  // 1. Sauvegarder dans le navigateur (pour que ça reste après rechargement)
-  localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-  // 2. Mettre à jour le header (nom en haut à droite)
-  const userNameDisplay = document.getElementById('user-name') || document.querySelector('.user-name');
-  if (userNameDisplay && currentUser.name) {
-    userNameDisplay.textContent = currentUser.name;
-  }
-
-  // 3. Mettre à jour la page de profil si elle est ouverte
-  const profileName = document.getElementById('ep-name');
-  const profilePhone = document.getElementById('ep-phone');
-  const profileAddress = document.getElementById('ep-address');
-  
-  if (profileName) profileName.value = currentUser.name || '';
-  if (profilePhone) profilePhone.value = currentUser.phone || '';
-  if (profileAddress) profileAddress.value = currentUser.address || '';
-
-  // 4. Mettre à jour le tableau de bord commerce si c'est un commerçant
-  if (typeof renderStoreProfile === 'function') {
-    renderStoreProfile();
-  }
-
-  // 5. Mettre à jour l'en-tête général
-  if (typeof updateHeader === 'function') {
-    updateHeader();
-  }
-
-  console.log("✅ [SYNC] Profil synchronisé partout !");
-}
 
 // ============ LIVREUR ============
 async function showDriverDashboard() {
@@ -2151,8 +2056,8 @@ async function acceptDriverOrder(orderId) {
       status_history: order.statusHistory
     }).eq('id', orderId);
 
-    await addNotification(order.clientId, '🚗 Livreur assigné', `${currentUser.name} s'occupe de votre commande ${order.orderNumber}`);
-    await addNotification('admin', '🚗 Commande assignée', `${order.orderNumber} → ${currentUser.name}`);
+    await showNotification('🚗 Livreur assigné', `${currentUser.name} s'occupe de votre commande ${order.orderNumber}`, 'delivery', order.clientId);
+    await showNotification('admin', '🚗 Commande assignée', `${order.orderNumber} → ${currentUser.name}`);
 
     showToast('✅ Commande acceptée !');
     renderDriverDashboard();
@@ -2488,7 +2393,7 @@ async function adminCancelOrder(orderId) {
       status_history: order.statusHistory
     }).eq('id', orderId);
 
-    await addNotification(order.clientId, '❌ Commande annulée', `Votre commande ${order.orderNumber} a été annulée par l'administration`);
+    await showNotification('❌ Commande annulée', `Votre commande ${order.orderNumber} a été annulée par l'administration`, 'warning', order.clientId);
     showToast('❌ Commande annulée');
     renderAdminOrders();
   } catch (err) {
@@ -2990,46 +2895,38 @@ async function approveStore(profileId) {
   }
 }
 
+
+// ==========================================
+// ✅ REFUSER UN COMMERCE (VERSION UNIQUE CORRIGÉE)
+// ==========================================
 async function rejectStore(profileId) {
+  if (!confirm('Êtes-vous sûr de vouloir refuser cette demande ?\nLe profil sera supprimé.')) return;
+  
   try {
-    // Supprimer le profil (et l'utilisateur sera supprimé en cascade grâce à ON DELETE CASCADE)
+    showToast('⏳ Refus et suppression en cours...');
+
+    // 1. Supprimer le commerce associé s'il existe (pour éviter les orphelins)
+    await supabaseClient.from('stores').delete().eq('owner_id', profileId);
+
+    // 2. Supprimer le profil (et l'utilisateur en cascade si la règle est bien faite)
     const { error } = await supabaseClient
-      .from('profiles')
+      .from('profiles') // ⚠️ Remplace par 'clients' SI tu as tout renommé (voir question plus haut)
       .delete()
       .eq('id', profileId);
 
     if (error) throw error;
 
-    showToast('🗑️ Demande refusée et supprimée.');
-    renderPendingStores();
+    showToast('🗑️ Demande refusée et profil supprimé.');
+    
+    // Rafraîchir la vue
+    if (typeof renderPendingStores === 'function') renderPendingStores();
     
   } catch (err) {
-    console.error('Erreur refus:', err);
-    showToast('❌ Erreur lors du refus.');
+    console.error('❌ Erreur refus:', err);
+    showToast('❌ Erreur lors du refus : ' + err.message);
   }
 }
 
-// Refuser un commerce
-async function rejectStore(id) {
-  if (!confirm('Êtes-vous sûr de vouloir refuser cette demande ?')) return;
-  
-  try {
-    // Mettre à jour le statut dans la table stores
-    const { error } = await supabaseClient
-      .from('stores')
-      .update({ status: 'rejected' })
-      .eq('id', id);
-    
-    if (error) throw error;
-    
-    showToast('❌ Commerce refusé');
-    renderPendingStores(); // Rafraîchir la liste
-    
-  } catch (error) {
-    console.error('Erreur rejectStore:', error);
-    showToast('❌ Erreur : ' + error.message);
-  }
-}
 async function loadPlatformSettings() {
   try {
     // 1. Récupérer les paramètres depuis la table 'platform_settings'
@@ -3201,106 +3098,7 @@ document.getElementById('cart-section').style.display = 'none';
   }
 }
 
-async function openAddProductModal(store_id) {
-  const name = prompt("Nom du produit :");
-  if (!name) return;
-  
-  const price = prompt("Prix du produit (ex: 15.99) :");
-  if (!price || isNaN(price)) {
-    alert("❌ Prix invalide");
-    return;
-  }
 
-  const description = prompt("Description (optionnel) :") || "Produit du commerce";
-  const category_idInput = prompt("ID de la catégorie (ex: 1, 2... ou laisse vide) :") || null;
-  const category_id = category_idInput ? parseInt(category_idInput) : null;
-
-  try {
-    const { error } = await supabaseClient.from('products').insert({
-      store_id: store_id,
-      category_id: category_id,
-      name: name,
-      price: parseFloat(price),
-      description: description,
-      available: true
-    });
-
-    if (error) throw error;
-
-    if (typeof products !== 'undefined' && Array.isArray(products)) {
-      products.push({
-        store_id: store_id,
-        category_id: category_id,
-        name: name,
-        price: parseFloat(price),
-        description: description,
-        available: true,
-        id: Date.now()
-      });
-    }
-
-    alert("✅ Produit ajouté ! Il est maintenant visible pour les clients.");
-    loadStoreProducts(store_id);
-
-  } catch (err) {
-    console.error(err);
-    alert("❌ Erreur lors de l'ajout : " + err.message);
-  }
-}
-
-
-
-async function openAddProductModal(store_id) {
-  const name = prompt("Nom du produit :");
-  if (!name) return;
-  
-  const price = prompt("Prix du produit (ex: 15.99) :");
-  if (!price || isNaN(price)) {
-    alert("❌ Prix invalide");
-    return;
-  }
-
-  const description = prompt("Description (optionnel) :") || "Produit du commerce";
-  
-  // Demander l'ID de la catégorie pour qu'il apparaisse dans les onglets du client
-  const category_idInput = prompt("ID de la catégorie (ex: 1, 2... ou laisse vide) :") || null;
-  const category_id = category_idInput ? parseInt(category_idInput) : null;
-
-  try {
-    // 1. Sauvegarder dans Supabase (avec les noms de colonnes de ta table)
-    const { error } = await supabaseClient.from('products').insert({
-      store_id: store_id,
-      category_id: category_id,
-      name: name,
-      price: parseFloat(price),
-      description: description,
-      available: true
-    });
-
-    if (error) throw error;
-
-    // 2. ASTUCE : Ajouter aussi à la liste locale 'products' pour un affichage immédiat
-    // Cela correspond EXACTEMENT à ce que openStoreDetail cherche (p.store_id, p.category_id)
-    if (typeof products !== 'undefined' && Array.isArray(products)) {
-      products.push({
-        store_id: store_id,
-        category_id: category_id,
-        name: name,
-        price: parseFloat(price),
-        description: description,
-        available: true,
-        id: Date.now() // ID temporaire pour l'affichage local immédiat
-      });
-    }
-
-    alert("✅ Produit ajouté ! Il est maintenant visible pour les clients.");
-    loadStoreProducts(store_id); // Rafraîchir la liste du dashboard
-
-  } catch (err) {
-    console.error(err);
-    alert("❌ Erreur lors de l'ajout : " + err.message);
-  }
-}
 
 
 
@@ -3346,40 +3144,33 @@ async function loadStoreProducts(store_id) {
     </div>
   `).join('');
 }
+// ==========================================
+// ✅ GESTION DES PRODUITS COMMERCE (VERSION UNIQUE ET PROPRE)
+// ==========================================
 
 async function openAddProductModal(store_id) {
-  const name = prompt("Nom du produit :");
-  if (!name) return;
+  // On utilise la modale existante plutôt que des prompts pour un rendu plus pro
+  document.getElementById('prod-modal-title').textContent = '➕ Nouveau Produit';
+  document.getElementById('prod-id').value = '';
+  document.getElementById('prod-name').value = '';
+  document.getElementById('prod-desc').value = '';
+  document.getElementById('prod-price').value = '';
+  document.getElementById('prod-available').value = 'true';
+  selectedProdIcon = '📦';
   
-  const price = prompt("Prix du produit (ex: 15.99) :");
-  if (!price || isNaN(price)) {
-    alert("❌ Prix invalide");
-    return;
-  }
-
-  const description = prompt("Description du produit (optionnel) :") || "";
-
-  try {
-    const { error } = await supabaseClient.from('products').insert({
-      store_id: store_id,
-      name: name,
-      price: parseFloat(price),
-      description: description,
-      available: true
-    });
-
-    if (error) throw error;
-    alert("✅ Produit ajouté !");
-    loadStoreProducts(store_id);
-  } catch (err) {
-    alert("❌ Erreur : " + err.message);
-  }
+  const myStore = stores.find(s => String(s.id) === String(store_id));
+  document.getElementById('prod-store').innerHTML = `<option value="${myStore.id}" selected>${myStore.icon} ${myStore.name}</option>`;
+  
+  const myCats = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
+  document.getElementById('prod-category').innerHTML = myCats.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+  
+  buildIconPicker('prod-icon-picker', 'prod-icon');
+  openModal('product-modal');
 }
 
 async function saveProduct(event) {
   event.preventDefault();
   
-  // 1. Récupérer les valeurs du formulaire
   const store_id = document.getElementById('prod-store').value;
   const category_id = document.getElementById('prod-category').value;
   const name = document.getElementById('prod-name').value.trim();
@@ -3396,27 +3187,22 @@ async function saveProduct(event) {
   showToast('⏳ Ajout du produit en cours...');
 
   try {
-    // ✅ 2. CORRECTION ICI : On utilise store_id et category_id (minuscules + underscore)
-    const { data, error } = await supabaseClient
-      .from('products')
-      .insert({
-        store_id: store_id,       // ✅ C'était probablement store_id avant
-        category_id: category_id, // ✅ C'était probablement category_id avant
-        name: name,
-        description: description,
-        price: price,
-        icon: icon,
-        available: available
-      })
-      .select()
-      .single();
+    const { data, error } = await supabaseClient.from('products').insert({
+      store_id: store_id,
+      category_id: category_id,
+      name: name,
+      description: description,
+      price: price,
+      icon: icon,
+      available: available
+    }).select().single();
 
     if (error) throw error;
-
-    showToast('✅ Produit ajouté et lié au commerce !');
-    closeModal('product-modal');
+   
+    // On ajoute une VRAIE notification pour le commerce
+    await showNotification('✅ Produit ajouté', `Le produit "${name}" est maintenant en ligne.`, 'success', currentUser.id);
     
-    // 3. Recharger l'affichage des produits
+    closeModal('product-modal');
     if (typeof loadStoreProducts === 'function') loadStoreProducts(store_id);
     if (typeof renderStoreProducts === 'function') renderStoreProducts();
 
@@ -3425,6 +3211,116 @@ async function saveProduct(event) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
+
+// ==========================================
+// ✅ UTILITAIRES ET MODALES
+// ==========================================
+
+
+
+function pickIcon(containerId, hiddenId, el) {
+  document.querySelectorAll('#' + containerId + ' .icon-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById(hiddenId).value = el.dataset.icon;
+  if (containerId === 'store-icon-picker') selectedStoreIcon = el.dataset.icon;
+  if (containerId === 'cat-icon-picker') selectedCatIcon = el.dataset.icon;
+  if (containerId === 'prod-icon-picker') selectedProdIcon = el.dataset.icon;
+}
+
+function openModal(id) { 
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+  }
+}
+
+
+// Fermer la modale si on clique en dehors
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', function(e) { 
+    if (e.target === this) this.classList.remove('show'); 
+  });
+});
+
+// ==========================================
+// ✅ TOAST VISUEL UNIQUEMENT (Ne spamme pas la DB)
+// ==========================================
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  if (toast) {
+    toast.textContent = message;
+    toast.className = 'toast show';
+    setTimeout(() => {
+      toast.className = toast.className.replace('show', '');
+    }, 3000);
+  }
+}
+
+// ==========================================
+// ✅ APPROBATION DES LIVREURS (Arguments corrigés)
+// ==========================================
+
+async function rejectDriver(id) {
+  const d = drivers.find(x => String(x.id) === String(id));
+  if (!d) { showToast('❌ Livreur introuvable'); return; }
+  try {
+    const { error } = await supabaseClient.from('profiles').update({ status: 'rejected' }).eq('id', id);
+    if (error) throw error;
+    d.status = 'rejected';
+    renderAdminDrivers();
+    showToast('❌ Livreur refusé');
+  } catch (err) {
+    console.error('Erreur rejectDriver:', err);
+    showToast('❌ Erreur: ' + err.message);
+  }
+}
+
+// ==========================================
+// ✅ DÉTAILS DES FONCTIONNALITÉS (Landing Page)
+// ==========================================
+
+
+// ==========================================
+// ✅ INITIALISATION ET DÉMARRAGE DU SITE
+// ==========================================
+function initScrollAnimations() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.feature-card, .step-card, .testimonial-card, .store, .stat-item').forEach(el => {
+    el.classList.add('animate-on-scroll');
+    observer.observe(el);
+  });
+}
+
+window.addEventListener('load', async function() {
+  // 1. Charger les données de Supabase
+  await load();
+  
+  // 2. Initialiser l'interface
+  renderLandingStores();
+  updateCart();
+  initScrollAnimations();
+  
+  // 3. Cacher l'écran de chargement
+  setTimeout(function() { 
+    const loader = document.getElementById('page-loader');
+    if (loader) loader.classList.add('hidden'); 
+  }, 1000);
+});
+
+// Fermer le panneau de notification si on clique ailleurs
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('notif-panel');
+  const bell = document.querySelector('.notif-bell');
+  if (panel && bell && !panel.contains(e.target) && !bell.contains(e.target)) {
+    panel.style.display = 'none';
+  }
+});
+
+console.log("🚀 RuralGo Script chargé avec succès !");
+
 async function toggleProductAvailability(productId, newStatus, store_id) {
   try {
     await supabaseClient.from('products').update({ available: newStatus }).eq('id', productId);
@@ -3816,6 +3712,82 @@ function editStoreProduct(id) {
 }
 
 // ============ FONCTIONS UTILITAIRES ============
+
+// ==========================================
+// ✅ FONCTION POUR FERMER LE MODAL (ANNULER)
+// ==========================================
+function closeModal(modalId) {
+  console.log("❌ [MODAL] Fermeture du modal :", modalId);
+  
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+    console.log("✅ [MODAL] Fermé avec succès.");
+  } else {
+    console.error("❌ [MODAL] Modal introuvable :", modalId);
+  }
+}
+
+// ==========================================
+// ✅ FONCTION POUR SAUVEGARDER LE PROFIL (ENREGISTRER)
+// ==========================================
+// ==========================================
+// ✅ SAUVEGARDE DU PROFIL CLIENT (TABLE : clients)
+// ==========================================
+async function saveProfile(e) {
+  if (e) e.preventDefault();
+
+  console.log("💾 [PROFIL] Sauvegarde en cours...");
+
+  // 1. Vérification
+  if (!currentUser || !currentUser.id) {
+    showToast('❌ Erreur : Vous devez être connecté.');
+    return;
+  }
+
+  // 2. Récupérer les valeurs
+  const addrInput = document.getElementById('ep-address');
+  const newName = document.getElementById('ep-name')?.value || currentUser.name;
+  const newPhone = document.getElementById('ep-phone')?.value || currentUser.phone;
+  const newAddress = addrInput?.value || currentUser.address;
+
+  // 3. Mettre à jour la mémoire locale
+  currentUser.name = newName;
+  currentUser.phone = newPhone;
+  currentUser.address = newAddress;
+  if (addrInput?._lat) currentUser.lat = addrInput._lat;
+
+  try {
+    // 4. ✅ Sauvegarder dans la table CLIENTS (pas profiles)
+    const { error } = await supabaseClient
+      .from('clients') // ✅ NOUVELLE TABLE
+      .update({ 
+        name: newName, 
+        phone: newPhone, 
+        address: newAddress,
+        lat: currentUser.lat || null
+      })
+      .eq('id', currentUser.id);
+
+    if (error) throw error;
+
+
+    // 6. Fermer le modal
+    closeModal('edit-profile-modal');
+
+    showToast('✅ Profil sauvegardé avec succès !');
+    console.log("✅ [PROFIL] Sauvegarde terminée.");
+
+  } catch (err) {
+    console.error("❌ Erreur sauvegarde profil:", err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ==========================================
+// ✅ SYNCHRONISATION UNIVERSELLE DU PROFIL
+// ==========================================
 function calculateDistance(lat1, lng1, lat2, lng2) {
   if (!lat1 || !lng1 || !lat2 || !lng2) return null;
   const R = 6371;
@@ -3830,83 +3802,22 @@ function buildIconPicker(containerId, hiddenId) {
   c.innerHTML = allIcons.map(ic => `<div class="icon-option" data-icon="${ic}" onclick="pickIcon('${containerId}','${hiddenId}',this)">${ic}</div>`).join('');
 }
 
-function pickIcon(containerId, hiddenId, el) {
-  document.querySelectorAll('#' + containerId + ' .icon-option').forEach(o => o.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById(hiddenId).value = el.dataset.icon;
-  if (containerId === 'store-icon-picker') selectedStoreIcon = el.dataset.icon;
-  if (containerId === 'cat-icon-picker') selectedCatIcon = el.dataset.icon;
-  if (containerId === 'prod-icon-picker') selectedProdIcon = el.dataset.icon;
-}
 
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-function openModal(id) { document.getElementById(id).classList.add('show'); }
 
-document.querySelectorAll('.modal-bg').forEach(m => {
-  m.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
-});
-
-// ✅ SUPER SHOWTOAST : Affiche le toast + Sauvegarde en DB + Incrémente la cloche
-async function showToast(message, type = 'info') {
-  // 1. Affichage visuel du toast (ton ancien code)
-  const toast = document.getElementById('toast');
-  if (toast) {
-    toast.textContent = message;
-    toast.className = 'toast show'; // Assure-toi que c'est la bonne classe pour l'afficher
-    setTimeout(() => {
-      toast.className = toast.className.replace('show', '');
-    }, 3000); // Disparaît après 3 secondes
-  }
-
-  // 2. Détection intelligente du type de message basé sur les émojis (optionnel mais pratique)
-  if (message.includes('✅') || message.includes('Succès') || message.includes('réussi')) type = 'success';
-  else if (message.includes('❌') || message.includes('Erreur') || message.includes('échoué')) type = 'error';
-  else if (message.includes('⚠️') || message.includes('Attention')) type = 'warning';
-  else type = 'info';
-
-  // 3. Sauvegarde automatique en base de données et mise à jour de la cloche
-  if (currentUser && currentUser.id) {
-    try {
-      await supabaseClient.from('notifications').insert({
-        user_id: currentUser.id,
-        title: 'Notification', // Titre par défaut
-        message: message,
-        type: type,
-        is_read: false
-      });
-      
-      // Met à jour le badge rouge instantanément
-      await updateNotifBadge();
-      
-    } catch (err) {
-      // On ne bloque pas l'app si la sauvegarde échoue, on log juste
-      console.error('Erreur sauvegarde auto-notification:', err);
-    }
-  }
-}
+// ==========================================
+// ✅ TOAST VISUEL UNIQUEMENT (Ne spamme pas la DB)
+// ==========================================
 
 
 // ============ FONCTION POUR LES FORFAITS COMMERCES ============
 
 // ============ ANIMATIONS ============
-function initScrollAnimations() {
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
-  }, { threshold: 0.1 });
-  document.querySelectorAll('.feature-card, .step-card, .testimonial-card, .store, .stat-item').forEach(el => {
-    el.classList.add('animate-on-scroll');
-    observer.observe(el);
-  });
-}
+
 setTimeout(initScrollAnimations, 500);
 
 
 // ============ DÉMARRAGE ============
-window.addEventListener('load', async function() {
-  await load();
-  renderLandingStores();
-  updateCart();
-});
+
 
 document.addEventListener('click', function(e) {
   const panel = document.getElementById('notif-panel');
@@ -3916,9 +3827,6 @@ document.addEventListener('click', function(e) {
   }
 });
 
-window.addEventListener('load', function() {
-  setTimeout(function() { document.getElementById('page-loader').classList.add('hidden'); }, 1500);
-});
 // ===== APPROBATION DES LIVREURS =====
 async function approveDriver(id) {
   const d = drivers.find(x => String(x.id) === String(id));
@@ -3931,7 +3839,7 @@ async function approveDriver(id) {
     if (error) throw error;
     d.status = 'approved';
 
-    await addNotification(id, '✅ Compte approuvé', 'Bienvenue dans l\'équipe RuralGo ! Vous pouvez maintenant accepter des livraisons.', 'success');
+    await showNotification(id, '✅ Compte approuvé', 'Bienvenue dans l\'équipe RuralGo ! Vous pouvez maintenant accepter des livraisons.', 'success');
     renderAdminDrivers();
     showToast('✅ Livreur approuvé !');
   } catch (err) {
@@ -4193,7 +4101,7 @@ function showCustomerCart() {
   if (storeModal) storeModal.remove();
 
   // 2. Récupérer le panier depuis localStorage
-  const cart = JSON.parse(localStorage.getItem('ruralgo_cart')) || [];
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
 
   // 3. Si le panier est vide
   if (cart.length === 0) {
@@ -4253,28 +4161,30 @@ function showCustomerCart() {
 
 // Modifier la quantité d'un produit dans le panier
 function updateCartQuantity(index, change) {
-  const cart = JSON.parse(localStorage.getItem('ruralgo_cart')) || [];
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
   if (cart[index]) {
     cart[index].qty = Math.max(1, (cart[index].qty || 1) + change);
-    localStorage.setItem('ruralgo_cart', JSON.stringify(cart));
+    localStorage.setItem('cart', JSON.stringify(cart));
     showCustomerCart(); // Recharger l'affichage
   }
+localStorage.setItem('cart', JSON.stringify(cart));
 }
 
 // Retirer un produit du panier
 function removeFromCart(index) {
-  const cart = JSON.parse(localStorage.getItem('ruralgo_cart')) || [];
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
   cart.splice(index, 1);
-  localStorage.setItem('ruralgo_cart', JSON.stringify(cart));
+  localStorage.setItem('cart', JSON.stringify(cart));
   showCustomerCart(); // Recharger l'affichage
 }
 
 // Passer la commande
 async function checkoutOrder() {
-  const cart = JSON.parse(localStorage.getItem('ruralgo_cart')) || [];
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
   
   if (cart.length === 0) {
     showToast('❌ Votre panier est vide');
+    localStorage.removeItem('cart');
     return;
   }
 
@@ -4294,9 +4204,9 @@ async function checkoutOrder() {
     total += parseFloat(item.price) * (item.qty || 1);
   });
 
-  showToast('⏳ Envoi de votre commande...');
+  
 
-  try {
+showToast('✅ Commande passée avec succès !');  try {
     // Sauvegarder la commande dans Supabase
     const { error } = await supabaseClient
       .from('orders')
@@ -4312,12 +4222,28 @@ async function checkoutOrder() {
     if (error) throw error;
 
     // Vider le panier
-    localStorage.removeItem('ruralgo_cart');
+    localStorage.removeItem('cart ');
     
     // Fermer la modale
     document.querySelector('.modal-bg')?.remove();
     
     showToast('✅ Commande envoyée avec succès ! Le commerçant vous contactera bientôt.');
+    // ✅ NOTIFIER LE COMMERCE
+try {
+  const firstProduct = products.find(p => String(p.id) === String(cart[0].productId));
+  if (firstProduct && firstProduct.store_id) {
+    const store = stores.find(s => String(s.id) === String(firstProduct.store_id));
+    if (store && store.owner_id) {
+      await createNotificationForUser(
+        store.owner_id,
+        '🛒 Nouvelle commande !',
+        `${currentUser.name} a passé une commande de ${cart.length} produit(s).`
+      );
+    }
+  }
+} catch (err) {
+  console.error("❌ Erreur notification commerce:", err);
+}
 
   } catch (err) {
     console.error('Erreur commande:', err);
@@ -4547,7 +4473,7 @@ function viewOrderDetails(id) {
 // SYSTÈME DE NOTIFICATIONS (VERSION UNIFIÉE - UTILISE is_read)
 // ==========================================
 
-async function addNotification(userId, title, message, type = 'info') {
+async function showNotification(userId, title, message, type = 'info') {
   try {
     await supabaseClient.from('notifications').insert({
       user_id: String(userId),
@@ -4558,7 +4484,7 @@ async function addNotification(userId, title, message, type = 'info') {
     });
     loadNotifications();
   } catch (err) {
-    console.error('Erreur addNotification:', err);
+    console.error('Erreur showNotification:', err);
   }
 }
 
@@ -4657,54 +4583,7 @@ async function markAsRead(id) {
 }
 
 
-
-// Rafraîchir les notifications toutes les 30 secondes si l'utilisateur est connecté
-setInterval(() => {
-  if (currentUser) {
-    loadNotifications();
-  }
-}, 30000);
-
 // ============ MODIFIER UN CLIENT ============
-function editClient(id) {
-  const client = clients.find(c => String(c.id) === String(id));
-  if (!client) {
-    showToast('❌ Client introuvable');
-    return;
-  }
-  
-  const modal = document.createElement('div');
-  modal.className = 'modal-bg show';
-  modal.id = 'edit-client-modal';
-  modal.innerHTML = `
-    <div class="modal" style="max-width:600px">
-      <h2 style="color:#0a1929;margin-bottom:1.5rem">✏️ Modifier le client</h2>
-      <form onsubmit="saveClientEdit(event, '${id}')">
-        <div class="form-group">
-          <label>👤 Nom complet</label>
-          <input type="text" id="ec-name" value="${client.name}" required>
-        </div>
-        <div class="form-group">
-          <label>📧 Email</label>
-          <input type="email" id="ec-email" value="${client.email || ''}" required>
-        </div>
-        <div class="form-group">
-          <label>📱 Téléphone</label>
-          <input type="tel" id="ec-phone" value="${client.phone || ''}" required>
-        </div>
-        <div class="form-group">
-          <label>📍 Adresse</label>
-          <input type="text" id="ec-address" value="${client.address || ''}" required>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-sm btn-gray" onclick="document.getElementById('edit-client-modal').remove()">Annuler</button>
-          <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
-        </div>
-      </form>
-    </div>
-  `;
-  document.body.appendChild(modal);
-}
 
 async function saveClientEdit(event, id) {
   event.preventDefault();
@@ -4717,7 +4596,7 @@ async function saveClientEdit(event, id) {
     };
     
     const { error } = await supabaseClient
-      .from('profiles')
+      .from('clients')
       .update(updateData)
       .eq('id', id);
     
@@ -4752,7 +4631,7 @@ async function confirmDeleteClient(id) {
     await supabaseClient.from('notifications').delete().eq('user_id', id);
     
     // 3. Supprimer le profil du client
-    const { error } = await supabaseClient.from('profiles').delete().eq('id', id);
+    const { error } = await supabaseClient.from('clients').delete().eq('id', id);
     if (error) throw error;
     
     // 4. Mettre à jour le tableau local
@@ -5337,13 +5216,13 @@ if (urlParams.get('payment_success') === 'true') {
   showToast('✅ Paiement effectué. Ton solde va être mis à jour automatiquement.');
   window.history.replaceState({}, document.title, window.location.pathname);
   
-  // ✅ AJOUTE CES LIGNES : Attendre 2 secondes pour le webhook Stripe, puis rafraîchir
+  // ✅ Attendre 2 secondes pour le webhook Stripe, puis rafraîchir
   setTimeout(async () => {
     await updateWalletDisplay();
-    showToast('💰 Solde mis à jour : ' + document.getElementById('user-wallet-balance').textContent);
+    // ✅ C'est ici la correction : on utilise la variable au lieu de chercher un ID qui n'existe pas
+    showToast('💰 Solde mis à jour : ' + userWalletBalance.toFixed(2) + ' $');
   }, 2000);
 }
-
 if (urlParams.get('payment_canceled') === 'true') {
   showToast('❌ Paiement annulé. Aucun montant n\'a été débité.');
   window.history.replaceState({}, document.title, window.location.pathname);
@@ -5561,12 +5440,6 @@ async function diagnosticComplet() {
   }
 }
 
-function goToMyStore() {
-  switchView('view-store');
-  if (typeof showStoreDashboard === 'function') {
-    showStoreDashboard();
-  }
-}
  // <-- Ajoute cette accolade ici au cas où il en manquerait une
 
 function goToMyStore() {
@@ -5760,7 +5633,7 @@ async function updateMyStoreName(newStoreName) {
     const { error } = await supabaseClient
       .from('stores')
       .update({ name: newStoreName.trim() })
-      .eq('user_id', currentUser.id);
+      .eq('_id', currentUser.id);
 
     if (error) throw error;
 
@@ -5903,31 +5776,6 @@ async function saveStoreNamePro() {
   } catch (err) {
     console.error('Erreur:', err);
     showToast('❌ Erreur : ' + err.message);
-  }
-}
-// 1. La fonction qui met le nom à l'écran
-function initStoreNameDisplay() {
-  const displayEl = document.getElementById('current-store-name-display');
-  if (!displayEl) return;
-
-  // On cherche le nom dans les variables globales
-  if (typeof currentStore !== 'undefined' && currentStore && currentStore.name) {
-    displayEl.textContent = currentStore.name;
-  } else if (typeof currentUser !== 'undefined' && currentUser && currentUser.storeName) {
-    displayEl.textContent = currentUser.storeName;
-  } else {
-    // Fallback : si on ne trouve pas, on essaie de le récupérer depuis le tableau 'stores'
-    if (typeof currentUser !== 'undefined' && currentUser && stores && Array.isArray(stores)) {
-      const myStore = stores.find(s => s.user_id === currentUser.id || s.id === currentUser.store_id);
-      if (myStore) {
-        displayEl.textContent = myStore.name;
-        currentUser.storeName = myStore.name; // On le sauvegarde pour la prochaine fois
-      } else {
-        displayEl.textContent = "Non défini";
-      }
-    } else {
-      displayEl.textContent = "Non défini";
-    }
   }
 }
 
@@ -6201,40 +6049,25 @@ function showMyCartProperly() {
 // ==========================================
 // ✅ SYSTÈME DE SYNCHRONISATION UNIVERSELLE DU PROFIL
 // ==========================================
-
-// Fonction centrale qui met à jour TOUT le site
+// ==========================================
+// ✅ SYNCHRONISATION UNIVERSELLE DU PROFIL CLIENT
+// ==========================================
 function syncUserProfileEverywhere() {
   console.log("🔄 [SYNC] Mise à jour du profil partout...");
 
-  // 1. Sauvegarder dans le navigateur (pour que ça reste après rechargement)
+  // 1. Sauvegarder dans le navigateur (localStorage)
   localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
-  // 2. Mettre à jour le header (nom en haut à droite)
-  const userNameDisplay = document.getElementById('user-name') || document.querySelector('.user-name');
+  // 2. Mettre à jour le nom dans le header
+  const userNameDisplay = document.getElementById('user-name');
   if (userNameDisplay && currentUser.name) {
     userNameDisplay.textContent = currentUser.name;
   }
 
-  // 3. Mettre à jour la page de profil si elle est ouverte
-  const profileName = document.getElementById('ep-name');
-  const profilePhone = document.getElementById('ep-phone');
-  const profileAddress = document.getElementById('ep-address');
-  
-  if (profileName) profileName.value = currentUser.name || '';
-  if (profilePhone) profilePhone.value = currentUser.phone || '';
-  if (profileAddress) profileAddress.value = currentUser.address || '';
+  // 3. Mettre à jour l'en-tête général
+  if (typeof updateHeader === 'function') updateHeader();
 
-  // 4. Mettre à jour le tableau de bord commerce si c'est un commerçant
-  if (typeof renderStoreProfile === 'function') {
-    renderStoreProfile();
-  }
-
-  // 5. Mettre à jour l'en-tête général
-  if (typeof updateHeader === 'function') {
-    updateHeader();
-  }
-
-  console.log("✅ [SYNC] Profil synchronisé partout !");
+  console.log("✅ [SYNC] Profil synchronisé !");
 }
 
 // Fonction pour sauvegarder le profil (appelle la sync automatique)
@@ -6242,10 +6075,21 @@ function syncUserProfileEverywhere() {
 // ==========================================
 // ✅ CLIENT : OUVERTURE DU MODAL DE PROFIL
 // ==========================================
+// ==========================================
+// ✅ VERSION INFAILLIBLE : MODAL PROFIL CLIENT
+// ==========================================
 function openEditProfileModal() {
-  console.log("📝 [CLIENT] Ouverture du modal de profil...");
+  console.log("🔍 [DEBUG 1] Clic sur le bouton Modifier le profil...");
 
-  // Remplir les champs avec les données actuelles
+  // 1. Vérification de sécurité absolue
+  if (typeof currentUser === 'undefined' || !currentUser || !currentUser.id) {
+    console.error("❌ [DEBUG 2] ÉCHEC : currentUser est manquant ou non connecté !");
+    showToast('❌ Erreur : Veuillez vous reconnecter.');
+    return;
+  }
+  console.log("✅ [DEBUG 3] Utilisateur connecté :", currentUser.name);
+
+  // 2. Remplir les champs (avec vérification que les éléments existent)
   const nameField = document.getElementById('ep-name');
   const phoneField = document.getElementById('ep-phone');
   const addressField = document.getElementById('ep-address');
@@ -6253,81 +6097,31 @@ function openEditProfileModal() {
   if (nameField) nameField.value = currentUser.name || '';
   if (phoneField) phoneField.value = currentUser.phone || '';
   if (addressField) addressField.value = currentUser.address || '';
+  console.log("✅ [DEBUG 4] Champs du formulaire remplis.");
 
-  // Activer l'autocomplétion d'adresse
+  // 3. Autocomplétion (seulement si la fonction existe)
   if (typeof initAutocomplete === 'function') {
     setTimeout(() => initAutocomplete('ep-address', 'ep-address-suggestions'), 100);
   }
 
-  // Ouvrir le modal
-  if (typeof openModal === 'function') {
-    openModal('edit-profile-modal');
+  // 4. Ouvrir le modal (méthode universelle)
+  const modal = document.getElementById('edit-profile-modal');
+  if (modal) {
+    modal.style.display = 'flex'; // ou 'block' selon ton CSS
+    modal.classList.add('show');
+    console.log("✅ [DEBUG 5] Modal affiché avec succès !");
   } else {
-    const modal = document.getElementById('edit-profile-modal');
-    if (modal) modal.style.display = 'flex';
+    console.error("❌ [DEBUG 5] ÉCHEC : L'élément HTML 'edit-profile-modal' est introuvable !");
   }
-
-  console.log("✅ [CLIENT] Modal ouvert avec les données actuelles.");
 }
-
 // ==========================================
 // ✅ CLIENT : SAUVEGARDE DU PROFIL
 // ==========================================
-async function saveProfile(e) {
-  if (e) e.preventDefault();
 
-  console.log("💾 [CLIENT] Sauvegarde du profil en cours...");
-
-  const addrInput = document.getElementById('ep-address');
-  const newName = document.getElementById('ep-name').value;
-  const newPhone = document.getElementById('ep-phone').value;
-  const newAddress = addrInput.value;
-
-  currentUser.name = newName;
-  currentUser.phone = newPhone;
-  currentUser.address = newAddress;
-  if (addrInput._lat) currentUser.lat = addrInput._lat;
-
-  try {
-    const { error } = await supabaseClient
-      .from('profiles')
-      .update({ 
-        name: newName, 
-        phone: newPhone, 
-        address: newAddress,
-        lat: currentUser.lat || null
-      })
-      .eq('id', currentUser.id);
-
-    if (error) throw error;
-
-    // Synchroniser partout
-    syncUserProfileEverywhere();
-    showToast('✅ Profil sauvegardé et synchronisé partout !');
-
-  } catch (err) {
-    console.error("❌ Erreur sauvegarde profil:", err);
-    showToast('❌ Erreur : ' + err.message);
-  }
-}
 
 // ==========================================
 // ✅ CLIENT : SYNCHRONISATION UNIVERSELLE
 // ==========================================
-function syncUserProfileEverywhere() {
-  console.log("🔄 [SYNC] Mise à jour du profil client partout...");
-
-  localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-  const userNameDisplay = document.getElementById('user-name') || document.querySelector('.user-name');
-  if (userNameDisplay && currentUser.name) {
-    userNameDisplay.textContent = currentUser.name;
-  }
-
-  if (typeof updateHeader === 'function') updateHeader();
-
-  console.log("✅ [SYNC] Profil client synchronisé !");
-}
 
 // ==========================================
 // ✅ COMMERCE : GESTION DU NOM DU COMMERCE
@@ -6389,3 +6183,223 @@ window.logout = function() {
     location.reload();
   }
 };
+
+// ==========================================
+// ✅ SYSTÈME DE NOTIFICATIONS INFAILLIBLE (Realtime + Polling)
+// ==========================================
+
+// 1. Fonction pour formater l'heure correctement pour Maniwaki
+// ==========================================
+// ✅ FORMATAGE DE L'HEURE MANIWAKI (CORRIGÉ SANS DÉCALAGE)
+// ==========================================
+function formatHeureManiwaki(dateString) {
+  if (!dateString) return "À l'instant";
+
+  // 1. Forcer l'interprétation en UTC en ajoutant 'Z' si absent
+  // Cela empêche le navigateur de deviner le fuseau horaire et de faire un double décalage
+  const isoString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
+  const date = new Date(isoString);
+
+  // 2. Vérifier que la date est valide
+  if (isNaN(date.getTime())) {
+    return "Date invalide";
+  }
+
+  // 3. Options de formatage strictes pour le Québec (America/Montreal)
+  const options = {
+    timeZone: 'America/Montreal',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false // Format 24h (ex: 14:05 au lieu de 2:05 PM)
+  };
+
+  // 4. Formater et nettoyer le résultat (ex: "02/11/2026 à 08:09")
+  return date.toLocaleString('fr-CA', options).replace(',', ' à');
+}
+
+// 2. Fonction principale : charger et afficher les notifications
+async function refreshNotificationsAuto() {
+  if (!currentUser || !currentUser.id) {
+    console.log("⚠️ [NOTIF] Pas d'utilisateur connecté");
+    return;
+  }
+
+  try {
+    const { data: notifs, error } = await supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error("❌ Erreur chargement notifications:", error);
+      return;
+    }
+
+    if (!notifs) return;
+
+    // Compter les notifications non lues
+    const unreadCount = notifs.filter(n => !n.read).length;
+
+    // ✅ Mettre à jour le badge INSTANTANÉMENT
+    const badge = document.getElementById('notif-badge');
+    if (badge) {
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    // ✅ Afficher les notifications dans le panneau
+    const notifList = document.getElementById('notif-list');
+    if (notifList && notifs.length > 0) {
+      notifList.innerHTML = notifs.map(n => {
+        const heureCorrecte = formatHeureManiwaki(n.created_at);
+        const bgColor = n.read ? '#f9fafb' : '#fff9f0';
+        const fontWeight = n.read ? 'normal' : 'bold';
+        
+        return `
+          <div class="notif-item" style="padding: 1rem; border-bottom: 1px solid #e5e7eb; background: ${bgColor}; cursor: pointer; transition: background 0.2s;" 
+               onclick="markNotifRead(${n.id})" 
+               onmouseover="this.style.background='#f3f4f6'" 
+               onmouseout="this.style.background='${bgColor}'">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+              <div style="font-weight: ${fontWeight}; color: #0a1929; flex: 1;">${n.title || 'Notification'}</div>
+              ${!n.read ? '<div style="width: 8px; height: 8px; border-radius: 50%; background: #f5a623; margin-left: 8px;"></div>' : ''}
+            </div>
+            <div style="font-size: 0.9rem; color: #6b7280; line-height: 1.4;">${n.message || ''}</div>
+            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.5rem;">🕐 ${heureCorrecte}</div>
+          </div>
+        `;
+      }).join('');
+    } else if (notifList) {
+      notifList.innerHTML = '<p style="padding: 2rem; text-align: center; color: #6b7280;">Aucune notification</p>';
+    }
+
+  } catch (err) {
+    console.error("❌ Erreur refresh notifications:", err);
+  }
+}
+
+// 3. Fonction pour marquer une notification comme lue
+async function markNotifRead(notifId) {
+  try {
+    await supabaseClient
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', notifId);
+
+    await refreshNotificationsAuto();
+  } catch (err) {
+    console.error("❌ Erreur markNotifRead:", err);
+  }
+}
+
+// 4. Fonction pour tout marquer comme lu
+async function markAllRead() {
+  if (!currentUser || !currentUser.id) return;
+
+  try {
+    await supabaseClient
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', currentUser.id)
+      .eq('read', false);
+
+    await refreshNotificationsAuto();
+    showToast('✅ Toutes les notifications marquées comme lues');
+  } catch (err) {
+    console.error("❌ Erreur markAllRead:", err);
+  }
+}
+
+// 5. ✅ DÉMARRER LE SYSTÈME HYBRIDE (Realtime + Polling toutes les 5s)
+if (typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
+  // Premier chargement immédiat
+  refreshNotificationsAuto();
+  
+  
+  console.log("🔔 [NOTIFICATIONS] Système hybride activé (Realtime + Polling 5s)");
+}
+
+// ==========================================
+// ✅ CORRECTION URGENTE : NOTIFICATIONS
+// ==========================================
+
+// 1. Fonction de debug pour tester manuellement
+async function debugNotifications() {
+  console.log("🔍 [DEBUG] Test des notifications...");
+  
+  if (!currentUser || !currentUser.id) {
+    console.error("❌ Pas d'utilisateur connecté !");
+    return;
+  }
+
+  console.log("✅ Utilisateur connecté :", currentUser.id);
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('notifications')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error("❌ Erreur Supabase:", error);
+      return;
+    }
+
+    console.log("✅ Notifications trouvées:", data);
+    console.log("📊 Nombre total:", data?.length || 0);
+
+    // Forcer l'affichage
+    await refreshNotificationsAuto();
+    
+  } catch (err) {
+    console.error("❌ Erreur:", err);
+  }
+}
+
+// 2. Démarrer le polling immédiatement (même si l'utilisateur n'est pas encore chargé)
+setTimeout(() => {
+  if (typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
+    console.log("🔔 [NOTIF] Démarrage du polling...");
+    refreshNotificationsAuto();
+    setInterval(refreshNotificationsAuto, 1500); // Toutes les 1.5 secondes
+  }
+}, 1000);
+
+// 3. Ajouter un bouton de refresh manuel dans le header (optionnel)
+console.log("💡 Astuce : Tape 'debugNotifications()' dans la console pour tester manuellement");
+
+// ==========================================
+// ✅ TOAST + NOTIFICATION AUTOMATIQUE
+// ==========================================
+
+// Nouvelle fonction qui affiche le toast ET crée une notification
+
+// Fonction pour créer une notification pour un AUTRE utilisateur (ex: commerce quand client commande)
+async function createNotificationForUser(userId, title, message) {
+  try {
+    await supabaseClient
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        title: title,
+        message: message,
+        read: false,
+        created_at: new Date().toISOString()
+      });
+
+    console.log("✅ [NOTIF] Notification créée pour l'utilisateur", userId);
+  } catch (err) {
+    console.error("❌ Erreur création notification:", err);
+  }
+}

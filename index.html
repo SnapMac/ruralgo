@@ -567,14 +567,14 @@
           <li onclick="adminTab('categories',this)">📂 Catégories</li>
           <li onclick="adminTab('products',this)">🛍️ Produits</li>
           <li onclick="adminTab('drivers',this)">🚗 Livreurs</li>
-          <li onclick="adminTab('clients',this)">👥 Clients</li>
+          <li onclick="adminTab('profiles',this)">👥 Clients</li>
           <li onclick="adminTab('settings',this)">⚙️ Paramètres</li>
         </ul></div>
         <div class="admin-main">
           <div id="admin-dashboard">
             <h3 style="color:#0a1929;margin-bottom:1rem">📊 Vue d'ensemble</h3>
             <div class="admin-stats">
-              <div class="stat"><div class="stat-val" id="stat-clients">0</div><div class="stat-lbl">Clients</div></div>
+              <div class="stat"><div class="stat-val" id="stat-profiles">0</div><div class="stat-lbl">Clients</div></div>
               <div class="stat"><div class="stat-val" id="stat-drivers">0</div><div class="stat-lbl">Livreurs</div></div>
               <div class="stat"><div class="stat-val" id="stat-stores">0</div><div class="stat-lbl">Commerces</div></div>
               <div class="stat"><div class="stat-val" id="stat-orders">0</div><div class="stat-lbl">Commandes</div></div>
@@ -616,9 +616,9 @@
             <h3 style="color:#0a1929;margin-bottom:1rem">🚗 Livreurs</h3>
             <div id="drivers-table-container"></div>
           </div>
-          <div id="admin-clients" style="display:none">
+          <div id="admin-profiles" style="display:none">
             <h3 style="color:#0a1929;margin-bottom:1rem">👥 Clients</h3>
-            <div id="clients-table-container"></div>
+            <div id="profiles-table-container"></div>
           </div>
           <div id="admin-settings" style="display:none">
             <h3 style="color:#0a1929;margin-bottom:1rem">⚙️ Paramètres de la plateforme</h3>
@@ -867,32 +867,37 @@
   </form>
 </div></div>
 
-<div class="modal-bg" id="edit-profile-modal"><div class="modal">
-  <h2>✏️ Modifier mon profil</h2>
-  <form onsubmit="saveProfile(event)">
-    <div class="form-group"><label>Nom complet</label><input type="text" id="ep-name" required></div>
-    <div class="form-group"><label>Téléphone</label><input type="tel" id="ep-phone" required></div>
-       <div class="form-group">
-     <label>📍 Province</label>
-     <input type="text" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;">
-   </div>
-    <div class="form-group">
-      <label>Adresse</label>
-      <div class="autocomplete-wrapper">
-        <input type="text" id="ep-address" class="autocomplete-input" autocomplete="off">
-        <div id="ep-address-suggestions" class="autocomplete-suggestions"></div>
+<div class="modal-bg" id="edit-profile-modal">
+  <div class="modal">
+    <h2>✏️ Modifier mon profil</h2>
+    <form onsubmit="saveProfile(event)">
+      <div class="form-group">
+        <label>Nom complet</label>
+        <input type="text" id="ep-name" required>
       </div>
-      <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('ep-address')">📍 Utiliser ma position GPS</button>
-    </div>
-    <div class="modal-actions"><button type="button" class="btn-sm btn-gray" onclick="closeModal('edit-profile-modal')">Annuler</button><button type="submit" class="btn-sm btn-green">💾 Enregistrer</button></div>
-  </form>
-</div></div>
-
-<div class="modal-bg" id="confirm-modal"><div style="background:white;border-radius:12px;padding:2rem;max-width:400px;text-align:center">
-  <h3 style="color:#0a1929;margin-bottom:0.5rem">⚠️ Confirmer</h3>
-  <p style="color:#666;margin-bottom:1.5rem" id="confirm-msg">Êtes-vous sûr ?</p>
-  <div style="display:flex;gap:0.5rem;justify-content:center"><button class="btn-sm btn-gray" onclick="closeModal('confirm-modal')">Annuler</button><button class="btn-sm btn-red" id="confirm-btn">🗑️ Supprimer</button></div>
-</div></div>
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input type="tel" id="ep-phone" required>
+      </div>
+      <div class="form-group">
+        <label>📍 Province</label>
+        <input type="text" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;">
+      </div>
+      <div class="form-group">
+        <label>Adresse</label>
+        <div class="autocomplete-wrapper">
+          <input type="text" id="ep-address" class="autocomplete-input" autocomplete="off">
+          <div id="ep-address-suggestions" class="autocomplete-suggestions"></div>
+        </div>
+        <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('ep-address')">📍 Utiliser ma position GPS</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-sm btn-gray" onclick="closeModal('edit-profile-modal')">Annuler</button>
+        <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- ==========================================
      ✅ SECTION RÉALISATION SKYMAC ENTREPRISES
