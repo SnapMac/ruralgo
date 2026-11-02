@@ -5608,52 +5608,110 @@ if (storeViewElement) {
 }
 
 // ==========================================
-// ✅ AFFICHER TOUS LES COMMERCES SUR LA PAGE D'ACCUEIL
+// ==========================================
+// ✅ AFFICHER LES COMMERCES SELON LE STATUT DE CONNEXION
 // ==========================================
 
-async function loadAllStoresOnHomepage() {
+async function loadAllStoresHomepage() {
+  // Vérifier si l'utilisateur est connecté
+  const isLoggedIn = typeof currentUser !== 'undefined' && currentUser && currentUser.id;
+  
+  if (isLoggedIn) {
+    console.log("🔍 Utilisateur connecté → Chargement de TOUS les commerces...");
+  } else {
+    console.log("🔍 Utilisateur déconnecté → Chargement des commerces Premium/Croissance uniquement...");
+  }
+  
   try {
-    // Charger TOUS les commerces actifs depuis Supabase
-    const { data: stores, error } = await supabaseClient
-      .from('stores')
-      .select('*')
-      .eq('status', 'active')
-      .order('name');
+    let query;
 
-    if (error) throw error;
+    if (isLoggedIn) {
+      // ✅ UTILISATEUR CONNECTÉ : Charger TOUS les commerces actifs
+      query = supabaseClient
+        .from('stores')
+        .select('*')
+        .eq('status', 'active')
+        .order('name', { ascending: true });
+    } else {
+      // ✅ UTILISATEUR DÉCONNECTÉ : Charger seulement Premium/Croissance
+      query = supabaseClient
+        .from('stores')
+        .select('*')
+        .eq('status', 'active')
+        .in('forfait', [3, 4]) // 3 = Croissance, 4 = Partenaire Plus
+        .order('name', { ascending: true });
+    }
 
-    // Trouver le conteneur où afficher les commerces
-    const container = document.getElementById('stores-grid') || 
-                      document.getElementById('stores-container') ||
-                      document.querySelector('.stores-grid');
+    const { data: storesToShow, error } = await query;
 
-    if (!container) {
-      console.warn("Conteneur de commerces introuvable");
+    if (error) {
+      console.error("❌ Erreur Supabase:", error);
       return;
     }
 
-    // Afficher tous les commerces
-    if (stores && stores.length > 0) {
-      container.innerHTML = stores.map(store => `
-        <div class="store" onclick="viewStoreDetails('${store.id}')">
-          <div class="store-img">${store.icon || '🏪'}</div>
-          <div class="store-info">
-            <h3>${store.name}</h3>
-            <p style="color:#666; font-size:0.9rem; margin-top:0.3rem;">${store.type || ''}</p>
-            <p style="color:#999; font-size:0.8rem; margin-top:0.2rem;">${store.address || ''}</p>
+    console.log(`✅ ${storesToShow ? storesToShow.length : 0} commerces affichés !`);
+
+    // Trouver tous les conteneurs possibles et les VIDER
+    const containers = document.querySelectorAll('#stores-grid, #stores-container, #home-stores, .stores-grid');
+    
+    containers.forEach(container => {
+      container.innerHTML = '';
+      
+      if (storesToShow && storesToShow.length > 0) {
+        container.innerHTML = storesToShow.map(store => {
+          // Ajouter un badge seulement si l'utilisateur est déconnecté
+          let badge = '';
+          if (!isLoggedIn) {
+            badge = store.forfait === 4 
+              ? '<span style="background:#f5a623; color:#0a1929; font-size:0.7rem; padding:2px 8px; border-radius:10px; font-weight:bold; position:absolute; top:10px; right:10px;">👑 PREMIUM</span>' 
+              : '<span style="background:#0a1929; color:white; font-size:0.7rem; padding:2px 8px; border-radius:10px; font-weight:bold; position:absolute; top:10px; right:10px;">🚀 CROISSANCE</span>';
+          }
+
+          return `
+          <div class="store" onclick="viewStoreDetails('${store.id}')" style="cursor:pointer; position:relative; overflow:hidden;">
+            <div class="store-img" style="position:relative;">
+              ${store.icon || '🏪'}
+              ${badge}
+            </div>
+            <div class="store-info">
+              <h3>${store.name}</h3>
+              <p style="color:#666; font-size:0.9rem; margin-top:0.3rem;">${store.type || 'Commerce'}</p>
+              <p style="color:#999; font-size:0.8rem; margin-top:0.2rem;">📍 ${store.address || ''}</p>
+            </div>
           </div>
-        </div>
-      `).join('');
-    } else {
-      container.innerHTML = '<p style="text-align:center; color:#666; padding:2rem;">Aucun commerce disponible pour le moment.</p>';
-    }
+        `}).join('');
+      } else {
+        const message = isLoggedIn 
+          ? 'Aucun commerce disponible pour le moment.' 
+          : 'Aucun commerce partenaire pour le moment.';
+        container.innerHTML = `<div class="empty-state"><p>${message}</p></div>`;
+      }
+    });
 
   } catch (err) {
-    console.error('Erreur chargement commerces:', err);
+    console.error('❌ Erreur critique:', err);
   }
 }
 
-// Lancer le chargement au démarrage de la page
+// ✅ Lancer au chargement de la page
 document.addEventListener('DOMContentLoaded', () => {
-  loadAllStoresOnHomepage();
+  setTimeout(loadAllStoresHomepage, 1000);
 });
+
+// ✅ Et aussi la relancer quand l'utilisateur se connecte/déconnecte
+// (pour mettre à jour l'affichage immédiatement)
+const originalLoginUser = window.loginUser;
+if (originalLoginUser) {
+  window.loginUser = async function(event) {
+    await originalLoginUser(event);
+    setTimeout(loadAllStoresHomepage, 500); // Recharger après connexion
+  };
+}
+
+const originalLogout = window.logout;
+if (originalLogout) {
+  window.logout = async function() {
+    await originalLogout();
+    setTimeout(loadAllStoresHomepage, 500); // Recharger après déconnexion
+  };
+}
