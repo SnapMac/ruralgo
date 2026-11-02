@@ -3130,7 +3130,45 @@ async function openAddProductModal(storeId) {
   }
 }
 
+async function loadStoreProducts(storeId) {
+  const container = document.getElementById('store-products-list');
+  if (!container) return;
 
+  const { data: productsData, error } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('store_id', storeId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    container.innerHTML = `<p style="color:red;">Erreur: ${error.message}</p>`;
+    return;
+  }
+
+  if (!productsData || productsData.length === 0) {
+    container.innerHTML = '<p style="color:#666; grid-column:1/-1; text-align:center; padding:1rem;">Aucun produit pour le moment. Cliquez sur "➕ Ajouter un produit".</p>';
+    return;
+  }
+
+  container.innerHTML = productsData.map(p => `
+    <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee;">
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <h5 style="margin:0 0 0.5rem 0; color:#0a1929;">${p.name}</h5>
+        <span style="color:${p.available ? '#10b981' : '#ef4444'}; font-size:0.8rem; font-weight:bold;">
+          ${p.available ? '✅ Dispo' : '❌ Indispo'}
+        </span>
+      </div>
+      <p style="margin:0; color:#10b981; font-weight:bold; font-size:1.2rem;">${p.price} $</p>
+      <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#666;">${p.description || 'Aucune description'}</p>
+      <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+        <button onclick="toggleProductAvailability(${p.id}, ${!p.available}, '${storeId}')" style="padding:4px 8px; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+          ${p.available ? 'Désactiver' : 'Activer'}
+        </button>
+        <button onclick="deleteProduct(${p.id}, '${storeId}')" style="padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
 
 async function toggleProductAvailability(productId, newStatus, storeId) {
   try {
@@ -3203,6 +3241,45 @@ async function openAddProductModal(storeId) {
   }
 }
 
+async function loadStoreProducts(storeId) {
+  const container = document.getElementById('store-products-list');
+  if (!container) return;
+
+  const { data: productsData, error } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('store_id', storeId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    container.innerHTML = `<p style="color:red;">Erreur: ${error.message}</p>`;
+    return;
+  }
+
+  if (!productsData || productsData.length === 0) {
+    container.innerHTML = '<p style="color:#666; grid-column:1/-1; text-align:center;">Aucun produit pour le moment.</p>';
+    return;
+  }
+
+  container.innerHTML = productsData.map(p => `
+    <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee;">
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <h5 style="margin:0 0 0.5rem 0; color:#0a1929;">${p.name}</h5>
+        <span style="color:${p.available ? '#10b981' : '#ef4444'}; font-size:0.8rem; font-weight:bold;">
+          ${p.available ? '✅ Dispo' : '❌ Indispo'}
+        </span>
+      </div>
+      <p style="margin:0; color:#10b981; font-weight:bold; font-size:1.2rem;">${p.price} $</p>
+      <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#666;">${p.description || 'Aucune description'}</p>
+      <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+        <button onclick="toggleProductAvailability(${p.id}, ${!p.available}, '${storeId}')" style="padding:4px 8px; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+          ${p.available ? 'Désactiver' : 'Activer'}
+        </button>
+        <button onclick="deleteProduct(${p.id}, '${storeId}')" style="padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
 
 async function toggleProductAvailability(productId, newStatus, storeId) {
   try {
@@ -3462,12 +3539,12 @@ function showStoreProducts() {
   document.getElementById('store-products-section').style.display = 'block';
   renderStoreProducts();
 }
+
 function renderStoreProducts() {
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   if (!myStore) return;
   
-  // ✅ CORRECTION : On utilise store_id au lieu de storeId
-  const myProds = products.filter(p => String(p.store_id) === String(myStore.id));
+  const myProds = products.filter(p => String(p.storeId) === String(myStore.id));
   const c = document.getElementById('store-products-container');
   
   if (!myProds.length) {
@@ -3476,7 +3553,7 @@ function renderStoreProducts() {
   }
   
   c.innerHTML = `<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr></thead><tbody>${myProds.map(p => {
-    const cat = categories.find(x => String(x.id) === String(p.category_id));
+    const cat = categories.find(x => String(x.id) === String(p.categoryId));
     return `<tr><td style="font-size:1.5rem;text-align:center">${p.icon}</td><td><strong>${p.name}</strong></td><td>${cat ? cat.icon + ' ' + cat.name : '-'}</td><td><strong>${p.price.toFixed(2)} $</strong></td><td><span class="badge ${p.available ? 'badge-green' : 'badge-red'}">${p.available ? '✅' : '❌'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editStoreProduct(${p.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('product',${p.id})">🗑️</button></div></td></tr>`;
   }).join('')}</tbody></table>`;
 }
