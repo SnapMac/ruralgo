@@ -1,3 +1,21 @@
+
+// ✅ NETTOYAGE PRÉVENTIF DU LOCALSTORAGE AU DÉMARRAGE
+(function() {
+  const savedUser = localStorage.getItem('currentUser');
+  if (savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      // Si l'utilisateur existe mais n'a PAS de rôle ou d'ID valide, on le supprime
+      if (!user || !user.id || !user.role) {
+        console.warn("🧹 [NETTOYAGE] Ancien profil corrompu détecté. Suppression...");
+        localStorage.removeItem('currentUser');
+      }
+    } catch (e) {
+      console.error("🧹 [NETTOYAGE] Erreur de lecture, suppression du localStorage...");
+      localStorage.removeItem('currentUser');
+    }
+  }
+})();
 ;
 // ==========================================
 // CONNEXION À SUPABASE
@@ -7,6 +25,8 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const MANIWAKI_CENTER = [46.3767, -75.9653];
 const DELIVERY_RADIUS_KM = 40;
+
+
 
 // ==========================================
 // ✅ SYSTÈME DE NOTIFICATIONS CENTRALISÉ
@@ -765,31 +785,62 @@ async function registerStore(event) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
-
 async function registerDriver(e) {
   e.preventDefault();
+  
   const email = document.getElementById('rd-email').value;
   const password = correctPassword(document.getElementById('rd-pass').value);
   const name = document.getElementById('rd-name').value;
   const phone = document.getElementById('rd-phone').value;
   const vehicle = document.getElementById('rd-vehicle').value;
 
+  console.log("🚚 [INSCRIPTION] Tentative d'inscription pour :", email);
+
+  // 1. Créer l'utilisateur dans Auth
   const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-    email, password, options: { data: { name, role: 'driver' } }
+    email, 
+    password, 
+    options: { data: { name, role: 'livreur' } } // ✅ Changé en 'livreur' pour correspondre à l'Admin
   });
 
-  if (authError) { showToast('❌ Erreur: ' + authError.message); return; }
+  if (authError) { 
+    console.error("❌ Erreur Auth:", authError);
+    showToast('❌ Erreur: ' + authError.message); 
+    return; 
+  }
 
-  await supabaseClient.from('profiles').insert({
-    id: authData.user.id, role: 'driver', name, phone, vehicle, status: 'pending'
+  // 2. Créer le profil dans la table 'profiles' (PAS 'drivers')
+  const { error: profileError } = await supabaseClient.from('profiles').insert({
+    id: authData.user.id, 
+    email: email,          // ✅ AJOUTÉ : Pour éviter les colonnes vides/null
+    role: 'livreur',       // ✅ IMPORTANT : Doit être 'livreur' et non 'driver'
+    name: name, 
+    phone: phone, 
+    vehicle: vehicle, 
+    status: 'pending'      // Statut en attente de validation
   });
 
-  // ✅ NOTIFICATION : Prévenir l'admin
-  const { data: admins } = await supabaseClient.from('profiles').select('id').eq('role', 'admin');
-  if (admins) {
-    for (const admin of admins) {
-      await showNotification('Nouvelle inscription livreur', `Le livreur "${name}" demande une validation.`, 'info', admin.id);
+  // ✅ VÉRIFICATION D'ERREUR (C'est ce qui manquait !)
+  if (profileError) {
+    console.error("❌ Erreur création profil:", profileError);
+    showToast('❌ Erreur profil: ' + profileError.message);
+    return; // On arrête tout si ça échoue
+  }
+
+  console.log("✅ Profil livreur créé avec succès dans 'profiles' !");
+
+  // 3. NOTIFICATION : Prévenir l'admin
+  try {
+    const { data: admins } = await supabaseClient.from('profiles').select('id').eq('role', 'admin');
+    if (admins && admins.length > 0) {
+      for (const admin of admins) {
+        if (typeof showNotification === 'function') {
+           await showNotification('Nouvelle inscription livreur', `Le livreur "${name}" demande une validation.`, 'info', admin.id);
+        }
+      }
     }
+  } catch (notifErr) {
+    console.warn("⚠️ Erreur d'envoi de notification (non critique):", notifErr);
   }
 
   closeModal('register-driver-modal');
@@ -1002,40 +1053,55 @@ async function handlePlanSelection(planId, price) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
-
-function logout() {
-  // 1. Déconnexion de Supabase
-  supabaseClient.auth.signOut().then(() => {
-    // 2. Réinitialiser l'utilisateur local
-    currentUser = null;
-    userWalletBalance = 0;
-    
-    // 3. Cacher la section utilisateur et le menu de navigation
-    const userSection = document.getElementById('user-section');
-    if (userSection) {
-      userSection.style.display = 'none';
-      userSection.classList.remove('show');
+async function logout() {
+  console.log("🚪 [DÉCONNEXION] Début du processus...");
+  
+  try {
+    // On essaie de se déconnecter de Supabase
+    await supabaseClient.auth.signOut({ scope: 'global' });
+    console.log("✅ [DÉCONNEXION] Supabase a confirmé la déconnexion.");
+  } catch (err) {
+    // 🔥 SI C'EST UNE ERREUR 403, ON L'IGNORE PROPREMENT
+    if (err.status === 403 || (err.message && err.message.includes('403'))) {
+      console.warn("⚠️ [DÉCONNEXION] Session déjà expirée ou invalide (403). On force le nettoyage local.");
+    } else {
+      console.error("❌ [DÉCONNEXION] Erreur inattendue:", err);
     }
-    
-    // 4. Réafficher les boutons de connexion / inscription
-    const authSection = document.getElementById('auth-section');
-    if (authSection) {
-      authSection.style.display = 'flex'; // ou 'block' selon ton design
-    }
+  }
 
-    // 5. Cacher la cloche de notification
-    const notifBell = document.getElementById('notif-bell-container');
-    if (notifBell) {
-      notifBell.style.display = 'none';
-    }
+  // 🔥 NETTOYAGE LOCAL OBLIGATOIRE (C'est l'étape la plus importante)
+  currentUser = null;
+  localStorage.removeItem('currentUser');
+  // Optionnel : vider le panier à la déconnexion pour éviter les conflits
+  // localStorage.removeItem('cart'); 
+  
+  console.log("✅ [DÉCONNEXION] Données locales nettoyées.");
 
-    // 6. Retourner à la page d'accueil
-    switchView('view-landing');
-    showToast('👋 À bientôt !');
-  }).catch(err => {
-    console.error('Erreur déconnexion:', err);
-  });
+  // 🔥 ARRÊTER LE POLLING DES NOTIFICATIONS (Règle le warning "Pas d'utilisateur connecté")
+  if (window.notifIntervalId) {
+    clearInterval(window.notifIntervalId);
+    window.notifIntervalId = null;
+    console.log("⏹️ [DÉCONNEXION] Polling des notifications arrêté.");
+  }
+
+  // Cacher les éléments réservés aux connectés
+  const bellContainer = document.getElementById('notif-bell-container');
+  if (bellContainer) bellContainer.style.display = 'none';
+  
+  const notifPanel = document.getElementById('notif-panel');
+  if (notifPanel) notifPanel.style.display = 'none';
+
+  // Mettre à jour l'interface (retour à l'accueil / mode visiteur)
+  if (typeof showUserInterface === 'function') {
+    showUserInterface(); 
+  } else {
+    // Fallback : recharger la page pour un reset total propre
+    window.location.href = 'index.html'; 
+  }
+  
+  showToast('👋 Déconnexion réussie !');
 }
+
 function showUserInterface() {
   // 1. Afficher la section utilisateur et la cloche
   document.getElementById('auth-section').style.display = 'none';
@@ -2384,6 +2450,116 @@ async function showAdminClients() {
 
   } catch (err) {
     console.error('❌ Erreur showAdminClients:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+// ==========================================
+// ✅ AFFICHER LES LIVREURS DANS LE DASHBOARD ADMIN
+// ==========================================
+async function showAdminDrivers() {
+  console.log("🚚 [ADMIN] Chargement de la liste des livreurs...");
+
+  try {
+    // 🔥 On cherche dans 'profiles' les rôles 'livreur' OU 'driver' (pour compatibilité)
+    const { data: drivers, error } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .in('role', ['livreur', 'driver']) 
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("❌ Erreur requête livreurs:", error);
+      showToast('❌ Erreur : ' + error.message);
+      return;
+    }
+
+    console.log("📊 [ADMIN] Nombre de livreurs trouvés :", drivers?.length || 0);
+
+    // ⚠️ ADAPTE L'ID CI-DESSOUS si ton conteneur HTML s'appelle autrement
+    const container = document.getElementById('admin-drivers-list') || document.getElementById('drivers-list');
+    
+    if (!container) {
+      console.error("❌ Conteneur HTML pour les livreurs introuvable. Vérifie l'ID dans index.html");
+      return;
+    }
+
+    if (!drivers || drivers.length === 0) {
+      container.innerHTML = '<p style="text-align:center; color:#666; padding:2rem;">🚚 Aucun livreur enregistré pour le moment</p>';
+      return;
+    }
+
+    // 🔥 GÉNÉRER L'AFFICHAGE HTML POUR CHAQUE LIVREUR
+    container.innerHTML = drivers.map(driver => {
+      const statusColor = driver.status === 'approved' ? '#10b981' : (driver.status === 'pending' ? '#f59e0b' : '#ef4444');
+      const statusText = driver.status === 'approved' ? '✅ Approuvé' : (driver.status === 'pending' ? '⏳ En attente' : '❌ Refusé');
+
+      return `
+        <div style="background:white; padding:1.5rem; border-radius:12px; margin-bottom:1rem; border-left: 5px solid ${statusColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
+            <div>
+              <h3 style="margin:0; color:#0a1929;">🚚 ${driver.name || 'Sans nom'}</h3>
+              <p style="margin:0.3rem 0; color:#666; font-size:0.9rem;">📧 ${driver.email || 'Pas d\'email'}</p>
+              <p style="margin:0.3rem 0; color:#666; font-size:0.9rem;">📞 ${driver.phone || 'Non spécifié'}</p>
+              <p style="margin:0.3rem 0; color:#666; font-size:0.9rem;">🛵 Véhicule : ${driver.vehicle || 'Non spécifié'}</p>
+            </div>
+            <span style="background:${statusColor}; color:white; padding:0.4rem 0.8rem; border-radius:20px; font-size:0.8rem; font-weight:bold;">
+              ${statusText}
+            </span>
+          </div>
+          
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:1rem;">
+            ${driver.status === 'pending' ? `
+              <button onclick="approveDriver('${driver.id}')" style="background:#10b981; color:white; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer; font-weight:bold;">
+                ✅ Approuver
+              </button>
+              <button onclick="rejectDriver('${driver.id}')" style="background:#ef4444; color:white; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer; font-weight:bold;">
+                ❌ Refuser
+              </button>
+            ` : ''}
+            <button onclick="deleteDriver('${driver.id}')" style="background:#6b7280; color:white; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer;">
+              🗑️ Supprimer
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    console.log("✅ [ADMIN] Liste des livreurs affichée avec succès !");
+
+  } catch (err) {
+    console.error('❌ Erreur showAdminDrivers:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ✅ FONCTIONS D'ACTION (À ajouter juste en dessous)
+async function approveDriver(driverId) {
+  try {
+    await supabaseClient.from('profiles').update({ status: 'approved' }).eq('id', driverId);
+    showToast('✅ Livreur approuvé !');
+    showAdminDrivers(); // Rafraîchir la liste
+  } catch (err) {
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+async function rejectDriver(driverId) {
+  try {
+    await supabaseClient.from('profiles').update({ status: 'rejected' }).eq('id', driverId);
+    showToast('⚠️ Livreur refusé.');
+    showAdminDrivers();
+  } catch (err) {
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+async function deleteDriver(driverId) {
+  if (!confirm('Supprimer définitivement ce livreur ?')) return;
+  try {
+    await supabaseClient.from('profiles').delete().eq('id', driverId);
+    showToast('🗑️ Livreur supprimé.');
+    showAdminDrivers();
+  } catch (err) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
@@ -6475,14 +6651,12 @@ async function debugNotifications() {
   }
 }
 
-// 2. Démarrer le polling immédiatement (même si l'utilisateur n'est pas encore chargé)
-setTimeout(() => {
-  if (typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
-    console.log("🔔 [NOTIF] Démarrage du polling...");
-    refreshNotificationsAuto();
-    setInterval(refreshNotificationsAuto, 1500); // Toutes les 1.5 secondes
+// ✅ Démarrer le polling et stocker l'ID pour pouvoir l'arrêter au logout
+window.notifIntervalId = setInterval(() => {
+  if (currentUser && currentUser.id) {
+    refreshNotificationsAuto(); // ou updateNotifBadge() selon le nom de ta fonction
   }
-}, 1000);
+}, 1500); // 1.5 secondes
 
 // 3. Ajouter un bouton de refresh manuel dans le header (optionnel)
 console.log("💡 Astuce : Tape 'debugNotifications()' dans la console pour tester manuellement");
@@ -6502,12 +6676,11 @@ async function showDeliveryOrders() {
 
   try {
     // ✅ RECHERCHER LES COMMANDES ASSIGNÉES À CE LIVREUR
-    // On cherche soit par ID, soit par nom (selon ce qui est dans driver_name)
     const { data: myOrders, error } = await supabaseClient
       .from('orders')
       .select('*')
-      .in('status', ['accepted', 'assigned', 'in_delivery'])
-      .or(`driver_name.eq.${currentUser.id},driver_name.eq.${currentUser.name}`) // ✅ Cherche les deux
+      .in('status', ['accepted', 'assigned', 'in_delivery']) // ⚠️ VOICI LA PARTIE QUI ÉTAIT COUPÉE !
+      .or(`driver_name.eq.${currentUser.id},driver_name.eq.${currentUser.name}`)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -6572,9 +6745,6 @@ async function showDeliveryOrders() {
                 ✅ Marquer comme livrée
               </button>
             ` : ''}
-            <button onclick="viewOrderDetails('${order.id}')" style="background:#6b7280; color:white; border:none; padding:0.8rem 1.2rem; border-radius:8px; cursor:pointer;">
-              👁️ Détails
-            </button>
           </div>
         </div>
       `;
@@ -6633,3 +6803,96 @@ async function completeDelivery(orderId) {
   }
 }
 
+// ==========================================
+// ✅ GESTION DES LIVREURS DANS L'ADMIN
+// ==========================================
+async function showAdminDrivers() {
+  console.log("🚚 [ADMIN] Chargement des livreurs...");
+
+  try {
+    // Cherche dans 'profiles' les rôles 'livreur' OU 'driver' (pour compatibilité)
+    const { data: drivers, error } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .in('role', ['livreur', 'driver']) 
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    console.log("📊 [ADMIN] Livreurs trouvés :", drivers?.length || 0);
+
+    // ✅ Cible la boîte qui est DÉJÀ dans ton HTML
+    const container = document.getElementById('drivers-table-container');
+
+    if (!drivers || drivers.length === 0) {
+      container.innerHTML = '<p style="text-align:center; color:#666; padding:2rem; background:white; border-radius:8px;">🚚 Aucun livreur enregistré pour le moment</p>';
+      return;
+    }
+
+    // Génère l'affichage HTML pour chaque livreur
+    container.innerHTML = drivers.map(driver => {
+      const statusColor = driver.status === 'approved' ? '#10b981' : (driver.status === 'pending' ? '#f59e0b' : '#ef4444');
+      const statusText = driver.status === 'approved' ? '✅ Approuvé' : (driver.status === 'pending' ? '⏳ En attente' : '❌ Refusé');
+
+      return `
+        <div style="background:white; padding:1.5rem; border-radius:12px; margin-bottom:1rem; border-left: 5px solid ${statusColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <h3 style="margin:0; color:#0a1929;">🚚 ${driver.name || 'Sans nom'}</h3>
+              <p style="margin:0.3rem 0; color:#666; font-size:0.9rem;">📧 ${driver.email || 'Pas d\'email'}</p>
+              <p style="margin:0.3rem 0; color:#666; font-size:0.9rem;">📞 ${driver.phone || 'Non spécifié'}</p>
+              <p style="margin:0.3rem 0; color:#666; font-size:0.9rem;">🛵 Véhicule : ${driver.vehicle || 'Non spécifié'}</p>
+            </div>
+            <span style="background:${statusColor}; color:white; padding:0.4rem 0.8rem; border-radius:20px; font-size:0.8rem; font-weight:bold; height:fit-content;">
+              ${statusText}
+            </span>
+          </div>
+          
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:1rem; padding-top:1rem; border-top:1px solid #eee;">
+            ${driver.status === 'pending' ? `
+              <button onclick="approveDriver('${driver.id}')" style="background:#10b981; color:white; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer; font-weight:bold;">✅ Approuver</button>
+              <button onclick="rejectDriver('${driver.id}')" style="background:#ef4444; color:white; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer; font-weight:bold;">❌ Refuser</button>
+            ` : ''}
+            <button onclick="deleteDriverProfile('${driver.id}')" style="background:#6b7280; color:white; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer;">🗑️ Supprimer</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('❌ Erreur showAdminDrivers:', err);
+    document.getElementById('drivers-table-container').innerHTML = '<p style="color:red; text-align:center;">❌ Erreur de chargement</p>';
+  }
+}
+
+// ✅ ACTIONS SUR LES LIVREURS
+async function approveDriver(driverId) {
+  try {
+    await supabaseClient.from('profiles').update({ status: 'approved' }).eq('id', driverId);
+    showToast('✅ Livreur approuvé !');
+    showAdminDrivers(); // Rafraîchit la liste
+  } catch (err) {
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+async function rejectDriver(driverId) {
+  try {
+    await supabaseClient.from('profiles').update({ status: 'rejected' }).eq('id', driverId);
+    showToast('⚠️ Livreur refusé.');
+    showAdminDrivers();
+  } catch (err) {
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+async function deleteDriverProfile(driverId) {
+  if (!confirm('Supprimer définitivement ce livreur ? Cette action est irréversible.')) return;
+  try {
+    await supabaseClient.from('profiles').delete().eq('id', driverId);
+    showToast('🗑️ Livreur supprimé.');
+    showAdminDrivers();
+  } catch (err) {
+    showToast('❌ Erreur : ' + err.message);
+  }
+}

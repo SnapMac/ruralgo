@@ -2,6 +2,10 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<!-- ✅ EMPÊCHER LE CACHE DE LA PAGE HTML -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>RuralGo - Livraison en milieu rural</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M 8 38 L 8 28 L 22 28 L 26 22 L 40 22 L 44 28 L 56 28 L 56 38 Z' fill='%230a1929' stroke='%23000' stroke-width='1.5'/><path d='M 24 28 L 27 24 L 38 24 L 38 28 Z' fill='%2387ceeb' stroke='%23000' stroke-width='1'/><line x1='40' y1='22' x2='40' y2='38' stroke='%23000' stroke-width='1.5'/><circle cx='18' cy='40' r='5' fill='%232a2a2a'/><circle cx='18' cy='40' r='2' fill='%23888'/><circle cx='48' cy='40' r='5' fill='%232a2a2a'/><circle cx='48' cy='40' r='2' fill='%23888'/><rect x='54' y='30' width='3' height='3' fill='%23f5a623' rx='0.5'/></svg>">
@@ -946,7 +950,20 @@
 <div class="toast" id="toast"></div>
 
 <!-- SCRIPTS -->
-   <script src="script.js?v=125"></script>
+ <!-- ✅ SYSTÈME ANTI-CACHE AUTOMATIQUE -->
+<script>
+  // Génère un numéro de version unique basé sur l'heure actuelle (ex: 1730000000000)
+  const antiCacheVersion = new Date().getTime();
+  
+  // Crée dynamiquement la balise script avec ce nouveau numéro
+  const scriptTag = document.createElement('script');
+  scriptTag.src = 'script.js?v=' + antiCacheVersion;
+  
+  // L'insère dans la page
+  document.head.appendChild(scriptTag);
+  
+  console.log("🚀 [ANTI-CACHE] Chargement de script.js avec la version :", antiCacheVersion);
+</script>
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 const supabase = createClient('https://shopfllntsigjmayqrre.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU')
