@@ -695,7 +695,6 @@ function correctPassword(pass) {
 async function registerStore(event) {
   event.preventDefault();
   
-  // 1. Récupérer toutes les valeurs du formulaire
   const name = document.getElementById('rs-name').value.trim();
   const type = document.getElementById('rs-type').value;
   const owner = document.getElementById('rs-owner').value.trim();
@@ -703,87 +702,50 @@ async function registerStore(event) {
   const pass = document.getElementById('rs-pass').value;
   const passConfirm = document.getElementById('rs-pass-confirm').value;
   const phone = document.getElementById('rs-phone').value.trim();
-  const province = document.getElementById('rs-province').value;
   const address = document.getElementById('rs-address').value.trim();
   const forfaitChoisi = document.getElementById('rs-forfait').value;
   
-  // 2. Vérifications de base
-  if (pass !== passConfirm) {
-    showToast('❌ Les mots de passe ne correspondent pas');
-    return;
-  }
-  if (pass.length < 6) {
-    showToast('❌ Le mot de passe doit contenir au moins 6 caractères');
-    return;
-  }
-  if (!name || !type || !owner || !email || !phone || !address || !forfaitChoisi) {
-    showToast('❌ Veuillez remplir tous les champs obligatoires');
-    return;
-  }
+  if (pass !== passConfirm) { showToast('❌ Les mots de passe ne correspondent pas'); return; }
+  if (pass.length < 6) { showToast('❌ Le mot de passe doit contenir au moins 6 caractères'); return; }
+  if (!name || !type || !owner || !email || !phone || !address || !forfaitChoisi) { showToast('❌ Veuillez remplir tous les champs'); return; }
   
-  // 3. Mapper le choix du formulaire vers l'ID du forfait dans la base de données
-  // (1=Essai, 2=Base, 3=Croissance, 4=Partenaires Plus)
   let planId = null;
   if (forfaitChoisi === 'essai') planId = 1;
   else if (forfaitChoisi === 'base') planId = 2;
   else if (forfaitChoisi === 'croissance') planId = 3;
   else if (forfaitChoisi === 'partenaire') planId = 4;
 
-  if (!planId) {
-    showToast('❌ Forfait invalide');
-    return;
-  }
+  if (!planId) { showToast('❌ Forfait invalide'); return; }
 
   try {
     showToast('📨 Envoi de votre demande en cours...');
     
-    // 4. Créer le compte dans Supabase Auth
     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-      email: email,
-      password: pass,
-      options: {
-        data: {
-          role: 'store',
-          name: owner
-        }
-      }
+      email: email, password: pass, options: { data: { role: 'store', name: owner } }
     });
-    
     if (authError) throw authError;
     
-    // 5. Créer le profil dans la table profiles (avec le selected_plan_id !)
     const { error: profileError } = await supabaseClient.from('profiles').insert({
-      id: authData.user.id,
-      email: email,
-      role: 'store',
-      name: owner,
-      phone: phone,
-      address: address,
-      status: 'pending', // En attente d'approbation par l'admin
-      selected_plan_id: planId // ✅ C'est ici qu'on sauvegarde le choix !
+      id: authData.user.id, email: email, role: 'store', name: owner, phone: phone,
+      address: address, status: 'pending', selected_plan_id: planId
     });
-    
     if (profileError) throw profileError;
     
-    // 6. Créer l'entrée dans la table stores (si tu as cette table)
     const { error: storeError } = await supabaseClient.from('stores').insert({
-      user_id: authData.user.id,
-      name: name,
-      type: type,
-      address: address,
-      phone: phone,
-      status: 'pending'
+      user_id: authData.user.id, name: name, type: type, address: address, phone: phone, status: 'pending'
     });
-
-    if (storeError) {
-      console.error('Erreur store:', storeError);
-      // On ne bloque pas tout si la table stores n'existe pas encore, mais on log l'erreur
+    if (storeError) console.error('Erreur store:', storeError);
+    
+    // ✅ NOTIFICATION : Prévenir l'admin
+    const { data: admins } = await supabaseClient.from('profiles').select('id').eq('role', 'admin');
+    if (admins) {
+      for (const admin of admins) {
+        await showNotification('Nouvelle inscription commerce', `Le commerce "${name}" (${owner}) demande une validation.`, 'info', admin.id);
+      }
     }
-    
-    // 7. Succès
+
     closeModal('register-store-modal');
-    showToast('✅ Demande envoyée avec succès ! Vous serez contacté après validation.');
-    
+    showToast('✅ Demande envoyée avec succès ! En attente de validation.');
   } catch (err) {
     console.error('Erreur inscription commerce:', err);
     showToast('❌ Erreur : ' + err.message);
@@ -799,8 +761,7 @@ async function registerDriver(e) {
   const vehicle = document.getElementById('rd-vehicle').value;
 
   const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-    email, password,
-    options: { data: { name, role: 'driver' } }
+    email, password, options: { data: { name, role: 'driver' } }
   });
 
   if (authError) { showToast('❌ Erreur: ' + authError.message); return; }
@@ -808,6 +769,14 @@ async function registerDriver(e) {
   await supabaseClient.from('profiles').insert({
     id: authData.user.id, role: 'driver', name, phone, vehicle, status: 'pending'
   });
+
+  // ✅ NOTIFICATION : Prévenir l'admin
+  const { data: admins } = await supabaseClient.from('profiles').select('id').eq('role', 'admin');
+  if (admins) {
+    for (const admin of admins) {
+      await showNotification('Nouvelle inscription livreur', `Le livreur "${name}" demande une validation.`, 'info', admin.id);
+    }
+  }
 
   closeModal('register-driver-modal');
   showToast('📨 Demande envoyée ! En attente d\'approbation admin.');
@@ -1733,28 +1702,20 @@ async function placeOrder() {
     return;
   }
 
-  const deliveryInfo = calculateDeliveryFee(
-    store.lat, store.lng,
-    currentUser.lat, currentUser.lng
-  );
-
+  const deliveryInfo = calculateDeliveryFee(store.lat, store.lng, currentUser.lat, currentUser.lng);
   const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
   const tax = subtotal * platformSettings.taxRate;
   const total = subtotal + deliveryInfo.totalFee + tax;
 
-  // ✅ VÉRIFIER LE SOLDE DU WALLET
   if (userWalletBalance < total) {
     showToast(`❌ Solde insuffisant ! Vous avez ${userWalletBalance.toFixed(2)}$ mais la commande coûte ${total.toFixed(2)}$`);
     setTimeout(() => {
-      if (confirm('Voulez-vous recharger votre compte maintenant ?')) {
-        openDepositModal();
-      }
+      if (confirm('Voulez-vous recharger votre compte maintenant ?')) openDepositModal();
     }, 1000);
     return;
   }
 
-  // ✅ CONFIRMER LE PAIEMENT
-  if (!confirm(`Payer ${total.toFixed(2)}$ avec votre portefeuille ?\n\nSolde actuel : ${userWalletBalance.toFixed(2)}$\nSolde après paiement : ${(userWalletBalance - total).toFixed(2)}$`)) {
+  if (!confirm(`Payer ${total.toFixed(2)}$ avec votre portefeuille ?\n\nSolde actuel : ${userWalletBalance.toFixed(2)}$\nSolde après : ${(userWalletBalance - total).toFixed(2)}$`)) {
     return;
   }
 
@@ -1766,13 +1727,7 @@ async function placeOrder() {
     client_address: currentUser.address,
     client_lat: currentUser.lat,
     client_lng: currentUser.lng,
-    items: cart.map(c => ({
-      productId: c.productId,
-      name: c.name,
-      icon: c.icon,
-      price: c.price,
-      qty: c.qty
-    })),
+    items: cart.map(c => ({ productId: c.productId, name: c.name, icon: c.icon, price: c.price, qty: c.qty })),
     subtotal: subtotal,
     delivery_base_fee: deliveryInfo.baseFee,
     delivery_distance_km: deliveryInfo.distanceKm,
@@ -1783,66 +1738,44 @@ async function placeOrder() {
     status: 'pending',
     store_id: store.id,
     store_name: store.name,
-    status_history: [{
-      status: 'pending',
-      time: new Date().toISOString(),
-      note: 'Commande créée et payée avec le portefeuille'
-    }]
+    status_history: [{ status: 'pending', time: new Date().toISOString(), note: 'Commande créée et payée' }]
   };
 
   try {
-  
- 
-        // ✅ CRÉER LA TRANSACTION DE PAIEMENT
-    const { error: transactionError } = await supabaseClient
-      .from('transactions')
-      .insert({
-        user_id: currentUser.id,
-        type: 'payment',
-        amount: total, // ✅ POSITIF ! (La base de données l'exige)
-        balance_before: userWalletBalance,
-        balance_after: userWalletBalance - total,
-        description: `Paiement commande ${orderData.order_number}`,
-        status: 'completed'
-      });
+    const { error: transactionError } = await supabaseClient.from('transactions').insert({
+      user_id: currentUser.id, type: 'payment', amount: total,
+      balance_before: userWalletBalance, balance_after: userWalletBalance - total,
+      description: `Paiement commande ${orderData.order_number}`, status: 'completed'
+    });
+    if (transactionError) throw transactionError;
 
-    if (transactionError) {
-      console.error('Erreur transaction:', transactionError);
-      throw transactionError;
-    }
-
-    // ✅ METTRE À JOUR LE SOLDE DU WALLET
-    const { error: walletError } = await supabaseClient
-      .from('wallets')
-      .update({ 
-        balance: userWalletBalance - total,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', currentUser.id);
-
+    const { error: walletError } = await supabaseClient.from('wallets').update({ 
+      balance: userWalletBalance - total, updated_at: new Date().toISOString()
+    }).eq('user_id', currentUser.id);
     if (walletError) throw walletError;
 
     userWalletBalance -= total;
     updateWalletDisplay();
 
-    // ✅ CRÉER LA COMMANDE
-    const { data: newOrder, error } = await supabaseClient
-      .from('orders')
-      .insert(orderData)
-      .select()
-      .single();
-
+    const { data: newOrder, error } = await supabaseClient.from('orders').insert(orderData).select().single();
     if (error) throw error;
 
-    await addNotification('admin', '💰 Nouvelle commande payée',
-      `Commande ${newOrder.order_number} de ${currentUser.name} - ${total.toFixed(2)}$ (payée avec wallet)`);
+    // ✅ NOTIFICATIONS : Commerce + Admin
+    await showNotification('Nouvelle commande', `Commande ${newOrder.order_number} de ${currentUser.name} (${total.toFixed(2)}$)`, 'order', store.id);
+    
+    const { data: admins } = await supabaseClient.from('profiles').select('id').eq('role', 'admin');
+    if (admins) {
+      for (const admin of admins) {
+        await showNotification('Nouvelle commande', `Commande ${newOrder.order_number} de ${currentUser.name} (${total.toFixed(2)}$)`, 'order', admin.id);
+      }
+    }
 
     cart = [];
     updateCart();
     showToast(`✅ Commande payée ! Nouveau solde : ${userWalletBalance.toFixed(2)}$`);
     showClientOrders();
   } catch (err) {
-  console.error('Erreur placeOrder:', err.message, JSON.stringify(err));
+    console.error('Erreur placeOrder:', err);
     showToast('❌ Erreur : ' + err.message);
   }
 }
@@ -2075,39 +2008,7 @@ async function acceptDriverOrder(orderId) {
   }
 }
 
-async function updateOrderStatus(orderId, newStatus) {
-  const order = orders.find(o => o.id === orderId);
-  if (!order) return;
 
-  try {
-    order.status = newStatus;
-    order.statusHistory.push({ status: newStatus, time: new Date().toISOString(), note: `Mis à jour par ${currentUser.name}` });
-
-    await supabaseClient.from('orders').update({
-      status: newStatus,
-      status_history: order.statusHistory
-    }).eq('id', orderId);
-
-    const messages = {
-      'driver_to_store': '🛣️ En route vers le commerce',
-      'at_store': '🏪 Arrivé au commerce',
-      'picked_up': '📦 Commande récupérée',
-      'driver_to_client': '🚗 En route vers vous',
-      'delivered': '🏠 Livraison complétée !'
-    };
-
-    await addNotification(order.clientId, messages[newStatus] || 'Mise à jour', `Commande ${order.orderNumber}`);
-    if (newStatus === 'delivered') {
-      await addNotification('admin', '✅ Commande livrée', `${order.orderNumber} par ${currentUser.name}`);
-    }
-
-    showToast('✅ Statut mis à jour');
-    renderDriverDashboard();
-  } catch (err) {
-    console.error('Erreur:', err);
-    showToast('❌ Erreur');
-  }
-}
 
 function showDriverOrderDetail(orderId) {
   const order = orders.find(o => o.id === orderId);
@@ -2313,35 +2214,88 @@ function renderAdminOrders() {
   }).join('')}</tbody></table>`;
 }
 
+async function updateOrderStatus(orderId, newStatus) {
+  const order = orders.find(o => o.id === orderId) || {};
+  if (!order.id) return;
+
+  try {
+    const history = order.status_history || order.statusHistory || [];
+    history.push({ status: newStatus, time: new Date().toISOString(), note: `Mis à jour par ${currentUser.name}` });
+
+    await supabaseClient.from('orders').update({
+      status: newStatus,
+      status_history: history
+    }).eq('id', orderId);
+
+    const messages = {
+      'driver_to_store': '🛣️ Le livreur est en route vers le commerce',
+      'at_store': '🏪 Le livreur est arrivé au commerce',
+      'picked_up': '📦 Votre commande a été récupérée',
+      'driver_to_client': '🚗 Le livreur est en route vers vous',
+      'delivered': '🏠 Votre commande a été livrée avec succès !'
+    };
+
+    // ✅ Notifier le client
+    const clientId = order.client_id || order.clientId;
+    if (clientId) {
+      await showNotification('Mise à jour commande', messages[newStatus] || 'Statut mis à jour', 'delivery', clientId);
+    }
+
+    // ✅ Si livrée, notifier l'admin
+    if (newStatus === 'delivered') {
+      const { data: admins } = await supabaseClient.from('profiles').select('id').eq('role', 'admin');
+      if (admins) {
+        for (const admin of admins) {
+          await showNotification('Commande livrée', `La commande ${order.order_number || order.orderNumber} a été livrée par ${currentUser.name}`, 'success', admin.id);
+        }
+      }
+    }
+
+    showToast('✅ Statut mis à jour');
+    if (typeof renderDriverDashboard === 'function') renderDriverDashboard();
+    if (typeof renderAdminOrders === 'function') renderAdminOrders();
+  } catch (err) {
+    console.error('Erreur updateOrderStatus:', err);
+    showToast('❌ Erreur');
+  }
+}
+
 async function assignDriverModal(orderId) {
   const approvedDrivers = drivers.filter(d => d.status === 'approved');
   if (approvedDrivers.length === 0) { showToast('❌ Aucun livreur approuvé'); return; }
+  
   const choice = prompt('Assigner au livreur :\n' + approvedDrivers.map((d, i) => `${i + 1}. ${d.name}`).join('\n') + '\nEntrez le numéro :');
   const idx = parseInt(choice) - 1;
   if (isNaN(idx) || !approvedDrivers[idx]) return;
+  
   const order = orders.find(o => o.id === orderId);
   const driver = approvedDrivers[idx];
 
   try {
-    order.driverId = driver.id;
-    order.driverName = driver.name;
-    order.status = 'driver_assigned';
-    order.statusHistory.push({ status: 'driver_assigned', time: new Date().toISOString(), note: `Assigné par admin à ${driver.name}` });
+    const history = order.status_history || order.statusHistory || [];
+    history.push({ status: 'driver_assigned', time: new Date().toISOString(), note: `Assigné par admin à ${driver.name}` });
 
     await supabaseClient.from('orders').update({
       driver_id: driver.id,
       driver_name: driver.name,
       status: 'driver_assigned',
-      status_history: order.statusHistory
+      status_history: history
     }).eq('id', orderId);
 
-    await addNotification(order.clientId, '🚗 Livreur assigné', `${driver.name} s'occupe de votre commande ${order.orderNumber}`);
-    await addNotification(driver.id, '📦 Nouvelle mission', `Commande ${order.orderNumber} vous a été assignée (${order.deliveryFee.toFixed(2)}$ à gagner)`);
+    // ✅ Notifier le client
+    const clientId = order.client_id || order.clientId;
+    if (clientId) {
+      await showNotification('Livreur assigné', `${driver.name} s'occupe de votre commande ${order.order_number || order.orderNumber}`, 'delivery', clientId);
+    }
+
+    // ✅ Notifier le livreur
+    const fee = order.delivery_fee || order.deliveryFee || 0;
+    await showNotification('Nouvelle mission', `Commande ${order.order_number || order.orderNumber} assignée (${fee.toFixed(2)}$ à gagner)`, 'delivery', driver.id);
 
     showToast('✅ Livreur assigné !');
-    renderAdminOrders();
+    if (typeof renderAdminOrders === 'function') renderAdminOrders();
   } catch (err) {
-    console.error('Erreur:', err);
+    console.error('Erreur assignDriver:', err);
     showToast('❌ Erreur');
   }
 }
