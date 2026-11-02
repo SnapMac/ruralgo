@@ -5428,27 +5428,6 @@ async function adminUpdateStoreName(storeId, newStoreName) {
 // ==========================================
 
 // 1. Basculer entre le mode affichage et le mode édition
-function toggleStoreNameEdit(isEditing) {
-  const display = document.getElementById('store-name-display');
-  const form = document.getElementById('store-name-edit-form');
-  const input = document.getElementById('store-name-input-pro');
-
-  if (isEditing) {
-    display.style.display = 'none';
-    form.style.display = 'block';
-    
-    // Pré-remplir avec le nom actuel si la variable existe
-    if (typeof currentStore !== 'undefined' && currentStore && currentStore.name) {
-      input.value = currentStore.name;
-    }
-    
-    // Donner le focus au champ pour une meilleure UX
-    setTimeout(() => input.focus(), 50);
-  } else {
-    display.style.display = 'flex';
-    form.style.display = 'none';
-  }
-}
 
 // 2. Sauvegarder le nouveau nom
 
@@ -5457,91 +5436,10 @@ function toggleStoreNameEdit(isEditing) {
 // ==========================================
 
 // 1. Basculer entre le mode affichage et le mode édition
-function toggleStoreNameEdit(isEditing) {
-  const display = document.getElementById('store-name-display');
-  const form = document.getElementById('store-name-edit-form');
-  const input = document.getElementById('store-name-input-pro');
 
-  if (isEditing) {
-    display.style.display = 'none';
-    form.style.display = 'block';
-    
-    // Pré-remplir avec le nom actuel s'il existe en mémoire
-    if (typeof currentStore !== 'undefined' && currentStore && currentStore.name) {
-      input.value = currentStore.name;
-    } else if (typeof currentUser !== 'undefined' && currentUser && currentUser.storeName) {
-      input.value = currentUser.storeName;
-    }
-    
-    setTimeout(() => input.focus(), 50);
-  } else {
-    display.style.display = 'flex';
-    form.style.display = 'none';
-  }
-}
 
 // 2. Sauvegarder le nouveau nom dans Supabase et mettre à jour l'écran
 
-async function saveStoreNamePro() {
-  const newName = document.getElementById('store-name-input-pro').value.trim();
-  
-  if (!newName) {
-    showToast('❌ Le nom du commerce ne peut pas être vide.');
-    return;
-  }
-
-  showToast('⏳ Vérification et mise à jour en cours...');
-  
-  try {
-    // 1. VÉRIFIER que currentUser.id existe
-    if (!currentUser || !currentUser.id) {
-      throw new Error("Utilisateur non connecté ou ID manquant.");
-    }
-
-    // 2. TROUVER l'ID du commerce dans la base de données
-    // ⚠️ IMPORTANT : Si ta colonne ne s'appelle pas 'user_id' dans la table 'stores', 
-    // change 'user_id' ci-dessous par le bon nom (ex: 'owner_id', 'profile_id').
-    const { data: storeData, error: findError } = await supabaseClient
-      .from('stores')
-      .select('id')
-            .eq('owner_id', currentUser.id) 
-      .single();
-
-    if (findError || !storeData) {
-      console.error("Détail recherche:", findError);
-      throw new Error("Impossible de trouver ton commerce. Vérifie que la colonne s'appelle bien 'user_id' dans la table 'stores'.");
-    }
-
-    // 3. METTRE À JOUR en utilisant l'ID du commerce (beaucoup plus fiable)
-    const { error: updateError } = await supabaseClient
-      .from('stores')
-      .update({ name: newName })
-      .eq('id', storeData.id);
-
-    if (updateError) {
-      console.error("Détail update:", updateError);
-      throw updateError;
-    }
-
-    // 4. SUCCÈS : Mise à jour immédiate de l'écran
-    document.getElementById('current-store-name-display').textContent = newName;
-    
-    if (typeof currentStore !== 'undefined' && currentStore) {
-      currentStore.name = newName;
-    }
-    if (typeof currentUser !== 'undefined' && currentUser) {
-      currentUser.storeName = newName; 
-    }
-
-    showToast('✅ Nom du commerce mis à jour avec succès !');
-    toggleStoreNameEdit(false);
-
-  } catch (err) {
-    // Affiche le VRAI message d'erreur de Supabase ici
-    console.error('🚨 VRAIE ERREUR SUPABASE:', err.message, err.details);
-    showToast('❌ Erreur : ' + err.message);
-  }
-}
 
 
 // 3. Initialiser l'affichage du nom quand on ouvre la page
@@ -5557,10 +5455,82 @@ function initStoreNameDisplay() {
     displayEl.textContent = "Chargement...";
   }
 }
+
 // ==========================================
 // ✅ SOLUTION INFAILLIBLE : Mise à jour auto du nom du commerce
 // ==========================================
+// ==========================================
+// ✅ GESTION PROPRE DU NOM DU COMMERCE (SANS DOUBLON)
+// ==========================================
 
+// 1. Basculer entre le mode affichage et le mode édition
+function toggleStoreNameEdit(isEditing) {
+  const display = document.getElementById('store-name-display');
+  const form = document.getElementById('store-name-edit-form');
+  const input = document.getElementById('store-name-input-pro');
+
+  if (isEditing) {
+    display.style.display = 'none';
+    form.style.display = 'block';
+    
+    // Pré-remplir avec le nom actuel
+    if (typeof currentStore !== 'undefined' && currentStore && currentStore.name) {
+      input.value = currentStore.name;
+    } else if (typeof currentUser !== 'undefined' && currentUser && currentUser.storeName) {
+      input.value = currentUser.storeName;
+    }
+    
+    setTimeout(() => input.focus(), 50);
+  } else {
+    display.style.display = 'flex';
+    form.style.display = 'none';
+  }
+}
+
+// 2. Sauvegarder le nouveau nom dans Supabase et mettre à jour l'écran
+async function saveStoreNamePro() {
+  const newName = document.getElementById('store-name-input-pro').value.trim();
+  
+  if (!newName) {
+    showToast('❌ Le nom du commerce ne peut pas être vide.');
+    return;
+  }
+
+  showToast('⏳ Mise à jour en cours...');
+  
+  try {
+    // A. Sauvegarder dans la base de données
+    const { error } = await supabaseClient
+      .from('stores')
+      .update({ name: newName })
+      .eq('owner_id', currentUser.id);
+
+    if (error) throw error;
+
+    // B. Mettre à jour la mémoire du site
+    if (typeof currentStore !== 'undefined' && currentStore) currentStore.name = newName;
+    if (typeof currentUser !== 'undefined' && currentUser) currentUser.storeName = newName;
+
+    // C. Mettre à jour l'affichage immédiatement
+    const displayEl = document.getElementById('current-store-name-display');
+    if (displayEl) displayEl.textContent = newName;
+
+    const headerTitle = document.querySelector('.header-store-name') || document.getElementById('header-store-name');
+    if (headerTitle) headerTitle.textContent = newName;
+
+    // D. Relancer les fonctions d'affichage si elles existent
+    if (typeof renderStoreDashboard === 'function') renderStoreDashboard();
+    if (typeof loadStoreProfile === 'function') loadStoreProfile();
+    if (typeof updateHeader === 'function') updateHeader();
+
+    showToast('✅ Nom mis à jour partout sur le site !');
+    toggleStoreNameEdit(false);
+
+  } catch (err) {
+    console.error('Erreur:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
 // 1. La fonction qui met le nom à l'écran
 function initStoreNameDisplay() {
   const displayEl = document.getElementById('current-store-name-display');
@@ -5782,4 +5752,23 @@ async function afficherCommercesAccueil() {
 // Lance le code quand la page est totalement chargée
 window.addEventListener('load', () => {
   setTimeout(afficherCommercesAccueil, 1000);
+});
+
+// ==========================================
+// ✅ SOLUTION MAGIQUE : Créer le conteneur manquant automatiquement
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Si le conteneur n'existe pas, on le crée nous-mêmes !
+  if (!document.getElementById('store-info-content')) {
+    
+    // On cherche la section principale du dashboard commerce
+    const targetSection = document.querySelector('.admin-main') || document.getElementById('store-dashboard-section');
+    
+    if (targetSection) {
+      const newDiv = document.createElement('div');
+      newDiv.id = 'store-info-content';
+      targetSection.appendChild(newDiv);
+      console.log("✅ Le conteneur 'store-info-content' a été créé automatiquement ! L'erreur est résolue.");
+    }
+  }
 });
