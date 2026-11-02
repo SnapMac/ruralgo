@@ -255,87 +255,87 @@ let categories = [
 ];
 
 let products = [
-  {id:1,storeId:1,categoryId:2,name:'Lait 2% 2L',desc:'Lait frais du Québec',price:4.99,icon:'🥛',available:true},
-  {id:2,storeId:1,categoryId:4,name:'Pain tranché blanc',desc:'Pain frais du jour',price:3.49,icon:'🍞',available:true},
-  {id:3,storeId:1,categoryId:2,name:'Douzaine d\'œufs',desc:'Œufs frais gros',price:5.29,icon:'🥚',available:true},
-  {id:4,storeId:1,categoryId:2,name:'Fromage cheddar',desc:'Bloc 400g',price:7.99,icon:'🧀',available:true},
-  {id:5,storeId:1,categoryId:1,name:'Pommes Gala 3lb',desc:'Pommes du Québec',price:6.49,icon:'🍎',available:true},
-  {id:6,storeId:1,categoryId:1,name:'Carottes 2lb',desc:'Carottes fraîches',price:3.29,icon:'🥕',available:true},
-  {id:7,storeId:1,categoryId:6,name:'Jus d\'orange 1.5L',desc:'100% pur jus',price:5.99,icon:'🍊',available:true},
-  {id:8,storeId:1,categoryId:5,name:'Riz basmati 2kg',desc:'Riz importé',price:8.49,icon:'🍚',available:true},
-  {id:30,storeId:1,categoryId:3,name:'Poitrine de poulet 1kg',desc:'Fraîche du jour',price:11.99,icon:'🍗',available:true},
-  {id:31,storeId:1,categoryId:1,name:'Bananes (régime)',desc:'Par livre',price:0.79,icon:'🍌',available:true},
-  {id:32,storeId:1,categoryId:1,name:'Tomates 2lb',desc:'Tomates de serre',price:4.49,icon:'🍅',available:true},
-  {id:33,storeId:1,categoryId:7,name:'Pizza surgelée',desc:'Pepperoni',price:7.99,icon:'🍕',available:true},
-  {id:34,storeId:1,categoryId:8,name:'Savon à vaisselle',desc:'Dawn 739ml',price:4.49,icon:'🧼',available:true},
-  {id:35,storeId:1,categoryId:5,name:'Pâtes spaghetti 500g',desc:'Pâtes alimentaires',price:2.29,icon:'🍝',available:true},
-  {id:36,storeId:1,categoryId:6,name:'Café régulier 300g',desc:'Café moulu',price:9.99,icon:'☕',available:true},
-  {id:9,storeId:2,categoryId:10,name:'Acétaminophène 500mg',desc:'24 comprimés',price:8.99,icon:'💊',available:true},
-  {id:10,storeId:2,categoryId:11,name:'Désinfectant mains',desc:'500ml',price:4.99,icon:'🧴',available:true},
-  {id:11,storeId:2,categoryId:11,name:'Savon corporel',desc:'400ml Dove',price:6.49,icon:'🧼',available:true},
-  {id:40,storeId:2,categoryId:10,name:'Ibuprofène 200mg',desc:'50 comprimés',price:12.99,icon:'💊',available:true},
-  {id:41,storeId:2,categoryId:10,name:'Sirop pour la toux',desc:'100ml',price:11.49,icon:'🍯',available:true},
-  {id:42,storeId:2,categoryId:11,name:'Shampooing',desc:'400ml Pantene',price:9.99,icon:'🧴',available:true},
-  {id:43,storeId:2,categoryId:11,name:'Dentifrice',desc:'100ml Colgate',price:4.99,icon:'🪥',available:true},
-  {id:44,storeId:2,categoryId:12,name:'Couches Pampers',desc:'Taille 3, 30 unités',price:16.99,icon:'👶',available:true},
-  {id:45,storeId:2,categoryId:12,name:'Lait pour bébé',desc:'En poudre 680g',price:24.99,icon:'🍼',available:true},
-  {id:46,storeId:2,categoryId:13,name:'Vitamine C 1000mg',desc:'90 comprimés',price:14.99,icon:'💉',available:true},
-  {id:47,storeId:2,categoryId:13,name:'Multivitamines',desc:'Flacon 100 unités',price:19.99,icon:'💊',available:true},
-  {id:48,storeId:2,categoryId:11,name:'Brosse à dents',desc:'Oral-B souple',price:5.49,icon:'🪥',available:true},
-  {id:49,storeId:2,categoryId:10,name:'Pansements adhésifs',desc:'Boîte 40 unités',price:6.99,icon:'🩹',available:true},
-  {id:12,storeId:3,categoryId:6,name:'Coca-Cola 2L',desc:'Boisson gazeuse',price:2.99,icon:'🥤',available:true},
-  {id:13,storeId:3,categoryId:15,name:'Chips Lay\'s nature',desc:'235g',price:4.29,icon:'🍟',available:true},
-  {id:50,storeId:3,categoryId:6,name:'Eau embouteillée 12 pack',desc:'500ml x 12',price:4.99,icon:'💧',available:true},
-  {id:51,storeId:3,categoryId:15,name:'Barre chocolatée',desc:'Kit Kat',price:1.79,icon:'🍫',available:true},
-  {id:52,storeId:3,categoryId:15,name:'Arachides salées',desc:'250g',price:3.99,icon:'🥜',available:true},
-  {id:53,storeId:3,categoryId:16,name:'Crème glacée 2L',desc:'Vanille',price:6.99,icon:'🍦',available:true},
-  {id:54,storeId:3,categoryId:16,name:'Esquimaux (boîte 8)',desc:'Barres glacées',price:7.49,icon:'🍡',available:true},
-  {id:55,storeId:3,categoryId:6,name:'Café Tim Hortons',desc:'Moyen chaud',price:2.29,icon:'☕',available:true},
-  {id:56,storeId:3,categoryId:6,name:'Red Bull 250ml',desc:'Boisson énergisante',price:3.49,icon:'🥫',available:true},
-  {id:57,storeId:3,categoryId:15,name:'Bonbons',desc:'Sac 150g',price:2.99,icon:'🍬',available:true},
-  {id:58,storeId:3,categoryId:6,name:'Jus Minute Maid',desc:'355ml',price:2.49,icon:'🧃',available:true},
-  {id:59,storeId:3,categoryId:17,name:'Cigarettes (paquet)',desc:'Marque au choix',price:14.50,icon:'🚬',available:true},
-  {id:60,storeId:3,categoryId:15,name:'Biscuits Oreo',desc:'154g',price:3.49,icon:'🍪',available:true},
-  {id:17,storeId:4,categoryId:20,name:'Pizza pepperoni',desc:'Grand format 16 pouces',price:18.99,icon:'🍕',available:true},
-  {id:18,storeId:4,categoryId:20,name:'Pâtes carbonara',desc:'Portion généreuse',price:14.99,icon:'🍝',available:true},
-  {id:19,storeId:4,categoryId:21,name:'Salade César',desc:'Avec poulet grillé',price:12.99,icon:'🥗',available:true},
-  {id:61,storeId:4,categoryId:20,name:'Lasagne italienne',desc:'Portion familiale',price:16.99,icon:'🍲',available:true},
-  {id:62,storeId:4,categoryId:20,name:'Poulet parmesan',desc:'Servi avec pâtes',price:17.99,icon:'🍗',available:true},
-  {id:63,storeId:4,categoryId:20,name:'Filet de saumon',desc:'Servi avec légumes',price:22.99,icon:'🐟',available:true},
-  {id:64,storeId:4,categoryId:21,name:'Soupe du jour',desc:'Bol 12oz',price:5.99,icon:'🍜',available:true},
-  {id:65,storeId:4,categoryId:21,name:'Ailes de poulet (12)',desc:'Sauce BBQ ou Buffalo',price:15.99,icon:'🍗',available:true},
-  {id:66,storeId:4,categoryId:22,name:'Tiramisu',desc:'Part individuelle',price:7.99,icon:'🍰',available:true},
-  {id:67,storeId:4,categoryId:22,name:'Crème brûlée',desc:'Part individuelle',price:6.99,icon:'🍮',available:true},
-  {id:68,storeId:4,categoryId:6,name:'Vin rouge (bouteille)',desc:'Chianti italien',price:18.99,icon:'🍷',available:true},
-  {id:69,storeId:4,categoryId:6,name:'Bière locale',desc:'600ml',price:7.99,icon:'🍺',available:true},
-  {id:14,storeId:5,categoryId:23,name:'Hamburger classique',desc:'Bœuf, laitue, tomate',price:8.99,icon:'🍔',available:true},
-  {id:15,storeId:5,categoryId:23,name:'Hot-dog',desc:'Classique avec moutarde',price:4.99,icon:'🌭',available:true},
-  {id:16,storeId:5,categoryId:23,name:'Poutine',desc:'Frites, sauce, fromage',price:10.99,icon:'🍟',available:true},
-  {id:70,storeId:5,categoryId:23,name:'Cheeseburger',desc:'Double viande, fromage',price:11.99,icon:'🍔',available:true},
-  {id:71,storeId:5,categoryId:23,name:'Club sandwich',desc:'Poulet, bacon, laitue',price:12.99,icon:'🥪',available:true},
-  {id:72,storeId:5,categoryId:23,name:'Nuggets de poulet (10)',desc:'Avec sauce',price:9.99,icon:'🍗',available:true},
-  {id:73,storeId:5,categoryId:23,name:'Frites régulières',desc:'Portion moyenne',price:4.49,icon:'🍟',available:true},
-  {id:74,storeId:5,categoryId:23,name:'Frites chargées',desc:'Bacon, fromage, sauce',price:8.99,icon:'🍟',available:true},
-  {id:75,storeId:5,categoryId:22,name:'Crêpes (3)',desc:'Avec sirop d\'érable',price:6.99,icon:'🥞',available:true},
-  {id:76,storeId:5,categoryId:22,name:'Pointe de tarte',desc:'Pommes ou bleuets',price:3.99,icon:'🥧',available:true},
-  {id:77,storeId:5,categoryId:6,name:'Liqueur molle',desc:'2L',price:2.99,icon:'🥤',available:true},
-  {id:78,storeId:5,categoryId:6,name:'Café régulier',desc:'Grand',price:2.49,icon:'☕',available:true},
-  {id:20,storeId:6,categoryId:25,name:'Marteau 16oz',desc:'Manche en bois',price:15.99,icon:'🔨',available:true},
-  {id:21,storeId:6,categoryId:25,name:'Tournevis set 6 pcs',desc:'Plat et cruciforme',price:19.99,icon:'🪛',available:true},
-  {id:80,storeId:6,categoryId:25,name:'Scie à main',desc:'14 pouces',price:24.99,icon:'🪚',available:true},
-  {id:81,storeId:6,categoryId:25,name:'Pince multiprise',desc:'10 pouces',price:12.99,icon:'🔧',available:true},
-  {id:82,storeId:6,categoryId:25,name:'Mètre à ruban 25 pi',desc:'Stanley',price:14.99,icon:'📏',available:true},
-  {id:83,storeId:6,categoryId:26,name:'Bois 2x4x8\'',desc:'Poteau de construction',price:6.99,icon:'🪵',available:true},
-  {id:84,storeId:6,categoryId:26,name:'Plywood 4x8',desc:'1/2 pouce',price:45.99,icon:'🪵',available:true},
-  {id:85,storeId:6,categoryId:27,name:'Tuyau PVC 10 pi',desc:'1.5 pouce',price:8.99,icon:'🚿',available:true},
-  {id:86,storeId:6,categoryId:27,name:'Robinet de cuisine',desc:'Chrome',price:79.99,icon:'🚰',available:true},
-  {id:87,storeId:6,categoryId:28,name:'Ampoule LED 60W',desc:'Pack de 4',price:12.99,icon:'💡',available:true},
-  {id:88,storeId:6,categoryId:28,name:'Prolongateur électrique',desc:'25 pieds',price:19.99,icon:'🔌',available:true},
-  {id:89,storeId:6,categoryId:29,name:'Terreau 25kg',desc:'Pour jardin',price:8.99,icon:'🌱',available:true},
-  {id:90,storeId:6,categoryId:29,name:'Boyau d\'arrosage 50 pi',desc:'Avec embout',price:29.99,icon:'💦',available:true},
-  {id:91,storeId:6,categoryId:30,name:'Peinture intérieure 4L',desc:'Blanc, latex',price:39.99,icon:'🎨',available:true},
-  {id:92,storeId:6,categoryId:30,name:'Pinceau 2 pouces',desc:'Soies synthétiques',price:7.99,icon:'🖌️',available:true},
-  {id:93,storeId:6,categoryId:25,name:'Perceuse sans fil',desc:'18V avec batterie',price:89.99,icon:'🔩',available:true}
+  {id:1,store_id:1,category_id:2,name:'Lait 2% 2L',desc:'Lait frais du Québec',price:4.99,icon:'🥛',available:true},
+  {id:2,store_id:1,category_id:4,name:'Pain tranché blanc',desc:'Pain frais du jour',price:3.49,icon:'🍞',available:true},
+  {id:3,store_id:1,category_id:2,name:'Douzaine d\'œufs',desc:'Œufs frais gros',price:5.29,icon:'🥚',available:true},
+  {id:4,store_id:1,category_id:2,name:'Fromage cheddar',desc:'Bloc 400g',price:7.99,icon:'🧀',available:true},
+  {id:5,store_id:1,category_id:1,name:'Pommes Gala 3lb',desc:'Pommes du Québec',price:6.49,icon:'🍎',available:true},
+  {id:6,store_id:1,category_id:1,name:'Carottes 2lb',desc:'Carottes fraîches',price:3.29,icon:'🥕',available:true},
+  {id:7,store_id:1,category_id:6,name:'Jus d\'orange 1.5L',desc:'100% pur jus',price:5.99,icon:'🍊',available:true},
+  {id:8,store_id:1,category_id:5,name:'Riz basmati 2kg',desc:'Riz importé',price:8.49,icon:'🍚',available:true},
+  {id:30,store_id:1,category_id:3,name:'Poitrine de poulet 1kg',desc:'Fraîche du jour',price:11.99,icon:'🍗',available:true},
+  {id:31,store_id:1,category_id:1,name:'Bananes (régime)',desc:'Par livre',price:0.79,icon:'🍌',available:true},
+  {id:32,store_id:1,category_id:1,name:'Tomates 2lb',desc:'Tomates de serre',price:4.49,icon:'🍅',available:true},
+  {id:33,store_id:1,category_id:7,name:'Pizza surgelée',desc:'Pepperoni',price:7.99,icon:'🍕',available:true},
+  {id:34,store_id:1,category_id:8,name:'Savon à vaisselle',desc:'Dawn 739ml',price:4.49,icon:'🧼',available:true},
+  {id:35,store_id:1,category_id:5,name:'Pâtes spaghetti 500g',desc:'Pâtes alimentaires',price:2.29,icon:'🍝',available:true},
+  {id:36,store_id:1,category_id:6,name:'Café régulier 300g',desc:'Café moulu',price:9.99,icon:'☕',available:true},
+  {id:9,store_id:2,category_id:10,name:'Acétaminophène 500mg',desc:'24 comprimés',price:8.99,icon:'💊',available:true},
+  {id:10,store_id:2,category_id:11,name:'Désinfectant mains',desc:'500ml',price:4.99,icon:'🧴',available:true},
+  {id:11,store_id:2,category_id:11,name:'Savon corporel',desc:'400ml Dove',price:6.49,icon:'🧼',available:true},
+  {id:40,store_id:2,category_id:10,name:'Ibuprofène 200mg',desc:'50 comprimés',price:12.99,icon:'💊',available:true},
+  {id:41,store_id:2,category_id:10,name:'Sirop pour la toux',desc:'100ml',price:11.49,icon:'🍯',available:true},
+  {id:42,store_id:2,category_id:11,name:'Shampooing',desc:'400ml Pantene',price:9.99,icon:'🧴',available:true},
+  {id:43,store_id:2,category_id:11,name:'Dentifrice',desc:'100ml Colgate',price:4.99,icon:'🪥',available:true},
+  {id:44,store_id:2,category_id:12,name:'Couches Pampers',desc:'Taille 3, 30 unités',price:16.99,icon:'👶',available:true},
+  {id:45,store_id:2,category_id:12,name:'Lait pour bébé',desc:'En poudre 680g',price:24.99,icon:'🍼',available:true},
+  {id:46,store_id:2,category_id:13,name:'Vitamine C 1000mg',desc:'90 comprimés',price:14.99,icon:'💉',available:true},
+  {id:47,store_id:2,category_id:13,name:'Multivitamines',desc:'Flacon 100 unités',price:19.99,icon:'💊',available:true},
+  {id:48,store_id:2,category_id:11,name:'Brosse à dents',desc:'Oral-B souple',price:5.49,icon:'🪥',available:true},
+  {id:49,store_id:2,category_id:10,name:'Pansements adhésifs',desc:'Boîte 40 unités',price:6.99,icon:'🩹',available:true},
+  {id:12,store_id:3,category_id:6,name:'Coca-Cola 2L',desc:'Boisson gazeuse',price:2.99,icon:'🥤',available:true},
+  {id:13,store_id:3,category_id:15,name:'Chips Lay\'s nature',desc:'235g',price:4.29,icon:'🍟',available:true},
+  {id:50,store_id:3,category_id:6,name:'Eau embouteillée 12 pack',desc:'500ml x 12',price:4.99,icon:'💧',available:true},
+  {id:51,store_id:3,category_id:15,name:'Barre chocolatée',desc:'Kit Kat',price:1.79,icon:'🍫',available:true},
+  {id:52,store_id:3,category_id:15,name:'Arachides salées',desc:'250g',price:3.99,icon:'🥜',available:true},
+  {id:53,store_id:3,category_id:16,name:'Crème glacée 2L',desc:'Vanille',price:6.99,icon:'🍦',available:true},
+  {id:54,store_id:3,category_id:16,name:'Esquimaux (boîte 8)',desc:'Barres glacées',price:7.49,icon:'🍡',available:true},
+  {id:55,store_id:3,category_id:6,name:'Café Tim Hortons',desc:'Moyen chaud',price:2.29,icon:'☕',available:true},
+  {id:56,store_id:3,category_id:6,name:'Red Bull 250ml',desc:'Boisson énergisante',price:3.49,icon:'🥫',available:true},
+  {id:57,store_id:3,category_id:15,name:'Bonbons',desc:'Sac 150g',price:2.99,icon:'🍬',available:true},
+  {id:58,store_id:3,category_id:6,name:'Jus Minute Maid',desc:'355ml',price:2.49,icon:'🧃',available:true},
+  {id:59,store_id:3,category_id:17,name:'Cigarettes (paquet)',desc:'Marque au choix',price:14.50,icon:'🚬',available:true},
+  {id:60,store_id:3,category_id:15,name:'Biscuits Oreo',desc:'154g',price:3.49,icon:'🍪',available:true},
+  {id:17,store_id:4,category_id:20,name:'Pizza pepperoni',desc:'Grand format 16 pouces',price:18.99,icon:'🍕',available:true},
+  {id:18,store_id:4,category_id:20,name:'Pâtes carbonara',desc:'Portion généreuse',price:14.99,icon:'🍝',available:true},
+  {id:19,store_id:4,category_id:21,name:'Salade César',desc:'Avec poulet grillé',price:12.99,icon:'🥗',available:true},
+  {id:61,store_id:4,category_id:20,name:'Lasagne italienne',desc:'Portion familiale',price:16.99,icon:'🍲',available:true},
+  {id:62,store_id:4,category_id:20,name:'Poulet parmesan',desc:'Servi avec pâtes',price:17.99,icon:'🍗',available:true},
+  {id:63,store_id:4,category_id:20,name:'Filet de saumon',desc:'Servi avec légumes',price:22.99,icon:'🐟',available:true},
+  {id:64,store_id:4,category_id:21,name:'Soupe du jour',desc:'Bol 12oz',price:5.99,icon:'🍜',available:true},
+  {id:65,store_id:4,category_id:21,name:'Ailes de poulet (12)',desc:'Sauce BBQ ou Buffalo',price:15.99,icon:'🍗',available:true},
+  {id:66,store_id:4,category_id:22,name:'Tiramisu',desc:'Part individuelle',price:7.99,icon:'🍰',available:true},
+  {id:67,store_id:4,category_id:22,name:'Crème brûlée',desc:'Part individuelle',price:6.99,icon:'🍮',available:true},
+  {id:68,store_id:4,category_id:6,name:'Vin rouge (bouteille)',desc:'Chianti italien',price:18.99,icon:'🍷',available:true},
+  {id:69,store_id:4,category_id:6,name:'Bière locale',desc:'600ml',price:7.99,icon:'🍺',available:true},
+  {id:14,store_id:5,category_id:23,name:'Hamburger classique',desc:'Bœuf, laitue, tomate',price:8.99,icon:'🍔',available:true},
+  {id:15,store_id:5,category_id:23,name:'Hot-dog',desc:'Classique avec moutarde',price:4.99,icon:'🌭',available:true},
+  {id:16,store_id:5,category_id:23,name:'Poutine',desc:'Frites, sauce, fromage',price:10.99,icon:'🍟',available:true},
+  {id:70,store_id:5,category_id:23,name:'Cheeseburger',desc:'Double viande, fromage',price:11.99,icon:'🍔',available:true},
+  {id:71,store_id:5,category_id:23,name:'Club sandwich',desc:'Poulet, bacon, laitue',price:12.99,icon:'🥪',available:true},
+  {id:72,store_id:5,category_id:23,name:'Nuggets de poulet (10)',desc:'Avec sauce',price:9.99,icon:'🍗',available:true},
+  {id:73,store_id:5,category_id:23,name:'Frites régulières',desc:'Portion moyenne',price:4.49,icon:'🍟',available:true},
+  {id:74,store_id:5,category_id:23,name:'Frites chargées',desc:'Bacon, fromage, sauce',price:8.99,icon:'🍟',available:true},
+  {id:75,store_id:5,category_id:22,name:'Crêpes (3)',desc:'Avec sirop d\'érable',price:6.99,icon:'🥞',available:true},
+  {id:76,store_id:5,category_id:22,name:'Pointe de tarte',desc:'Pommes ou bleuets',price:3.99,icon:'🥧',available:true},
+  {id:77,store_id:5,category_id:6,name:'Liqueur molle',desc:'2L',price:2.99,icon:'🥤',available:true},
+  {id:78,store_id:5,category_id:6,name:'Café régulier',desc:'Grand',price:2.49,icon:'☕',available:true},
+  {id:20,store_id:6,category_id:25,name:'Marteau 16oz',desc:'Manche en bois',price:15.99,icon:'🔨',available:true},
+  {id:21,store_id:6,category_id:25,name:'Tournevis set 6 pcs',desc:'Plat et cruciforme',price:19.99,icon:'🪛',available:true},
+  {id:80,store_id:6,category_id:25,name:'Scie à main',desc:'14 pouces',price:24.99,icon:'🪚',available:true},
+  {id:81,store_id:6,category_id:25,name:'Pince multiprise',desc:'10 pouces',price:12.99,icon:'🔧',available:true},
+  {id:82,store_id:6,category_id:25,name:'Mètre à ruban 25 pi',desc:'Stanley',price:14.99,icon:'📏',available:true},
+  {id:83,store_id:6,category_id:26,name:'Bois 2x4x8\'',desc:'Poteau de construction',price:6.99,icon:'🪵',available:true},
+  {id:84,store_id:6,category_id:26,name:'Plywood 4x8',desc:'1/2 pouce',price:45.99,icon:'🪵',available:true},
+  {id:85,store_id:6,category_id:27,name:'Tuyau PVC 10 pi',desc:'1.5 pouce',price:8.99,icon:'🚿',available:true},
+  {id:86,store_id:6,category_id:27,name:'Robinet de cuisine',desc:'Chrome',price:79.99,icon:'🚰',available:true},
+  {id:87,store_id:6,category_id:28,name:'Ampoule LED 60W',desc:'Pack de 4',price:12.99,icon:'💡',available:true},
+  {id:88,store_id:6,category_id:28,name:'Prolongateur électrique',desc:'25 pieds',price:19.99,icon:'🔌',available:true},
+  {id:89,store_id:6,category_id:29,name:'Terreau 25kg',desc:'Pour jardin',price:8.99,icon:'🌱',available:true},
+  {id:90,store_id:6,category_id:29,name:'Boyau d\'arrosage 50 pi',desc:'Avec embout',price:29.99,icon:'💦',available:true},
+  {id:91,store_id:6,category_id:30,name:'Peinture intérieure 4L',desc:'Blanc, latex',price:39.99,icon:'🎨',available:true},
+  {id:92,store_id:6,category_id:30,name:'Pinceau 2 pouces',desc:'Soies synthétiques',price:7.99,icon:'🖌️',available:true},
+  {id:93,store_id:6,category_id:25,name:'Perceuse sans fil',desc:'18V avec batterie',price:89.99,icon:'🔩',available:true}
 ];
 
 let nextStoreId = 7, nextCatId = 31, nextProdId = 100;
@@ -397,7 +397,7 @@ function getCurrentStore() {
   const firstProductId = cart[0].productId;
   const product = products.find(p => p.id === firstProductId);
   if (!product) return null;
-  return stores.find(s => s.id === product.storeId);
+  return stores.find(s => s.id === product.store_id);
 }
 
 // ============ CHARGEMENT DEPUIS SUPABASE ============
@@ -413,8 +413,8 @@ const { data: prodsData } = await supabaseClient.from('products').select('*');
 if (prodsData && prodsData.length > 0) {
   products = prodsData.map(p => ({
     ...p,
-    storeId: p.store_id,
-    categoryId: p.category_id
+    store_id: p.store_id,
+    category_id: p.category_id
   }));
 }
 
@@ -445,7 +445,7 @@ if (prodsData && prodsData.length > 0) {
         deliveryPerKmFee: o.delivery_per_km_fee || 0, deliveryFee: o.delivery_fee || 0,
         tax: o.tax || 0, total: o.total || 0, status: o.status,
         driverId: o.driver_id, driverName: o.driver_name,
-        storeId: o.store_id, storeName: o.store_name,
+        store_id: o.store_id, storeName: o.store_name,
         createdAt: o.created_at, statusHistory: o.status_history || []
       }));
     }
@@ -1149,7 +1149,7 @@ function renderLandingStores() {
   if (!g) return;
   const active = stores.filter(s => s.status === 'active').slice(0, 6);
   g.innerHTML = active.map(s => {
-    const count = products.filter(p => p.storeId === s.id && p.available).length;
+    const count = products.filter(p => p.store_id === s.id && p.available).length;
     return `<div class="store" onclick="openStoreFromLanding(${s.id})">
       <div class="store-img">${s.icon}</div>
       <div class="store-info">
@@ -1162,13 +1162,13 @@ function renderLandingStores() {
   }).join('');
 }
 
-function openStoreFromLanding(storeId) {
+function openStoreFromLanding(store_id) {
   if (!currentUser) {
     showToast('🔑 Connectez-vous pour voir les Commerces');
     setTimeout(() => openChooseTypeModal(), 1000);
     return;
   }
-  openStoreDetail(storeId);
+  openStoreDetail(store_id);
 }
 
 // ============ CLIENT - COMMERCE ============
@@ -1264,7 +1264,7 @@ function renderClientStores() {
   }
   g.innerHTML = active.map(s => {
     // ✅ CORRECTION : Utiliser String() pour éviter les bugs de type (Nombre vs Texte)
-    const count = products.filter(p => String(p.storeId) === String(s.id) && p.available).length;
+    const count = products.filter(p => String(p.store_id) === String(s.id) && p.available).length;
     const dist = userPosition ? calculateDistance(userPosition.lat, userPosition.lng, s.lat, s.lng) : null;
     return `<div class="store" onclick="openStoreDetail(${s.id})"><div class="store-img">${s.logo ? `<img src="${s.logo}" alt="${s.name}">` : `<span class="emoji-fallback">${s.icon}</span>`}</div>
     <div class="store-info">
@@ -1278,16 +1278,16 @@ function renderClientStores() {
   }).join('');
 }
 
-function openStoreDetail(storeId) {
-  const store = stores.find(s => String(s.id) === String(storeId));
+function openStoreDetail(store_id) {
+  const store = stores.find(s => String(s.id) === String(store_id));
   if (!store) return;
   
   switchView('view-client');
   document.getElementById('stores-section').style.display = 'none';
   document.getElementById('store-detail-section').style.display = 'block';
 
-  const storeProducts = products.filter(p => String(p.storeId) === String(storeId) && p.available);
-  const storeCats = [...new Set(storeProducts.map(p => p.categoryId))].map(cid => categories.find(c => String(c.id) === String(cid))).filter(Boolean);
+  const storeProducts = products.filter(p => String(p.store_id) === String(store_id) && p.available);
+  const storeCats = [...new Set(storeProducts.map(p => p.category_id))].map(cid => categories.find(c => String(c.id) === String(cid))).filter(Boolean);
 
   let html = `<button class="back-btn" onclick="showClientStores()">← Retour</button>`;
   html += `<div class="store-detail-header"><div class="store-detail-icon">${store.logo ? `<img src="${store.logo}" alt="${store.name}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">` : store.icon}</div>
@@ -1300,10 +1300,10 @@ function openStoreDetail(storeId) {
 
   if (storeCats.length > 0) {
     html += `<div class="categories-bar">
-    <button class="cat-btn active" onclick="filterProducts(${storeId},'all',this)">🏷️ Tout (${storeProducts.length})</button>`;
+    <button class="cat-btn active" onclick="filterProducts(${store_id},'all',this)">🏷️ Tout (${storeProducts.length})</button>`;
     storeCats.forEach(c => {
-      const catCount = storeProducts.filter(p => String(p.categoryId) === String(c.id)).length;
-      html += `<button class="cat-btn" onclick="filterProducts(${storeId},${c.id},this)">${c.icon} ${c.name} (${catCount})</button>`;
+      const catCount = storeProducts.filter(p => String(p.category_id) === String(c.id)).length;
+      html += `<button class="cat-btn" onclick="filterProducts(${store_id},${c.id},this)">${c.icon} ${c.name} (${catCount})</button>`;
     });
     html += `</div>`;
   }
@@ -1320,7 +1320,7 @@ function openStoreDetail(storeId) {
   `;
   
   document.getElementById('store-detail-content').innerHTML = html;
-  renderClientProductGrid(storeId, 'all');
+  renderClientProductGrid(store_id, 'all');
   
   // Mettre à jour le compteur inline
   updateInlineCartCount();
@@ -1365,15 +1365,15 @@ function updateStickyCartBar() {
   }
 }
 
-function filterProducts(storeId, catId, btn) {
+function filterProducts(store_id, catId, btn) {
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderClientProductGrid(storeId, catId);
+  renderClientProductGrid(store_id, catId);
 }
 
-function renderClientProductGrid(storeId, catId) {
-  let prods = products.filter(p => String(p.storeId) === String(storeId) && p.available);
-  if (catId !== 'all') prods = prods.filter(p => String(p.categoryId) === String(catId));
+function renderClientProductGrid(store_id, catId) {
+  let prods = products.filter(p => String(p.store_id) === String(store_id) && p.available);
+  if (catId !== 'all') prods = prods.filter(p => String(p.category_id) === String(catId));
 
   const g = document.getElementById('products-grid-detail');
   if (!prods.length) {
@@ -1382,7 +1382,7 @@ function renderClientProductGrid(storeId, catId) {
   }
 
   g.innerHTML = prods.map(p => {
-    const cat = categories.find(c => String(c.id) === String(p.categoryId));
+    const cat = categories.find(c => String(c.id) === String(p.category_id));
     
     return `
     <div class="modern-product-card">
@@ -1568,7 +1568,7 @@ async function renderClientOrders() {
       deliveryPerKmFee: o.delivery_per_km_fee || 0, deliveryFee: o.delivery_fee || 0,
       tax: o.tax || 0, total: o.total || 0, status: o.status,
       driverId: o.driver_id, driverName: o.driver_name,
-      storeId: o.store_id, storeName: o.store_name,
+      store_id: o.store_id, storeName: o.store_name,
       createdAt: o.created_at, statusHistory: o.status_history || []
     }));
 
@@ -2019,7 +2019,7 @@ function showDriverOrderDetail(orderId) {
   document.getElementById('driver-order-detail-section').style.display = 'block';
 
   const st = STATUS_LABELS[order.status];
-  const store = stores.find(s => s.id === order.storeId);
+  const store = stores.find(s => s.id === order.store_id);
 
   let html = `<button class="back-btn" onclick="showDriverDashboard()">← Retour</button>`;
   html += `<div class="store-detail-header">
@@ -2169,7 +2169,7 @@ function renderAllAdmin() {
   renderAdminSettings();
 }
 
-async function adminUpdateStoreName(storeId, newStoreName) {
+async function adminUpdateStoreName(store_id, newStoreName) {
   if (!currentUser || currentUser.role !== 'admin') {
     showToast('❌ Accès refusé. Réservé aux administrateurs.');
     return;
@@ -2179,7 +2179,7 @@ async function adminUpdateStoreName(storeId, newStoreName) {
     const { error } = await supabaseClient
       .from('stores')
       .update({ name: newStoreName.trim() })
-      .eq('id', storeId);
+      .eq('id', store_id);
 
     if (error) throw error;
     showToast('✅ Nom du commerce modifié par l\'admin !');
@@ -2391,7 +2391,7 @@ function renderAdminStores() {
 }
 
 // ✅ FONCTION POUR RENOMMER UN COMMERCE (ADMIN)
-async function promptRenameStore(storeId, currentName) {
+async function promptRenameStore(store_id, currentName) {
   const newName = prompt("Entrez le nouveau nom pour ce commerce :", currentName);
   
   // Vérifie que le nom n'est pas vide et qu'il a vraiment changé
@@ -2399,7 +2399,7 @@ async function promptRenameStore(storeId, currentName) {
     showToast('⏳ Mise à jour en cours...');
     
     // On appelle la fonction de mise à jour qu'on a créée plus tôt
-    await adminUpdateStoreName(storeId, newName.trim());
+    await adminUpdateStoreName(store_id, newName.trim());
     
     // Recharger les données et rafraîchir l'affichage
     if (typeof loadStores === 'function') await loadStores();
@@ -2487,7 +2487,7 @@ function renderAdminCategories() {
   const c = document.getElementById('categories-container');
   if (!categories.length) { c.innerHTML = '<div class="empty-state"><p>Aucune catégorie</p></div>'; return; }
   c.innerHTML = `<div class="cat-grid">${categories.map(cat => {
-    const count = products.filter(p => p.categoryId === cat.id).length;
+    const count = products.filter(p => p.category_id === cat.id).length;
     return `<div class="cat-card"><div class="cat-card-icon">${cat.icon}</div><div class="cat-card-name">${cat.name}</div><p style="color:#666;font-size:0.85rem;margin-bottom:0.5rem">${count} produit(s)</p><div class="cat-card-actions"><button class="action-btn btn-blue" onclick="editCategory(${cat.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('category',${cat.id})">🗑️</button></div></div>`;
   }).join('')}</div>`;
 }
@@ -2553,8 +2553,8 @@ function renderAdminProducts() {
   const c = document.getElementById('products-table-container');
   if (!products.length) { c.innerHTML = '<div class="empty-state"><p>Aucun produit</p></div>'; return; }
   c.innerHTML = `<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Commerce</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr></thead><tbody>${products.map(p => {
-    const s = stores.find(x => x.id === p.storeId);
-    const cat = categories.find(x => x.id === p.categoryId);
+    const s = stores.find(x => x.id === p.store_id);
+    const cat = categories.find(x => x.id === p.category_id);
     return `<tr><td style="font-size:1.5rem;text-align:center">${p.icon}</td><td><strong>${p.name}</strong></td><td>${s ? s.name : '-'}</td><td>${cat ? cat.icon + ' ' + cat.name : '-'}</td><td><strong>${p.price.toFixed(2)} $</strong></td><td><span class="badge ${p.available ? 'badge-green' : 'badge-red'}">${p.available ? '✅' : '❌'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editProduct(${p.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('product',${p.id})">🗑️</button></div></td></tr>`;
   }).join('')}</tbody></table>`;
 }
@@ -2583,8 +2583,8 @@ function editProduct(id) {
   document.getElementById('prod-price').value = p.price;
   document.getElementById('prod-available').value = p.available ? 'true' : 'false';
   selectedProdIcon = p.icon;
-  document.getElementById('prod-store').innerHTML = stores.map(s => `<option value="${s.id}" ${s.id === p.storeId ? 'selected' : ''}>${s.icon} ${s.name}</option>`).join('');
-  document.getElementById('prod-category').innerHTML = categories.map(c => `<option value="${c.id}" ${c.id === p.categoryId ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('');
+  document.getElementById('prod-store').innerHTML = stores.map(s => `<option value="${s.id}" ${s.id === p.store_id ? 'selected' : ''}>${s.icon} ${s.name}</option>`).join('');
+  document.getElementById('prod-category').innerHTML = categories.map(c => `<option value="${c.id}" ${c.id === p.category_id ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('');
   buildIconPicker('prod-icon-picker', 'prod-icon');
   setTimeout(() => {
     document.querySelectorAll('#prod-icon-picker .icon-option').forEach(o => {
@@ -2593,43 +2593,7 @@ function editProduct(id) {
   }, 50);
   openModal('product-modal');
 }
-async function saveProduct(e) {
-  e.preventDefault();
-  if (!selectedProdIcon && !document.getElementById('prod-icon').value) {
-    showToast('⚠️ Choisissez une icône'); return;
-  }
-  const id = document.getElementById('prod-id').value;
-  const prodData = {
-    store_id: parseInt(document.getElementById('prod-store').value),           
-    category_id: parseInt(document.getElementById('prod-category').value),
-    name: document.getElementById('prod-name').value,
-    description: document.getElementById('prod-desc').value,
-    price: parseFloat(document.getElementById('prod-price').value),
-    icon: document.getElementById('prod-icon').value || selectedProdIcon,
-    available: document.getElementById('prod-available').value === 'true'
-  };
 
-  try {
-    if (id) {
-      await supabaseClient.from('products').update(prodData).eq('id', parseInt(id));
-      const idx = products.findIndex(p => p.id === parseInt(id));
-      products[idx] = { ...products[idx], ...prodData, storeId: prodData.store_id, categoryId: prodData.category_id };
-      showToast('✅ Modifié !');
-    } else {
-      const { data: newProd, error } = await supabaseClient.from('products').insert(prodData).select().single();
-      if (error) throw error;
-      products.push({ ...newProd, storeId: newProd.store_id, categoryId: newProd.category_id });
-      showToast('✅ Ajouté !');
-    }
-    closeModal('product-modal');
-    renderAdminProducts();
-    renderStoreProducts();
-    renderLandingStores(); // ✅ NOUVEAU : Met à jour la page d'accueil
-  } catch (err) {
-    console.error('Erreur saveProduct:', err);
-    showToast('❌ Erreur : ' + err.message);
-  }
-}
 
 
 // ============ ADMIN - CLIENTS ET LIVREURS ============
@@ -3083,7 +3047,7 @@ document.getElementById('cart-section').style.display = 'none';
   }
 }
 
-async function openAddProductModal(storeId) {
+async function openAddProductModal(store_id) {
   const name = prompt("Nom du produit :");
   if (!name) return;
   
@@ -3094,13 +3058,13 @@ async function openAddProductModal(storeId) {
   }
 
   const description = prompt("Description (optionnel) :") || "Produit du commerce";
-  const categoryIdInput = prompt("ID de la catégorie (ex: 1, 2... ou laisse vide) :") || null;
-  const categoryId = categoryIdInput ? parseInt(categoryIdInput) : null;
+  const category_idInput = prompt("ID de la catégorie (ex: 1, 2... ou laisse vide) :") || null;
+  const category_id = category_idInput ? parseInt(category_idInput) : null;
 
   try {
     const { error } = await supabaseClient.from('products').insert({
-      store_id: storeId,
-      category_id: categoryId,
+      store_id: store_id,
+      category_id: category_id,
       name: name,
       price: parseFloat(price),
       description: description,
@@ -3111,8 +3075,8 @@ async function openAddProductModal(storeId) {
 
     if (typeof products !== 'undefined' && Array.isArray(products)) {
       products.push({
-        storeId: storeId,
-        categoryId: categoryId,
+        store_id: store_id,
+        category_id: category_id,
         name: name,
         price: parseFloat(price),
         description: description,
@@ -3122,7 +3086,7 @@ async function openAddProductModal(storeId) {
     }
 
     alert("✅ Produit ajouté ! Il est maintenant visible pour les clients.");
-    loadStoreProducts(storeId);
+    loadStoreProducts(store_id);
 
   } catch (err) {
     console.error(err);
@@ -3130,66 +3094,9 @@ async function openAddProductModal(storeId) {
   }
 }
 
-async function loadStoreProducts(storeId) {
-  const container = document.getElementById('store-products-list');
-  if (!container) return;
 
-  const { data: productsData, error } = await supabaseClient
-    .from('products')
-    .select('*')
-    .eq('store_id', storeId)
-    .order('created_at', { ascending: false });
 
-  if (error) {
-    container.innerHTML = `<p style="color:red;">Erreur: ${error.message}</p>`;
-    return;
-  }
-
-  if (!productsData || productsData.length === 0) {
-    container.innerHTML = '<p style="color:#666; grid-column:1/-1; text-align:center; padding:1rem;">Aucun produit pour le moment. Cliquez sur "➕ Ajouter un produit".</p>';
-    return;
-  }
-
-  container.innerHTML = productsData.map(p => `
-    <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee;">
-      <div style="display:flex; justify-content:space-between; align-items:start;">
-        <h5 style="margin:0 0 0.5rem 0; color:#0a1929;">${p.name}</h5>
-        <span style="color:${p.available ? '#10b981' : '#ef4444'}; font-size:0.8rem; font-weight:bold;">
-          ${p.available ? '✅ Dispo' : '❌ Indispo'}
-        </span>
-      </div>
-      <p style="margin:0; color:#10b981; font-weight:bold; font-size:1.2rem;">${p.price} $</p>
-      <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#666;">${p.description || 'Aucune description'}</p>
-      <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
-        <button onclick="toggleProductAvailability(${p.id}, ${!p.available}, '${storeId}')" style="padding:4px 8px; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">
-          ${p.available ? 'Désactiver' : 'Activer'}
-        </button>
-        <button onclick="deleteProduct(${p.id}, '${storeId}')" style="padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑️</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function toggleProductAvailability(productId, newStatus, storeId) {
-  try {
-    await supabaseClient.from('products').update({ available: newStatus }).eq('id', productId);
-    loadStoreProducts(storeId);
-  } catch (err) {
-    alert("❌ Erreur : " + err.message);
-  }
-}
-
-async function deleteProduct(productId, storeId) {
-  if (!confirm("Supprimer ce produit définitivement ?")) return;
-  try {
-    await supabaseClient.from('products').delete().eq('id', productId);
-    loadStoreProducts(storeId);
-  } catch (err) {
-    alert("❌ Erreur : " + err.message);
-  }
-}
-
-async function openAddProductModal(storeId) {
+async function openAddProductModal(store_id) {
   const name = prompt("Nom du produit :");
   if (!name) return;
   
@@ -3202,14 +3109,14 @@ async function openAddProductModal(storeId) {
   const description = prompt("Description (optionnel) :") || "Produit du commerce";
   
   // Demander l'ID de la catégorie pour qu'il apparaisse dans les onglets du client
-  const categoryIdInput = prompt("ID de la catégorie (ex: 1, 2... ou laisse vide) :") || null;
-  const categoryId = categoryIdInput ? parseInt(categoryIdInput) : null;
+  const category_idInput = prompt("ID de la catégorie (ex: 1, 2... ou laisse vide) :") || null;
+  const category_id = category_idInput ? parseInt(category_idInput) : null;
 
   try {
     // 1. Sauvegarder dans Supabase (avec les noms de colonnes de ta table)
     const { error } = await supabaseClient.from('products').insert({
-      store_id: storeId,
-      category_id: categoryId,
+      store_id: store_id,
+      category_id: category_id,
       name: name,
       price: parseFloat(price),
       description: description,
@@ -3219,11 +3126,11 @@ async function openAddProductModal(storeId) {
     if (error) throw error;
 
     // 2. ASTUCE : Ajouter aussi à la liste locale 'products' pour un affichage immédiat
-    // Cela correspond EXACTEMENT à ce que openStoreDetail cherche (p.storeId, p.categoryId)
+    // Cela correspond EXACTEMENT à ce que openStoreDetail cherche (p.store_id, p.category_id)
     if (typeof products !== 'undefined' && Array.isArray(products)) {
       products.push({
-        storeId: storeId,
-        categoryId: categoryId,
+        store_id: store_id,
+        category_id: category_id,
         name: name,
         price: parseFloat(price),
         description: description,
@@ -3233,7 +3140,7 @@ async function openAddProductModal(storeId) {
     }
 
     alert("✅ Produit ajouté ! Il est maintenant visible pour les clients.");
-    loadStoreProducts(storeId); // Rafraîchir la liste du dashboard
+    loadStoreProducts(store_id); // Rafraîchir la liste du dashboard
 
   } catch (err) {
     console.error(err);
@@ -3241,109 +3148,19 @@ async function openAddProductModal(storeId) {
   }
 }
 
-async function loadStoreProducts(storeId) {
-  const container = document.getElementById('store-products-list');
-  if (!container) return;
-
-  const { data: productsData, error } = await supabaseClient
-    .from('products')
-    .select('*')
-    .eq('store_id', storeId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    container.innerHTML = `<p style="color:red;">Erreur: ${error.message}</p>`;
-    return;
-  }
-
-  if (!productsData || productsData.length === 0) {
-    container.innerHTML = '<p style="color:#666; grid-column:1/-1; text-align:center;">Aucun produit pour le moment.</p>';
-    return;
-  }
-
-  container.innerHTML = productsData.map(p => `
-    <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee;">
-      <div style="display:flex; justify-content:space-between; align-items:start;">
-        <h5 style="margin:0 0 0.5rem 0; color:#0a1929;">${p.name}</h5>
-        <span style="color:${p.available ? '#10b981' : '#ef4444'}; font-size:0.8rem; font-weight:bold;">
-          ${p.available ? '✅ Dispo' : '❌ Indispo'}
-        </span>
-      </div>
-      <p style="margin:0; color:#10b981; font-weight:bold; font-size:1.2rem;">${p.price} $</p>
-      <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#666;">${p.description || 'Aucune description'}</p>
-      <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
-        <button onclick="toggleProductAvailability(${p.id}, ${!p.available}, '${storeId}')" style="padding:4px 8px; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">
-          ${p.available ? 'Désactiver' : 'Activer'}
-        </button>
-        <button onclick="deleteProduct(${p.id}, '${storeId}')" style="padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑️</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function toggleProductAvailability(productId, newStatus, storeId) {
-  try {
-    await supabaseClient.from('products').update({ available: newStatus }).eq('id', productId);
-    loadStoreProducts(storeId);
-  } catch (err) {
-    alert("❌ Erreur : " + err.message);
-  }
-}
-
-async function deleteProduct(productId, storeId) {
-  if (!confirm("Supprimer ce produit définitivement ?")) return;
-  try {
-    await supabaseClient.from('products').delete().eq('id', productId);
-    loadStoreProducts(storeId);
-  } catch (err) {
-    alert("❌ Erreur : " + err.message);
-  }
-}
 
 
-
-async function toggleProductAvailability(productId, newStatus, storeId) {
-  try {
-    await supabaseClient.from('products').update({ available: newStatus }).eq('id', productId);
-    loadStoreProducts(storeId);
-  } catch (err) {
-    alert("❌ Erreur : " + err.message);
-  }
-}
-
-async function deleteProduct(productId, storeId) {
-  if (!confirm("Supprimer ce produit ?")) return;
-  try {
-    await supabaseClient.from('products').delete().eq('id', productId);
-    loadStoreProducts(storeId);
-  } catch (err) {
-    alert("❌ Erreur : " + err.message);
-  }
-}
-
-async function editStoreName(storeId, currentName) {
-  const newName = prompt("Nouveau nom du commerce :", currentName);
-  if (!newName || newName === currentName) return;
-  try {
-    const { error } = await supabaseClient.from('stores').update({ name: newName }).eq('id', storeId);
-    if (error) throw error;
-    alert("✅ Nom modifié !");
-    showStoreDashboard();
-  } catch (err) {
-    alert("❌ Erreur : " + err.message);
-  }
-}
 
 // --- Fonctions utilitaires pour le dashboard ---
 
-async function loadStoreProducts(storeId) {
+async function loadStoreProducts(store_id) {
   const container = document.getElementById('store-products-list');
   if (!container) return;
 
   const { data: products, error } = await supabaseClient
     .from('products')
     .select('*')
-    .eq('store_id', storeId)
+    .eq('store_id', store_id)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -3367,16 +3184,16 @@ async function loadStoreProducts(storeId) {
       <p style="margin:0; color:#10b981; font-weight:bold; font-size:1.2rem;">${p.price} $</p>
       <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#666;">${p.description || 'Aucune description'}</p>
       <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
-        <button onclick="toggleProductAvailability(${p.id}, ${!p.available}, '${storeId}')" style="padding:4px 8px; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+        <button onclick="toggleProductAvailability(${p.id}, ${!p.available}, '${store_id}')" style="padding:4px 8px; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">
           ${p.available ? 'Désactiver' : 'Activer'}
         </button>
-        <button onclick="deleteProduct(${p.id}, '${storeId}')" style="padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑️</button>
+        <button onclick="deleteProduct(${p.id}, '${store_id}')" style="padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑️</button>
       </div>
     </div>
   `).join('');
 }
 
-async function openAddProductModal(storeId) {
+async function openAddProductModal(store_id) {
   const name = prompt("Nom du produit :");
   if (!name) return;
   
@@ -3390,7 +3207,7 @@ async function openAddProductModal(storeId) {
 
   try {
     const { error } = await supabaseClient.from('products').insert({
-      store_id: storeId,
+      store_id: store_id,
       name: name,
       price: parseFloat(price),
       description: description,
@@ -3399,36 +3216,85 @@ async function openAddProductModal(storeId) {
 
     if (error) throw error;
     alert("✅ Produit ajouté !");
-    loadStoreProducts(storeId);
+    loadStoreProducts(store_id);
   } catch (err) {
     alert("❌ Erreur : " + err.message);
   }
 }
 
-async function toggleProductAvailability(productId, newStatus, storeId) {
+async function saveProduct(event) {
+  event.preventDefault();
+  
+  // 1. Récupérer les valeurs du formulaire
+  const store_id = document.getElementById('prod-store').value;
+  const category_id = document.getElementById('prod-category').value;
+  const name = document.getElementById('prod-name').value.trim();
+  const description = document.getElementById('prod-desc').value.trim();
+  const price = parseFloat(document.getElementById('prod-price').value);
+  const icon = document.getElementById('prod-icon').value || '📦';
+  const available = document.getElementById('prod-available').value === 'true';
+
+  if (!name || !price || !store_id || !category_id) {
+    showToast('❌ Veuillez remplir tous les champs obligatoires');
+    return;
+  }
+
+  showToast('⏳ Ajout du produit en cours...');
+
+  try {
+    // ✅ 2. CORRECTION ICI : On utilise store_id et category_id (minuscules + underscore)
+    const { data, error } = await supabaseClient
+      .from('products')
+      .insert({
+        store_id: store_id,       // ✅ C'était probablement store_id avant
+        category_id: category_id, // ✅ C'était probablement category_id avant
+        name: name,
+        description: description,
+        price: price,
+        icon: icon,
+        available: available
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    showToast('✅ Produit ajouté et lié au commerce !');
+    closeModal('product-modal');
+    
+    // 3. Recharger l'affichage des produits
+    if (typeof loadStoreProducts === 'function') loadStoreProducts(store_id);
+    if (typeof renderStoreProducts === 'function') renderStoreProducts();
+
+  } catch (err) {
+    console.error('Erreur ajout produit:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+async function toggleProductAvailability(productId, newStatus, store_id) {
   try {
     await supabaseClient.from('products').update({ available: newStatus }).eq('id', productId);
-    loadStoreProducts(storeId);
+    loadStoreProducts(store_id);
   } catch (err) {
     alert("❌ Erreur : " + err.message);
   }
 }
 
-async function deleteProduct(productId, storeId) {
+async function deleteProduct(productId, store_id) {
   if (!confirm("Supprimer ce produit définitivement ?")) return;
   try {
     await supabaseClient.from('products').delete().eq('id', productId);
-    loadStoreProducts(storeId);
+    loadStoreProducts(store_id);
   } catch (err) {
     alert("❌ Erreur : " + err.message);
   }
 }
 
-async function editStoreName(storeId, currentName) {
+async function editStoreName(store_id, currentName) {
   const newName = prompt("Nouveau nom du commerce :", currentName);
   if (!newName || newName === currentName) return;
   try {
-    const { error } = await supabaseClient.from('stores').update({ name: newName }).eq('id', storeId);
+    const { error } = await supabaseClient.from('stores').update({ name: newName }).eq('id', store_id);
     if (error) throw error;
     alert("✅ Nom modifié !");
     showStoreDashboard();
@@ -3444,9 +3310,9 @@ function renderStoreDashboard() {
     return;
   }
 
-  const myProducts = products.filter(p => String(p.storeId) === String(myStore.id));
-  const myCategories = categories.filter(c => String(c.storeId) === String(myStore.id) || !c.storeId);
-  const storeOrders = orders.filter(o => String(o.storeId) === String(myStore.id));
+  const myProducts = products.filter(p => String(p.store_id) === String(myStore.id));
+  const myCategories = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
+  const storeOrders = orders.filter(o => String(o.store_id) === String(myStore.id));
 
   document.getElementById('store-total-products').textContent = myProducts.length;
   document.getElementById('store-total-categories').textContent = myCategories.length;
@@ -3466,6 +3332,106 @@ function renderStoreDashboard() {
     </div>
   `;
 }
+// ==========================================
+// ✅ GESTION DES CATÉGORIES DU COMMERCE (VERSION PROPRE)
+// ==========================================
+
+// 1. Charger et afficher les catégories
+async function loadStoreCategories() {
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  if (!myStore) return;
+
+  const container = document.getElementById('store-categories-container');
+  if (!container) return;
+
+  // Petit message de chargement
+  container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">⏳ Chargement des catégories...</p>';
+
+  try {
+    // ✅ On utilise bien 'store_id' pour filtrer
+    const { data: cats, error } = await supabaseClient
+      .from('categories') 
+      .select('*')
+      .eq('store_id', myStore.id)
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+
+    if (!cats || cats.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>Aucune catégorie. Ajoutez-en une !</p></div>';
+      return;
+    }
+
+    // Affichage propre
+    container.innerHTML = cats.map(c => `
+      <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee; display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <div>
+          <span style="font-size:1.5rem; margin-right:10px;">${c.icon || '📂'}</span>
+          <strong>${c.name}</strong>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+          <button class="action-btn btn-blue" onclick="editStoreCategory(${c.id})" style="padding:4px 8px; background:#3b82f6; color:white; border:none; border-radius:4px; cursor:pointer;">✏️</button>
+          <button class="action-btn btn-red" onclick="deleteStoreCategory(${c.id})" style="padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer;">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+
+  } catch (err) {
+    console.error('Erreur chargement catégories:', err);
+    container.innerHTML = `<p style="color:red;">Erreur: ${err.message}</p>`;
+  }
+}
+
+// 2. Modifier une catégorie (Ouvre la modale avec les infos)
+async function editStoreCategory(category_id) {
+  try {
+    // On récupère les infos de la catégorie dans la base de données
+    const { data: cat, error } = await supabaseClient
+      .from('categories')
+      .select('*')
+      .eq('id', category_id)
+      .single();
+
+    if (error) throw error;
+
+    // On remplit la modale (celle qui existe déjà dans ton HTML : #category-modal)
+    document.getElementById('cat-id').value = cat.id;
+    document.getElementById('cat-name').value = cat.name;
+    document.getElementById('cat-icon').value = cat.icon || '📂';
+    document.getElementById('cat-modal-title').textContent = '✏️ Modifier la catégorie';
+
+    // On ouvre la modale
+    const modal = document.getElementById('category-modal');
+    if (modal) modal.style.display = 'flex'; // Ou modal.classList.add('active') selon ton CSS
+
+  } catch (err) {
+    console.error('Erreur édition catégorie:', err);
+    showToast('❌ Impossible de charger la catégorie.');
+  }
+}
+
+// 3. Supprimer une catégorie
+async function deleteStoreCategory(category_id) {
+  if (!confirm('Voulez-vous vraiment supprimer cette catégorie ?')) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from('categories')
+      .delete()
+      .eq('id', category_id);
+
+    if (error) throw error;
+
+    showToast('✅ Catégorie supprimée !');
+    
+    // On recharge la liste immédiatement
+    loadStoreCategories();
+
+  } catch (err) {
+    console.error('Erreur suppression:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
 
 function showStoreCategories() {
   switchView('view-store');
@@ -3479,7 +3445,7 @@ function renderStoreCategories() {
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   if (!myStore) return;
   
-  const myCats = categories.filter(c => String(c.storeId) === String(myStore.id) || !c.storeId);
+  const myCats = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
   const c = document.getElementById('store-categories-container');
   
   if (!myCats.length) {
@@ -3488,8 +3454,8 @@ function renderStoreCategories() {
   }
   
   c.innerHTML = `<div class="cat-grid">${myCats.map(cat => {
-    const count = products.filter(p => String(p.storeId) === String(myStore.id) && String(p.categoryId) === String(cat.id)).length;
-    const isGlobal = !cat.storeId;
+    const count = products.filter(p => String(p.store_id) === String(myStore.id) && String(p.category_id) === String(cat.id)).length;
+    const isGlobal = !cat.store_id;
     return `<div class="cat-card">
       <div class="cat-card-icon">${cat.icon}</div>
       <div class="cat-card-name">${cat.name}</div>
@@ -3532,6 +3498,111 @@ async function saveStoreCategory(e) {
   }
 }
 
+// ==========================================
+// ✅ FONCTION MASTER : Charger et Afficher les Produits
+// ==========================================
+async function renderStoreProducts() {
+  console.log("🚀 [DEBUG] renderStoreProducts démarré");
+  
+  // 1. Vérifier si l'utilisateur est connecté
+  if (typeof currentUser === 'undefined' || !currentUser || !currentUser.id) {
+    console.warn("⚠️ currentUser non défini ou non connecté.");
+    return;
+  }
+  console.log("✅ currentUser.id :", currentUser.id);
+
+  // 2. Vérifier si la liste des magasins est chargée
+  if (typeof stores === 'undefined' || !Array.isArray(stores)) {
+    console.warn("⚠️ Le tableau 'stores' n'est pas encore chargé.");
+    return;
+  }
+
+  // 3. Trouver le magasin
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  if (!myStore) {
+    console.warn("⚠️ Aucun magasin trouvé pour owner_id =", currentUser.id);
+    console.log("Stores disponibles dans la mémoire :", stores);
+    return;
+  }
+  console.log("✅ Magasin trouvé :", myStore.name, "(ID du magasin :", myStore.id, ")");
+
+  // 4. Trouver le conteneur HTML
+  const container = document.getElementById('store-products-container');
+  if (!container) {
+    console.error("❌ Le conteneur HTML 'store-products-container' est introuvable dans la page !");
+    return;
+  }
+  console.log("✅ Conteneur HTML trouvé.");
+
+  // 5. Afficher le chargement
+  container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">⏳ Chargement de votre inventaire...</p>';
+
+  try {
+    console.log("🔍 Requête Supabase pour store_id =", myStore.id);
+    
+    // 6. Demander les produits à Supabase
+    const { data: dbProducts, error } = await supabaseClient
+      .from('products')
+      .select('*')
+      .eq('store_id', myStore.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("❌ Erreur Supabase :", error);
+      container.innerHTML = `<p style="color:red; text-align:center;">Erreur DB: ${error.message}</p>`;
+      return;
+    }
+
+    console.log("✅ Produits reçus de Supabase :", dbProducts ? dbProducts.length : 0);
+
+    // 7. Mise à jour de la mémoire locale (pour que le reste du site soit synchronisé)
+    if (typeof products !== 'undefined' && Array.isArray(products)) {
+      products = products.filter(p => String(p.store_id || p.store_id) !== String(myStore.id));
+      if (dbProducts) {
+        products = [...products, ...dbProducts];
+      }
+    }
+
+    // 8. Afficher le résultat
+    if (!dbProducts || dbProducts.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>Aucun produit dans votre inventaire. Cliquez sur "Ajouter" pour commencer !</p></div>';
+      return;
+    }
+
+    container.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr><th>Icon</th><th>Nom</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          ${dbProducts.map(p => {
+            const cat = (typeof categories !== 'undefined' && Array.isArray(categories)) ? categories.find(x => String(x.id) === String(p.category_id || p.category_id)) : null;
+            const price = parseFloat(p.price).toFixed(2);
+            return `
+            <tr>
+              <td style="font-size:1.5rem;text-align:center">${p.icon || '📦'}</td>
+              <td><strong>${p.name}</strong></td>
+              <td>${cat ? cat.icon + ' ' + cat.name : '-'}</td>
+              <td><strong>${price} $</strong></td>
+              <td><span class="badge ${p.available ? 'badge-green' : 'badge-red'}">${p.available ? '✅' : '❌'}</span></td>
+              <td>
+                <div class="action-btns">
+                  <button class="action-btn btn-blue" onclick="editStoreProduct(${p.id})">✏️</button>
+                  <button class="action-btn btn-red" onclick="confirmDelete('product',${p.id})">🗑️</button>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+    console.log("✅ Affichage des produits terminé avec succès !");
+
+  } catch (err) {
+    console.error('❌ Erreur critique chargement produits:', err);
+    container.innerHTML = `<p style="color:red; text-align:center;">Erreur: ${err.message}</p>`;
+  }
+}
 function showStoreProducts() {
   switchView('view-store');
   document.getElementById('store-dashboard-section').style.display = 'none';
@@ -3540,23 +3611,7 @@ function showStoreProducts() {
   renderStoreProducts();
 }
 
-function renderStoreProducts() {
-  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
-  if (!myStore) return;
-  
-  const myProds = products.filter(p => String(p.storeId) === String(myStore.id));
-  const c = document.getElementById('store-products-container');
-  
-  if (!myProds.length) {
-    c.innerHTML = '<div class="empty-state"><p>Aucun produit. Ajoutez-en un !</p></div>';
-    return;
-  }
-  
-  c.innerHTML = `<table class="admin-table"><thead><tr><th>Icon</th><th>Nom</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr></thead><tbody>${myProds.map(p => {
-    const cat = categories.find(x => String(x.id) === String(p.categoryId));
-    return `<tr><td style="font-size:1.5rem;text-align:center">${p.icon}</td><td><strong>${p.name}</strong></td><td>${cat ? cat.icon + ' ' + cat.name : '-'}</td><td><strong>${p.price.toFixed(2)} $</strong></td><td><span class="badge ${p.available ? 'badge-green' : 'badge-red'}">${p.available ? '✅' : '❌'}</span></td><td><div class="action-btns"><button class="action-btn btn-blue" onclick="editStoreProduct(${p.id})">✏️</button><button class="action-btn btn-red" onclick="confirmDelete('product',${p.id})">🗑️</button></div></td></tr>`;
-  }).join('')}</tbody></table>`;
-}
+
 
 function openStoreProductModal() {
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
@@ -3572,7 +3627,7 @@ function openStoreProductModal() {
   
   document.getElementById('prod-store').innerHTML = `<option value="${myStore.id}" selected>${myStore.icon} ${myStore.name}</option>`;
   
-  const myCats = categories.filter(c => String(c.storeId) === String(myStore.id) || !c.storeId);
+  const myCats = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
   document.getElementById('prod-category').innerHTML = myCats.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
   
   buildIconPicker('prod-icon-picker', 'prod-icon');
@@ -3594,8 +3649,8 @@ function editStoreProduct(id) {
   
   document.getElementById('prod-store').innerHTML = `<option value="${myStore.id}" selected>${myStore.icon} ${myStore.name}</option>`;
   
-  const myCats = categories.filter(c => String(c.storeId) === String(myStore.id) || !c.storeId);
-  document.getElementById('prod-category').innerHTML = myCats.map(c => `<option value="${c.id}" ${String(c.id) === String(p.categoryId) ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('');
+  const myCats = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
+  document.getElementById('prod-category').innerHTML = myCats.map(c => `<option value="${c.id}" ${String(c.id) === String(p.category_id) ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('');
   
   buildIconPicker('prod-icon-picker', 'prod-icon');
   setTimeout(() => {
@@ -3823,7 +3878,7 @@ function showFeatureDetail(type) {
     title = '🏪 Nos commerces partenaires';
     const activeStores = stores.filter(s => s.status === 'active');
     const storesList = activeStores.map(s => {
-      const count = products.filter(p => p.storeId === s.id && p.available).length;
+      const count = products.filter(p => p.store_id === s.id && p.available).length;
       return `<div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#f5f1e8;border-radius:8px;margin-bottom:0.5rem">
         <div style="font-size:2.5rem">${s.icon}</div>
         <div style="flex:1">
@@ -3974,18 +4029,191 @@ function openStoreRegisterModal(forfait) {
     }
   }, 100);
 }
-function viewStoreDetails(id) {
+
+// ==========================================
+// ✅ PANIER CLIENT : Voir et Commander
+// ==========================================
+function showCustomerCart() {
+  // 1. Fermer la modale du magasin si elle est ouverte
+  const storeModal = document.querySelector('.modal-bg');
+  if (storeModal) storeModal.remove();
+
+  // 2. Récupérer le panier depuis localStorage
+  const cart = JSON.parse(localStorage.getItem('ruralgo_cart')) || [];
+
+  // 3. Si le panier est vide
+  if (cart.length === 0) {
+    showToast('❌ Votre panier est vide');
+    return;
+  }
+
+  // 4. Calculer le total
+  let total = 0;
+  cart.forEach(item => {
+    total += parseFloat(item.price) * (item.qty || 1);
+  });
+
+  // 5. Créer la modale du panier
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg show';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:600px; max-height:90vh; overflow-y:auto;">
+      <h2 style="color:#0a1929; margin-bottom:1.5rem;">🛒 Mon Panier</h2>
+      
+      <!-- Liste des produits -->
+      <div style="display:flex; flex-direction:column; gap:1rem; margin-bottom:1.5rem;">
+        ${cart.map((item, index) => `
+          <div style="background:#f9f9f9; padding:1rem; border-radius:8px; display:flex; gap:1rem; align-items:center;">
+            <div style="font-size:2rem;">${item.icon || '📦'}</div>
+            <div style="flex:1;">
+              <h4 style="margin:0; color:#0a1929;">${item.name}</h4>
+              <p style="margin:0.3rem 0; color:#10b981; font-weight:bold;">${parseFloat(item.price).toFixed(2)} $</p>
+              <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.5rem;">
+                <button onclick="updateCartQuantity(${index}, -1)" style="background:#ef4444; color:white; border:none; width:28px; height:28px; border-radius:4px; cursor:pointer; font-size:1rem;">-</button>
+                <span style="font-weight:bold; min-width:30px; text-align:center;">${item.qty || 1}</span>
+                <button onclick="updateCartQuantity(${index}, 1)" style="background:#10b981; color:white; border:none; width:28px; height:28px; border-radius:4px; cursor:pointer; font-size:1rem;">+</button>
+              </div>
+            </div>
+            <button onclick="removeFromCart(${index})" style="background:#ef4444; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem;">🗑️ Retirer</button>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Total -->
+      <div style="background:#f5f1e8; padding:1.5rem; border-radius:8px; margin-bottom:1.5rem;">
+        <div style="display:flex; justify-content:space-between; font-size:1.3rem; font-weight:bold; color:#0a1929;">
+          <span>Total :</span>
+          <span style="color:#10b981;">${total.toFixed(2)} $</span>
+        </div>
+      </div>
+
+      <!-- Boutons d'action -->
+      <div style="display:flex; gap:1rem; justify-content:flex-end;">
+        <button onclick="this.closest('.modal-bg').remove()" style="background:#6b7280; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-size:1rem;">Continuer mes achats</button>
+        <button onclick="checkoutOrder()" style="background:#f5a623; color:#0a1929; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-size:1rem; font-weight:bold;">✅ Passer la commande</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+// Modifier la quantité d'un produit dans le panier
+function updateCartQuantity(index, change) {
+  const cart = JSON.parse(localStorage.getItem('ruralgo_cart')) || [];
+  if (cart[index]) {
+    cart[index].qty = Math.max(1, (cart[index].qty || 1) + change);
+    localStorage.setItem('ruralgo_cart', JSON.stringify(cart));
+    showCustomerCart(); // Recharger l'affichage
+  }
+}
+
+// Retirer un produit du panier
+function removeFromCart(index) {
+  const cart = JSON.parse(localStorage.getItem('ruralgo_cart')) || [];
+  cart.splice(index, 1);
+  localStorage.setItem('ruralgo_cart', JSON.stringify(cart));
+  showCustomerCart(); // Recharger l'affichage
+}
+
+// Passer la commande
+async function checkoutOrder() {
+  const cart = JSON.parse(localStorage.getItem('ruralgo_cart')) || [];
+  
+  if (cart.length === 0) {
+    showToast('❌ Votre panier est vide');
+    return;
+  }
+
+  // Demander les infos de livraison
+  const customerName = prompt('Votre nom :');
+  if (!customerName) return;
+  
+  const customerPhone = prompt('Votre téléphone :');
+  if (!customerPhone) return;
+  
+  const customerAddress = prompt('Adresse de livraison :');
+  if (!customerAddress) return;
+
+  // Calculer le total
+  let total = 0;
+  cart.forEach(item => {
+    total += parseFloat(item.price) * (item.qty || 1);
+  });
+
+  showToast('⏳ Envoi de votre commande...');
+
+  try {
+    // Sauvegarder la commande dans Supabase
+    const { error } = await supabaseClient
+      .from('orders')
+      .insert({
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_address: customerAddress,
+        items: cart,
+        total: total,
+        status: 'pending'
+      });
+
+    if (error) throw error;
+
+    // Vider le panier
+    localStorage.removeItem('ruralgo_cart');
+    
+    // Fermer la modale
+    document.querySelector('.modal-bg')?.remove();
+    
+    showToast('✅ Commande envoyée avec succès ! Le commerçant vous contactera bientôt.');
+
+  } catch (err) {
+    console.error('Erreur commande:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+async function viewStoreDetails(id) {
+  // 1. Trouver les infos du magasin
   const store = stores.find(s => String(s.id) === String(id));
   if (!store) {
     showToast('❌ Commerce introuvable');
     return;
   }
   
+  // 2. Récupérer les produits de ce magasin (avec le BON nom: store_id)
+  const { data: storeProducts } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('store_id', store.id)
+    .eq('available', true); // On n'affiche que les produits disponibles aux clients
+
+  // 3. Préparer l'affichage des produits
+  let productsHtml = '<p style="color:#666; text-align:center; padding:1rem;">Aucun produit disponible pour le moment.</p>';
+  
+  if (storeProducts && storeProducts.length > 0) {
+    productsHtml = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">';
+    storeProducts.forEach(p => {
+      productsHtml += `
+        <div style="background:white; padding:1rem; border-radius:8px; text-align:center; border:1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="font-size:2.5rem; margin-bottom:0.5rem;">${p.icon || '📦'}</div>
+            <h4 style="margin:0; font-size:0.9rem; color:#0a1929;">${p.name}</h4>
+            <p style="margin:0.5rem 0; color:#10b981; font-weight:bold; font-size:1.1rem;">${parseFloat(p.price).toFixed(2)} $</p>
+          </div>
+          <!-- ✅ CORRECTION : On envoie juste l'ID (p.id) à ta fonction addToCart -->
+          <button onclick="addToCart(${p.id})" style="background:#0a1929; color:white; border:none; padding:8px; border-radius:6px; cursor:pointer; font-size:0.85rem; margin-top:0.5rem; width:100%;">🛒 Ajouter</button>
+        </div>
+      `;
+    });
+    productsHtml += '</div>';
+  }
+
+  // 4. Créer et afficher la modale
   const modal = document.createElement('div');
   modal.className = 'modal-bg show';
   modal.innerHTML = `
-    <div class="modal" style="max-width:600px">
-      <h2 style="color:#0a1929;margin-bottom:1.5rem">🏪 Détails du commerce</h2>
+    <div class="modal" style="max-width:700px; max-height: 90vh; overflow-y: auto;">
+      <h2 style="color:#0a1929;margin-bottom:1.5rem">🏪 ${store.name}</h2>
+      
+      <!-- Infos du commerce -->
       <div style="background:#f5f1e8;padding:1.5rem;border-radius:12px">
         <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
           <div style="font-size:4rem">${store.icon || '🏪'}</div>
@@ -3994,7 +4222,7 @@ function viewStoreDetails(id) {
             <p style="margin:0.3rem 0;color:#666">${store.type || 'Non spécifié'}</p>
           </div>
         </div>
-        <div style="display:grid;gap:1rem">
+        <div style="display:grid;gap:1rem; grid-template-columns: 1fr 1fr;">
           <div style="background:white;padding:1rem;border-radius:8px">
             <strong>📍 Adresse :</strong>
             <p style="margin:0.3rem 0;color:#666">${store.address || 'Non spécifiée'}</p>
@@ -4011,21 +4239,26 @@ function viewStoreDetails(id) {
             <strong>🎟️ Forfait :</strong>
             <p style="margin:0.3rem 0;color:#666">${store.forfait || 'Non spécifié'}</p>
           </div>
-          <div style="background:white;padding:1rem;border-radius:8px">
-            <strong>📊 Statut :</strong>
-            <span class="badge ${store.status === 'active' ? 'badge-green' : store.status === 'pending' ? 'badge-orange' : 'badge-red'}">
-              ${store.status === 'active' ? '✅ Actif' : store.status === 'pending' ? '⏳ En attente' : '❌ Inactif'}
-            </span>
-          </div>
         </div>
       </div>
-      <div style="margin-top:1.5rem;text-align:right">
-        <button class="btn-sm btn-gray" onclick="this.closest('.modal-bg').remove()">Fermer</button>
+
+      <!-- Section des produits -->
+      <div style="margin-top: 2rem;">
+        <h3 style="color:#0a1929; margin-bottom: 0.5rem; border-bottom: 2px solid #f5a623; padding-bottom: 0.5rem;">🛒 Produits disponibles</h3>
+        ${productsHtml}
+      </div>
+
+      <!-- Boutons du bas -->
+      <div style="margin-top:2rem; text-align:center; padding-bottom:1rem; border-top:1px solid #eee; padding-top:1rem;">
+        <button onclick="showMyCartProperly()" style="background:#f5a623; color:#0a1929; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-size:1rem; font-weight:bold; margin-right:10px;">🛒 Voir mon panier</button>
+      <button onclick="this.closest('.modal-bg').remove()" style="background:#ef4444; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-size:1rem;">Fermer</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
 }
+
+
 function viewDriverDetails(id) {
   const driver = drivers.find(d => String(d.id) === String(id));
   if (!driver) {
@@ -5238,11 +5471,11 @@ async function performSearch(query) {
     ).slice(0, 5);
     
     matchingProducts.forEach(p => {
-      const store = stores.find(s => String(s.id) === String(p.storeId));
+      const store = stores.find(s => String(s.id) === String(p.store_id));
       results.push({
         type: 'product',
         id: p.id,
-        storeId: p.storeId,
+        store_id: p.store_id,
         icon: '🛍️',
         title: p.name,
         subtitle: `${store ? store.name : 'Commerce'} • ${p.price} $`
@@ -5273,7 +5506,7 @@ async function performSearch(query) {
     suggestionsDiv.innerHTML = '<div class="search-item" style="text-align:center; color:#999;">Aucun résultat trouvé</div>';
   } else {
     suggestionsDiv.innerHTML = results.map(r => `
-      <div class="search-item" onclick="handleSearchClick('${r.type}', '${r.id}', '${r.storeId || ''}')">
+      <div class="search-item" onclick="handleSearchClick('${r.type}', '${r.id}', '${r.store_id || ''}')">
         <div class="search-item-icon">${r.icon}</div>
         <div class="search-item-content">
           <div class="search-item-title">${r.title}</div>
@@ -5286,7 +5519,7 @@ async function performSearch(query) {
   suggestionsDiv.style.display = 'block';
 }
 
-function handleSearchClick(type, id, storeId) {
+function handleSearchClick(type, id, store_id) {
   const suggestionsDiv = document.getElementById('search-suggestions');
   if (suggestionsDiv) suggestionsDiv.style.display = 'none';
   
@@ -5295,7 +5528,7 @@ function handleSearchClick(type, id, storeId) {
   
   if (type === 'product') {
     if (typeof openStoreDetail === 'function') {
-      openStoreDetail(storeId);
+      openStoreDetail(store_id);
     }
   } else if (type === 'store') {
     if (typeof openStoreDetail === 'function') {
@@ -5391,7 +5624,7 @@ async function updateMyStoreName(newStoreName) {
 // ==========================================
 // ✅ 2. MODIFIER LE NOM D'UN COMMERCE (PAR L'ADMIN)
 // ==========================================
-async function adminUpdateStoreName(storeId, newStoreName) {
+async function adminUpdateStoreName(store_id, newStoreName) {
   if (!currentUser || currentUser.role !== 'admin') {
     showToast('❌ Accès refusé. Réservé aux administrateurs.');
     return;
@@ -5409,7 +5642,7 @@ async function adminUpdateStoreName(storeId, newStoreName) {
     const { error } = await supabaseClient
       .from('stores')
       .update({ name: newStoreName.trim() })
-      .eq('id', storeId);
+      .eq('id', store_id);
 
     if (error) throw error;
 
@@ -5442,19 +5675,6 @@ async function adminUpdateStoreName(storeId, newStoreName) {
 
 
 
-// 3. Initialiser l'affichage du nom quand on ouvre la page
-function initStoreNameDisplay() {
-  const displayEl = document.getElementById('current-store-name-display');
-  if (!displayEl) return;
-
-  if (typeof currentStore !== 'undefined' && currentStore && currentStore.name) {
-    displayEl.textContent = currentStore.name;
-  } else if (typeof currentUser !== 'undefined' && currentUser && currentUser.storeName) {
-    displayEl.textContent = currentUser.storeName;
-  } else {
-    displayEl.textContent = "Chargement...";
-  }
-}
 
 // ==========================================
 // ✅ SOLUTION INFAILLIBLE : Mise à jour auto du nom du commerce
@@ -5772,3 +5992,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
+
+
+
+// ==========================================
+// ✅ FONCTION MAÎTRESSE POUR AFFICHER LE PANIER PROPREMENT
+// ==========================================
+function showMyCartProperly() {
+  console.log("🛒 [PANIER] Activation du mode panier propre...");
+
+  // 1. Fermer TOUTES les fenêtres modales ouvertes (comme celle du magasin)
+  document.querySelectorAll('.modal-bg').forEach(modal => modal.remove());
+
+  // 2. Liste de toutes les sections qu'on veut CACHER quand on va au panier
+  const sectionsToHide = [
+    'home-section', 
+    'store-dashboard-section', 
+    'store-products-section', 
+    'store-categories-section', 
+    'checkout-section'
+  ];
+
+  // 3. Les cacher toutes
+  sectionsToHide.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  // 4. Afficher UNIQUEMENT la section panier
+  const cartSection = document.getElementById('cart-section');
+  if (cartSection) {
+    cartSection.style.display = 'block';
+    
+    // 5. Forcer la mise à jour de l'affichage du panier (si ta fonction existe)
+    if (typeof updateCart === 'function') updateCart();
+    if (typeof renderCart === 'function') renderCart();
+  }
+
+  // 6. Remonter en haut de la page pour une belle expérience
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
