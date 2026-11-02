@@ -1026,6 +1026,7 @@ function showUserInterface() {
   // 1. Afficher la section utilisateur et la cloche
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('user-section').style.display = 'flex';
+  document.getElementById('header-wallet').style.display = 'block';
   document.getElementById('notif-bell-container').style.display = 'block';
 
   // 2. Mise à jour de l'avatar et du nom
@@ -1172,19 +1173,88 @@ function openStoreFromLanding(store_id) {
 }
 
 // ============ CLIENT - COMMERCE ============
-function showClientStores() {
-  switchView('view-client');
-  document.getElementById('stores-section').style.display = 'block';
-  document.getElementById('store-detail-section').style.display = 'none';
-  document.getElementById('client-orders-section').style.display = 'none';
-  document.getElementById('client-order-detail-section').style.display = 'none';
-  document.getElementById('client-profile-section').style.display = 'none';
-  
-  // ❌ ON ENLÈVE CETTE LIGNE pour que le panier reste caché par défaut
-  // document.getElementById('cart-section').style.display = 'block';
-  
-  renderClientStores();
-  setTimeout(() => document.getElementById('stores-section').scrollIntoView({ behavior: 'smooth' }), 200);
+
+// ==========================================
+// ✅ FONCTION UNIFIÉE : LISTE DES COMMERCES (DESIGN PREMIUM)
+// ==========================================
+async function showClientStores() {
+  console.log("🏪 [COMMERCES] Affichage de la liste design premium...");
+
+  // 1. Cacher les autres sections
+  ['home-section', 'cart-section', 'store-detail-section', 'store-dashboard-section', 'checkout-section', 'client-section'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  // 2. Cibler le conteneur
+  const container = document.getElementById('stores-section');
+  if (!container) return;
+
+  container.style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  container.innerHTML = '<p style="text-align:center; padding:3rem; color:#666; font-size:1.1rem;">⏳ Chargement de nos commerces partenaires...</p>';
+
+  try {
+    // 3. Charger les commerces
+    const { data: storesData, error } = await supabaseClient
+      .from('stores')
+      .select('*')
+      .eq('status', 'active');
+
+    if (error) throw error;
+
+    if (!storesData || storesData.length === 0) {
+      container.innerHTML = '<p style="text-align:center; padding:3rem; color:#666;">Aucun commerce disponible pour le moment.</p>';
+      return;
+    }
+
+    window.stores = storesData;
+
+    // 4. ✅ NOUVEAU DESIGN : Grille de cartes modernes
+    container.innerHTML = `
+      <div style="text-align:center; margin-bottom:2rem; padding-top:1rem;">
+        <h2 style="color:#0a1929; font-size:2rem; margin-bottom:0.5rem;">🏪 Nos Commerces Partenaires</h2>
+        <p style="color:#64748b; font-size:1rem;">Soutenez les commerces locaux de votre région</p>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; padding: 1rem 1.5rem 3rem 1.5rem; max-width: 1200px; margin: 0 auto;">
+        ${storesData.map(store => `
+          <div onclick="openStoreDetail('${store.id}')" style="background:white; border-radius:16px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05); cursor:pointer; transition:all 0.3s ease; border:1px solid #f1f5f9;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 25px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.05)'">
+            
+            <!-- Bannière et Icône -->
+            <div style="background: linear-gradient(135deg, #f5f1e8 0%, #e2dcc8 100%); height: 90px; position: relative; display: flex; align-items: flex-end; justify-content: center;">
+              <div style="font-size: 3.5rem; background: white; width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 4px solid white; position: absolute; bottom: -37px; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                ${store.icon || '🏪'}
+              </div>
+            </div>
+
+            <!-- Contenu de la carte -->
+            <div style="padding: 3rem 1.5rem 1.5rem 1.5rem; text-align: center;">
+              <h3 style="margin: 0 0 0.8rem 0; color: #0a1929; font-size: 1.3rem; font-weight: 700;">${store.name}</h3>
+              
+              <!-- Badge Type -->
+              <span style="display: inline-block; background: #f0f9ff; color: #0369a1; padding: 5px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem; border: 1px solid #bae6fd;">
+                ${store.type || 'Commerce local'}
+              </span>
+
+              <!-- Adresse -->
+              <p style="margin: 0; color: #64748b; font-size: 0.95rem; line-height: 1.5; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                📍 ${store.address || 'Adresse non spécifiée'}
+              </p>
+
+              <!-- Indicateur d'action -->
+              <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px dashed #e2e8f0; color: #f5a623; font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                Voir les produits <span style="transition: transform 0.3s;">→</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+  } catch (err) {
+    console.error("❌ Erreur chargement commerces:", err);
+    container.innerHTML = '<p style="text-align:center; padding:3rem; color:#ef4444;">Une erreur est survenue lors du chargement.</p>';
+  }
 }
 // ==========================================
 // ✅ FILTRAGE DES COMMERCES PAR CATÉGORIE
@@ -1278,53 +1348,7 @@ function renderClientStores() {
   }).join('');
 }
 
-function openStoreDetail(store_id) {
-  const store = stores.find(s => String(s.id) === String(store_id));
-  if (!store) return;
-  
-  switchView('view-client');
-  document.getElementById('stores-section').style.display = 'none';
-  document.getElementById('store-detail-section').style.display = 'block';
 
-  const storeProducts = products.filter(p => String(p.store_id) === String(store_id) && p.available);
-  const storeCats = [...new Set(storeProducts.map(p => p.category_id))].map(cid => categories.find(c => String(c.id) === String(cid))).filter(Boolean);
-
-  let html = `<button class="back-btn" onclick="showClientStores()">← Retour</button>`;
-  html += `<div class="store-detail-header"><div class="store-detail-icon">${store.logo ? `<img src="${store.logo}" alt="${store.name}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">` : store.icon}</div>
-  <div class="store-detail-info">
-  <h2>${store.name}</h2>
-  <p>${store.type} • ${store.address}</p>
-  <p>${storeProducts.length} produit(s) disponible(s)</p>
-  </div>
-  </div>`;
-
-  if (storeCats.length > 0) {
-    html += `<div class="categories-bar">
-    <button class="cat-btn active" onclick="filterProducts(${store_id},'all',this)">🏷️ Tout (${storeProducts.length})</button>`;
-    storeCats.forEach(c => {
-      const catCount = storeProducts.filter(p => String(p.category_id) === String(c.id)).length;
-      html += `<button class="cat-btn" onclick="filterProducts(${store_id},${c.id},this)">${c.icon} ${c.name} (${catCount})</button>`;
-    });
-    html += `</div>`;
-  }
-  
-  html += `<div class="products-grid" id="products-grid-detail"></div>`;
-  
-  // ✅ BOUTON SIMPLE POUR ALLER AU PANIER (en bas des articles)
-  html += `
-    <div style="margin-top:2rem; text-align:center;">
-      <button onclick="scrollToCart()" style="background:linear-gradient(135deg, #0a1929 0%, #1e3c72 100%); color:white; border:none; padding:1rem 2rem; border-radius:10px; font-size:1.1rem; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(10,25,41,0.2);">
-        🛒 Voir mon panier (<span id="inline-cart-count">0</span> articles)
-      </button>
-    </div>
-  `;
-  
-  document.getElementById('store-detail-content').innerHTML = html;
-  renderClientProductGrid(store_id, 'all');
-  
-  // Mettre à jour le compteur inline
-  updateInlineCartCount();
-}
 
 // ✅ Mettre à jour le compteur d'articles en bas de page
 function updateInlineCartCount() {
@@ -1365,43 +1389,127 @@ function updateStickyCartBar() {
   }
 }
 
-function filterProducts(store_id, catId, btn) {
-  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderClientProductGrid(store_id, catId);
+
+// ==========================================
+// ✅ AFFICHAGE DU COMMERCE (VERSION CLIENT) - CORRIGÉE
+// ==========================================
+
+async function openStoreDetail(store_id) { 
+  const store = stores.find(s => String(s.id) === String(store_id));
+  if (!store) {
+    showToast('❌ Commerce introuvable');
+    return;
+  }
+  
+  switchView('view-client');
+  document.getElementById('stores-section').style.display = 'none';
+  document.getElementById('store-detail-section').style.display = 'block';
+
+  // ✅ NOUVEAU : Récupérer les produits directement depuis Supabase avec le BON nom
+  const { data: storeProducts, error } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('store_id', store.id)
+    .eq('available', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("❌ Erreur chargement produits:", error);
+  }
+
+  const validProducts = storeProducts || [];
+
+  // Trouver les catégories de ces produits
+  const storeCats = [...new Set(validProducts.map(p => p.category_id))]
+    .map(cid => categories.find(c => String(c.id) === String(cid)))
+    .filter(Boolean);
+
+  let html = `<button class="back-btn" onclick="showClientStores()">← Retour aux commerces</button>`;
+  html += `<div class="store-detail-header" style="display:flex; align-items:center; gap:1.5rem; margin-bottom:1.5rem; padding:1rem; background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+    <div class="store-detail-icon" style="font-size:4rem;">${store.logo ? `<img src="${store.logo}" alt="${store.name}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">` : (store.icon || '🏪')}</div>
+    <div class="store-detail-info">
+      <h2 style="margin:0; color:#0a1929;">${store.name}</h2>
+      <p style="margin:0.3rem 0; color:#666;">${store.type || 'Commerce'} • ${store.address || 'Adresse non spécifiée'}</p>
+      <p style="margin:0.3rem 0; color:#10b981; font-weight:bold;">${validProducts.length} produit(s) disponible(s)</p>
+    </div>
+  </div>`;
+
+  if (storeCats.length > 0) {
+    html += `<div class="categories-bar" style="display:flex; gap:0.5rem; overflow-x:auto; padding-bottom:0.5rem; margin-bottom:1rem;">
+      <button class="cat-btn active" onclick="filterClientProducts('${store.id}','all',this, window.currentStoreProducts)" style="padding:8px 16px; background:#0a1929; color:white; border:none; border-radius:20px; cursor:pointer; white-space:nowrap;">🏷️ Tout (${validProducts.length})</button>`;
+    storeCats.forEach(c => {
+      const catCount = validProducts.filter(p => String(p.category_id) === String(c.id)).length;
+      html += `<button class="cat-btn" onclick="filterClientProducts('${store.id}','${c.id}',this, window.currentStoreProducts)" style="padding:8px 16px; background:#f3f4f6; color:#374151; border:none; border-radius:20px; cursor:pointer; white-space:nowrap;">${c.icon || '📂'} ${c.name} (${catCount})</button>`;
+    });
+    html += `</div>`;
+  }
+  
+  // Conteneur pour la grille de produits
+  html += `<div class="products-grid" id="products-grid-detail" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:1rem;"></div>`;
+  
+  // ✅ BOUTON POUR ALLER AU PANIER
+  html += `
+    <div style="margin-top:2rem; text-align:center; padding-bottom: 2rem;">
+      <button onclick="showMyCartProperly()" style="background:linear-gradient(135deg, #f5a623 0%, #d48a1b 100%); color:#0a1929; border:none; padding:1rem 2rem; border-radius:10px; font-size:1.1rem; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(245,166,35,0.3);">
+        🛒 Voir mon panier et Commander
+      </button>
+    </div>
+  `;
+  
+  document.getElementById('store-detail-content').innerHTML = html;
+  
+  // Sauvegarder les produits en mémoire pour le filtrage par catégorie
+  window.currentStoreProducts = validProducts;
+  
+  // Afficher les produits immédiatement
+  renderClientProductsGrid(store.id, 'all', validProducts);
+  
+  // Mettre à jour le compteur inline
+  if (typeof updateInlineCartCount === 'function') updateInlineCartCount();
 }
 
-function renderClientProductGrid(store_id, catId) {
-  let prods = products.filter(p => String(p.store_id) === String(store_id) && p.available);
-  if (catId !== 'all') prods = prods.filter(p => String(p.category_id) === String(catId));
+// ✅ FONCTION POUR AFFICHER LA GRILLE DE PRODUITS
+function renderClientProductsGrid(store_id, categoryId, allProducts) {
+  const grid = document.getElementById('products-grid-detail');
+  if (!grid) return;
 
-  const g = document.getElementById('products-grid-detail');
-  if (!prods.length) {
-    g.innerHTML = '<div style="text-align:center; padding:3rem; color:#666;"><p style="font-size:3rem; margin-bottom:1rem;">😕</p><p>Aucun produit dans cette catégorie</p></div>';
+  const filteredProducts = categoryId === 'all' 
+    ? allProducts 
+    : allProducts.filter(p => String(p.category_id) === String(categoryId));
+
+  if (filteredProducts.length === 0) {
+    grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#666; padding:2rem; background:white; border-radius:8px;">Aucun produit dans cette catégorie pour le moment.</p>';
     return;
   }
 
-  g.innerHTML = prods.map(p => {
-    const cat = categories.find(c => String(c.id) === String(p.category_id));
-    
-    return `
-    <div class="modern-product-card">
-      <div class="product-image-area">
-        <div class="product-icon">${p.icon || '📦'}</div>
-        ${cat ? `<span class="product-category-badge">${cat.icon} ${cat.name}</span>` : ''}
+  grid.innerHTML = filteredProducts.map(p => `
+    <div style="background:white; padding:1rem; border-radius:12px; text-align:center; border:1px solid #eee; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+      <div>
+        <div style="font-size:3rem; margin-bottom:0.5rem;">${p.icon || '📦'}</div>
+        <h4 style="margin:0 0 0.5rem 0; font-size:1rem; color:#0a1929; min-height:2.5rem; display:flex; align-items:center; justify-content:center;">${p.name}</h4>
+        <p style="margin:0; color:#10b981; font-weight:bold; font-size:1.2rem;">${parseFloat(p.price).toFixed(2)} $</p>
+        <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#666;">${p.description || ''}</p>
       </div>
-      <div class="product-details">
-        <h4 class="product-name">${p.name}</h4>
-        <p class="product-desc">${p.desc || 'Aucune description disponible'}</p>
-        <div class="product-footer">
-          <span class="product-price">${p.price.toFixed(2)} $</span>
-          <button class="modern-add-btn" onclick="addToCart(${p.id})">
-            <span>+</span> Ajouter
-          </button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+      <!-- ✅ BOUTON AJOUTER AU PANIER CORRIGÉ (Envoie juste l'ID à ta fonction) -->
+      <button onclick="addToCart(${p.id})" style="background:#0a1929; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-size:0.9rem; font-weight:bold; margin-top:1rem; width:100%; display:flex; align-items:center; justify-content:center; gap:8px;">
+        🛒 Ajouter
+      </button>
+    </div>
+  `).join('');
+}
+
+// ✅ FONCTION POUR FILTRER PAR CATÉGORIE (Clic sur les boutons)
+function filterClientProducts(store_id, categoryId, btnElement, allProducts) {
+  // Mettre à jour l'apparence des boutons
+  document.querySelectorAll('.categories-bar .cat-btn').forEach(btn => {
+    btn.style.background = '#f3f4f6';
+    btn.style.color = '#374151';
+  });
+  btnElement.style.background = '#0a1929';
+  btnElement.style.color = 'white';
+
+  // Rafraîchir la grille avec le filtre
+  renderClientProductsGrid(store_id, categoryId, allProducts);
 }
 
 function addToCart(prodId) {
@@ -1850,7 +1958,7 @@ function renderProfiless() {
   content.innerHTML = html;
 }
 
-function openEditProfiless() {
+function openEditProfile() {
   document.getElementById('ep-name').value = currentUser.name;
   document.getElementById('ep-phone').value = currentUser.phone;
   document.getElementById('ep-address').value = currentUser.address;
@@ -1858,17 +1966,20 @@ function openEditProfiless() {
   setTimeout(() => initAutocomplete('ep-address', 'ep-address-suggestions'), 100);
 }
 
-async function saveProfiless(e) {
-  e.preventDefault();
-  
-  console.log("💾 [PROFIL] Début de la sauvegarde...");
+// ==========================================
+// ✅ SAUVEGARDE DU PROFIL AVEC SYNCHRONISATION UNIVERSELLE
+// ==========================================
+async function saveProfile(e) {
+  if (e) e.preventDefault();
 
-  // 1. Récupérer les nouvelles valeurs
+  console.log("💾 [PROFIL] Sauvegarde en cours...");
+
+  // 1. Récupérer les valeurs des champs
   const addrInput = document.getElementById('ep-address');
   const newName = document.getElementById('ep-name').value;
   const newPhone = document.getElementById('ep-phone').value;
   const newAddress = addrInput.value;
-  
+
   // 2. Mettre à jour la mémoire locale
   currentUser.name = newName;
   currentUser.phone = newPhone;
@@ -1876,9 +1987,9 @@ async function saveProfiless(e) {
   if (addrInput._lat) currentUser.lat = addrInput._lat;
 
   try {
-    // 3. ✅ SAUVEGARDER DANS SUPABASE (Table 'profiles')
+    // 3. Sauvegarder dans Supabase
     const { error } = await supabaseClient
-      .from('profiles') // ⚠️ Si ta table s'appelle 'users', change ici
+      .from('profiles') // ⚠️ Change en 'users' si ta table s'appelle ainsi
       .update({ 
         name: newName, 
         phone: newPhone, 
@@ -1889,20 +2000,52 @@ async function saveProfiless(e) {
 
     if (error) throw error;
 
-    // 4. Sauvegarder dans le navigateur pour les prochains rechargements
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    // 4. ✅ SYNCHRONISER PARTOUT INSTANTANÉMENT
+    syncUserProfileEverywhere();
 
-    // 5. ✅ METTRE À JOUR L'ÉCRAN PARTOUT
-    if (typeof updateHeader === 'function') updateHeader();
-    if (typeof renderStoreProfiles === 'function') renderStoreProfiles();
-
-    showToast('✅ Informations sauvegardées avec succès !');
-    console.log("✅ [PROFIL] Sauvegarde terminée.");
+    showToast('✅ Informations sauvegardées et synchronisées partout !');
 
   } catch (err) {
-    console.error("❌ Erreur sauvegarde profil:", err);
+    console.error("❌ Erreur sauvegarde:", err);
     showToast('❌ Erreur : ' + err.message);
   }
+}
+
+// ==========================================
+// ✅ FONCTION DE SYNCHRONISATION UNIVERSELLE
+// ==========================================
+function syncUserProfileEverywhere() {
+  console.log("🔄 [SYNC] Mise à jour du profil partout...");
+
+  // 1. Sauvegarder dans le navigateur (pour que ça reste après rechargement)
+  localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+  // 2. Mettre à jour le header (nom en haut à droite)
+  const userNameDisplay = document.getElementById('user-name') || document.querySelector('.user-name');
+  if (userNameDisplay && currentUser.name) {
+    userNameDisplay.textContent = currentUser.name;
+  }
+
+  // 3. Mettre à jour la page de profil si elle est ouverte
+  const profileName = document.getElementById('ep-name');
+  const profilePhone = document.getElementById('ep-phone');
+  const profileAddress = document.getElementById('ep-address');
+  
+  if (profileName) profileName.value = currentUser.name || '';
+  if (profilePhone) profilePhone.value = currentUser.phone || '';
+  if (profileAddress) profileAddress.value = currentUser.address || '';
+
+  // 4. Mettre à jour le tableau de bord commerce si c'est un commerçant
+  if (typeof renderStoreProfile === 'function') {
+    renderStoreProfile();
+  }
+
+  // 5. Mettre à jour l'en-tête général
+  if (typeof updateHeader === 'function') {
+    updateHeader();
+  }
+
+  console.log("✅ [SYNC] Profil synchronisé partout !");
 }
 
 // ============ LIVREUR ============
@@ -6007,21 +6150,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ==========================================
-// ✅ FONCTION MAÎTRESSE POUR AFFICHER LE PANIER PROPREMENT
+// ✅ FONCTION MAÎTRESSE POUR AFFICHER LE PANIER PROPREMENT (VERSION 2.0)
 // ==========================================
 function showMyCartProperly() {
   console.log("🛒 [PANIER] Activation du mode panier propre...");
 
-  // 1. Fermer TOUTES les fenêtres modales ouvertes (comme celle du magasin)
+  // 1. Fermer TOUTES les fenêtres modales ouvertes
   document.querySelectorAll('.modal-bg').forEach(modal => modal.remove());
 
-  // 2. Liste de toutes les sections qu'on veut CACHER quand on va au panier
+  // 2. ✅ LISTE COMPLÈTE de toutes les sections à CACHER (y compris celles des commerces)
   const sectionsToHide = [
     'home-section', 
+    'stores-section',           // ⬅️ NOUVEAU : Cache la liste des commerces
+    'store-detail-section',     // ⬅️ NOUVEAU : Cache le détail du commerce actuel
     'store-dashboard-section', 
     'store-products-section', 
     'store-categories-section', 
-    'checkout-section'
+    'checkout-section',
+    'client-section'            // Au cas où
   ];
 
   // 3. Les cacher toutes
@@ -6035,11 +6181,211 @@ function showMyCartProperly() {
   if (cartSection) {
     cartSection.style.display = 'block';
     
-    // 5. Forcer la mise à jour de l'affichage du panier (si ta fonction existe)
+    // 5. Forcer la mise à jour de l'affichage du panier
     if (typeof updateCart === 'function') updateCart();
     if (typeof renderCart === 'function') renderCart();
   }
 
-  // 6. Remonter en haut de la page pour une belle expérience
+  // 6. ✅ Mettre à jour le menu du haut pour enlever la surbrillance "Commerces"
+  document.querySelectorAll('.nav-link, .tab-link').forEach(link => {
+    link.classList.remove('active');
+  });
+  const cartLink = document.querySelector('[onclick*="cart"]') || document.querySelector('#cart-link');
+  if (cartLink) cartLink.classList.add('active');
+
+  // 7. Remonter en haut de la page pour une belle expérience
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+
+// ==========================================
+// ✅ SYSTÈME DE SYNCHRONISATION UNIVERSELLE DU PROFIL
+// ==========================================
+
+// Fonction centrale qui met à jour TOUT le site
+function syncUserProfileEverywhere() {
+  console.log("🔄 [SYNC] Mise à jour du profil partout...");
+
+  // 1. Sauvegarder dans le navigateur (pour que ça reste après rechargement)
+  localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+  // 2. Mettre à jour le header (nom en haut à droite)
+  const userNameDisplay = document.getElementById('user-name') || document.querySelector('.user-name');
+  if (userNameDisplay && currentUser.name) {
+    userNameDisplay.textContent = currentUser.name;
+  }
+
+  // 3. Mettre à jour la page de profil si elle est ouverte
+  const profileName = document.getElementById('ep-name');
+  const profilePhone = document.getElementById('ep-phone');
+  const profileAddress = document.getElementById('ep-address');
+  
+  if (profileName) profileName.value = currentUser.name || '';
+  if (profilePhone) profilePhone.value = currentUser.phone || '';
+  if (profileAddress) profileAddress.value = currentUser.address || '';
+
+  // 4. Mettre à jour le tableau de bord commerce si c'est un commerçant
+  if (typeof renderStoreProfile === 'function') {
+    renderStoreProfile();
+  }
+
+  // 5. Mettre à jour l'en-tête général
+  if (typeof updateHeader === 'function') {
+    updateHeader();
+  }
+
+  console.log("✅ [SYNC] Profil synchronisé partout !");
+}
+
+// Fonction pour sauvegarder le profil (appelle la sync automatique)
+
+// ==========================================
+// ✅ CLIENT : OUVERTURE DU MODAL DE PROFIL
+// ==========================================
+function openEditProfileModal() {
+  console.log("📝 [CLIENT] Ouverture du modal de profil...");
+
+  // Remplir les champs avec les données actuelles
+  const nameField = document.getElementById('ep-name');
+  const phoneField = document.getElementById('ep-phone');
+  const addressField = document.getElementById('ep-address');
+
+  if (nameField) nameField.value = currentUser.name || '';
+  if (phoneField) phoneField.value = currentUser.phone || '';
+  if (addressField) addressField.value = currentUser.address || '';
+
+  // Activer l'autocomplétion d'adresse
+  if (typeof initAutocomplete === 'function') {
+    setTimeout(() => initAutocomplete('ep-address', 'ep-address-suggestions'), 100);
+  }
+
+  // Ouvrir le modal
+  if (typeof openModal === 'function') {
+    openModal('edit-profile-modal');
+  } else {
+    const modal = document.getElementById('edit-profile-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  console.log("✅ [CLIENT] Modal ouvert avec les données actuelles.");
+}
+
+// ==========================================
+// ✅ CLIENT : SAUVEGARDE DU PROFIL
+// ==========================================
+async function saveProfile(e) {
+  if (e) e.preventDefault();
+
+  console.log("💾 [CLIENT] Sauvegarde du profil en cours...");
+
+  const addrInput = document.getElementById('ep-address');
+  const newName = document.getElementById('ep-name').value;
+  const newPhone = document.getElementById('ep-phone').value;
+  const newAddress = addrInput.value;
+
+  currentUser.name = newName;
+  currentUser.phone = newPhone;
+  currentUser.address = newAddress;
+  if (addrInput._lat) currentUser.lat = addrInput._lat;
+
+  try {
+    const { error } = await supabaseClient
+      .from('profiles')
+      .update({ 
+        name: newName, 
+        phone: newPhone, 
+        address: newAddress,
+        lat: currentUser.lat || null
+      })
+      .eq('id', currentUser.id);
+
+    if (error) throw error;
+
+    // Synchroniser partout
+    syncUserProfileEverywhere();
+    showToast('✅ Profil sauvegardé et synchronisé partout !');
+
+  } catch (err) {
+    console.error("❌ Erreur sauvegarde profil:", err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ==========================================
+// ✅ CLIENT : SYNCHRONISATION UNIVERSELLE
+// ==========================================
+function syncUserProfileEverywhere() {
+  console.log("🔄 [SYNC] Mise à jour du profil client partout...");
+
+  localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+  const userNameDisplay = document.getElementById('user-name') || document.querySelector('.user-name');
+  if (userNameDisplay && currentUser.name) {
+    userNameDisplay.textContent = currentUser.name;
+  }
+
+  if (typeof updateHeader === 'function') updateHeader();
+
+  console.log("✅ [SYNC] Profil client synchronisé !");
+}
+
+// ==========================================
+// ✅ COMMERCE : GESTION DU NOM DU COMMERCE
+// ==========================================
+function initStoreNameDisplay() {
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  const display = document.getElementById('current-store-name-display');
+  
+  if (display && myStore) {
+    display.textContent = myStore.name;
+  } else if (display) {
+    display.textContent = 'Mon commerce';
+  }
+}
+
+function toggleStoreNameEdit(showEdit) {
+  const displayMode = document.getElementById('store-name-display');
+  const editMode = document.getElementById('store-name-edit-form');
+  
+  if (showEdit) {
+    if (displayMode) displayMode.style.display = 'none';
+    if (editMode) editMode.style.display = 'block';
+    
+    const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+    const input = document.getElementById('store-name-input-pro');
+    if (input && myStore) {
+      input.value = myStore.name || '';
+    }
+  } else {
+    if (displayMode) displayMode.style.display = 'block';
+    if (editMode) editMode.style.display = 'none';
+  }
+}
+
+// ==========================================
+// ✅ CORRECTION AUTOMATIQUE DU WALLET (Ne rien chercher, juste coller)
+// ==========================================
+
+// 1. Au chargement de la page : si l'utilisateur est connecté, on affiche le wallet
+if (typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
+  const wallet = document.getElementById('header-wallet');
+  if (wallet) wallet.style.display = 'block';
+}
+
+// 2. On intercepte le bouton "Déconnexion" pour qu'il cache le wallet automatiquement
+const ancienneFonctionLogout = window.logout; 
+window.logout = function() {
+  // On cache le wallet
+  const wallet = document.getElementById('header-wallet');
+  if (wallet) wallet.style.display = 'none';
+  
+  // On lance la vraie déconnexion de ton site
+  if (typeof ancienneFonctionLogout === 'function') {
+    ancienneFonctionLogout();
+  } else {
+    // Sécurité au cas où
+    localStorage.removeItem('currentUser');
+    currentUser = null;
+    location.reload();
+  }
+};

@@ -33,10 +33,13 @@
   🚧 <strong>Site en phase de développement</strong> — Bienvenue sur RuralGo !
 </div>
 
-<!-- HEADER -->
+<!-- ==========================================
+     ✅ HEADER CORRIGÉ ET OPTIMISÉ
+     ========================================== -->
 <header>
   <div class="nav">
-    <!-- 1. LOGO -->
+    
+    <!-- 1. LOGO (Gauche) -->
     <div class="logo" onclick="goHome()">
       <div class="logo-icon">
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
@@ -87,7 +90,15 @@
       </ul>
     </nav>
 
-    <!-- 6. CLOCHE DE NOTIFICATIONS -->
+    <!-- ✅ 6. WALLET (NOUVELLE POSITION : Centre-Gauche, après la navigation) -->
+    <div id="header-wallet" style="display: none; margin-left: 2rem; margin-right: auto;">
+      <div id="wallet-display" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(16,185,129,0.3); cursor: pointer; transition: transform 0.2s;" onclick="showWalletBalance()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <span style="font-size: 1.2rem;">💰</span>
+        <span id="wallet-balance">0.00</span> $
+      </div>
+    </div>
+
+    <!-- 7. CLOCHE DE NOTIFICATIONS -->
     <div id="notif-bell-container" style="display:none; position:relative;">
       <div class="notif-bell" onclick="toggleNotifPanel()">
         🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span>
@@ -101,42 +112,38 @@
       </div>
     </div>
 
-    <!-- 7. BOUTONS DE CONNEXION / INSCRIPTION (VISIBLE SI DÉCONNECTÉ) -->
+    <!-- 8. BOUTONS DE CONNEXION / INSCRIPTION (VISIBLE SI DÉCONNECTÉ) -->
     <div id="auth-section" class="auth-buttons">
       <button class="auth-btn" onclick="openChooseTypeModal()">📝 S'inscrire</button>
       <button class="auth-btn secondary" onclick="openLoginModal()">🔑 Connexion</button>
     </div>
 
-    <!-- 8. SECTION UTILISATEUR CONNECTÉ (PROPRE, SANS DOUBLON) -->
-    <div id="user-section" style="display:none">
-      <!-- Infos utilisateur -->
-      <div class="user-info" style="cursor:pointer" onclick="showProfile()">
-        <div class="user-avatar" id="user-avatar">👤</div>
-        <div class="user-details">
-          <div class="user-name" id="user-name">User</div>
-          <div class="user-role" id="user-role">Client</div>
+    <!-- ✅ 9. SECTION UTILISATEUR CONNECTÉ (Nettoyée et alignée à droite) -->
+    <div id="user-section" style="display:none; align-items: center; gap: 1rem;">
+      
+      <!-- Bouton Modifier le profil -->
+      <button onclick="openEditProfileModal()" style="background: transparent; color: #0a1929; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 500; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;" onmouseover="this.style.borderColor='#f5a623'; this.style.color='#f5a623'" onmouseout="this.style.borderColor='#d1d5db'; this.style.color='#0a1929'">
+        <span>✏️</span> Modifier
+      </button>
+
+      <!-- Infos utilisateur (Avatar + Nom + Rôle) -->
+      <div class="user-info" style="cursor:pointer; display: flex; align-items: center; gap: 10px;" onclick="showProfile()">
+        <div class="user-avatar" id="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #f5a623 0%, #d48a1b 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">👤</div>
+        <div class="user-details" style="text-align: left; line-height: 1.2;">
+          <div class="user-name" id="user-name" style="font-weight: 600; color: #0a1929; font-size: 0.95rem;">User</div>
+          <div class="user-role" id="user-role" style="font-size: 0.8rem; color: #6b7280;">Client</div>
         </div>
       </div>
 
-      <!-- Widget Portefeuille -->
-      <div class="wallet-widget">
-        <button class="wallet-btn wallet-balance-btn" onclick="showWalletBalance()" title="Voir mon solde">
-          💰 <span class="wallet-balance-wrapper"><span class="wallet-balance" id="wallet-balance">0.00 $</span></span>
-        </button>
-        <button class="wallet-btn wallet-deposit-btn" onclick="openDepositModal()" title="Recharger mon compte">
-          💳 Recharger
-        </button>
-        <button class="wallet-btn wallet-history-btn" onclick="showTransactionHistory()" title="Historique">
-          📋
-        </button>
-      </div>
-
       <!-- Bouton Déconnexion -->
-      <button class="logout-btn" onclick="logout()">Déconnexion</button>
+      <button class="logout-btn" onclick="logout()" style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.85rem; transition: background 0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+        Déconnexion
+      </button>
     </div>
 
   </div> <!-- Fin de .nav -->
 </header>
+
 <!-- COMPTEUR VISITEURS -->
 <div id="compteur" style="text-align:center;padding:0.8rem;background:#0a1929;color:white;font-size:1.1rem;font-weight:bold;"></div>
 
