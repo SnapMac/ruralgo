@@ -5715,3 +5715,71 @@ if (originalLogout) {
     setTimeout(loadAllStoresHomepage, 500); // Recharger après déconnexion
   };
 }
+
+// ==========================================
+// ✅ CODE FINAL ET INFAILLIBLE POUR L'ACCUEIL
+// ==========================================
+async function afficherCommercesAccueil() {
+  console.log("🚀 Lancement de l'affichage des commerces...");
+  
+  // Vérifie si connecté
+  const estConnecte = (typeof currentUser !== 'undefined' && currentUser && currentUser.id);
+
+  // 1. Récupère les 9 commerces actifs
+  const { data: commerces, error } = await supabaseClient
+    .from('stores')
+    .select('*')
+    .eq('status', 'active');
+
+  if (error) { console.error("Erreur DB:", error); return; }
+  console.log("📦 Commerces actifs reçus de la base :", commerces.length);
+
+  // 2. Filtre si déconnecté (On utilise == pour éviter les bugs de texte/chiffre)
+  let listeFinale = commerces;
+  if (!estConnecte) {
+    listeFinale = commerces.filter(c => c.forfait == 3 || c.forfait == 4 || c.plan_id == 3 || c.plan_id == 4);
+    console.log("🔒 Déconnecté -> On garde seulement les forfaits 3 et 4. Total :", listeFinale.length);
+  } else {
+    console.log("🔓 Connecté -> On garde TOUS les commerces. Total :", listeFinale.length);
+  }
+
+  // 3. Trouve la boîte sur la page (avec plusieurs tentatives au cas où la page charge lentement)
+  let boite = document.getElementById('stores-grid') || document.querySelector('.stores-grid');
+
+  if (!boite) {
+    console.warn("⚠️ La boîte d'affichage n'est pas encore prête, on réessaie dans 1 seconde...");
+    setTimeout(afficherCommercesAccueil, 1000); 
+    return;
+  }
+
+  // 4. Vide la boîte et affiche les commerces
+  boite.innerHTML = '';
+  
+  if (listeFinale.length === 0) {
+    boite.innerHTML = '<p style="text-align:center; padding:20px;">Aucun commerce à afficher pour le moment.</p>';
+    return;
+  }
+
+  listeFinale.forEach(c => {
+    let badge = '';
+    if (!estConnecte) {
+      if (c.forfait == 4 || c.plan_id == 4) badge = '👑 PREMIUM';
+      else if (c.forfait == 3 || c.plan_id == 3) badge = '🚀 CROISSANCE';
+    }
+
+    boite.innerHTML += `
+      <div class="store" style="border:1px solid #ddd; padding:15px; margin:10px; border-radius:8px; cursor:pointer; background:white;">
+        <div style="font-size:2rem;">${c.icon || '🏪'} <span style="font-size:0.8rem; background:#f5a623; padding:2px 6px; border-radius:4px; color:white; margin-left:5px;">${badge}</span></div>
+        <h3 style="margin:5px 0;">${c.name}</h3>
+        <p style="margin:0; color:#666;">${c.address || ''}</p>
+      </div>
+    `;
+  });
+  
+  console.log("✅ Affichage terminé avec succès !");
+}
+
+// Lance le code quand la page est totalement chargée
+window.addEventListener('load', () => {
+  setTimeout(afficherCommercesAccueil, 1000);
+});
