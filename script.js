@@ -6346,17 +6346,58 @@ function syncUserProfileEverywhere() {
 // ✅ VERSION INFAILLIBLE : MODAL PROFIL CLIENT
 // ==========================================
 function openEditProfileModal() {
-  console.log("🔍 [DEBUG 1] Clic sur le bouton Modifier le profil...");
+  console.log("🔍 [DEBUG 1] Clic sur Modifier le profil...");
   
   if (!currentUser || !currentUser.id) {
-    console.log("❌ [DEBUG 2] Utilisateur non connecté.");
     showToast('🔑 Veuillez vous connecter');
     return;
   }
   
   console.log("✅ [DEBUG 3] Utilisateur connecté :", currentUser.name);
 
-  // Remplir les champs avec les données actuelles
+  // 1. Chercher la modale dans le HTML
+  let modal = document.getElementById('edit-profile-modal');
+  
+  // 2. 🔥 SI ELLE N'EXISTE PAS, ON LA CRÉE DE A À Z ET ON L'AJOUTE AU BODY
+  if (!modal) {
+    console.warn("⚠️ [DEBUG] Modale introuvable dans le HTML. Création d'urgence...");
+    modal = document.createElement('div');
+    modal.id = 'edit-profile-modal';
+    modal.className = 'modal-bg';
+    modal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;';
+    
+    modal.innerHTML = `
+      <div class="modal" style="background:white; padding:2rem; border-radius:12px; width:90%; max-width:500px; position:relative; max-height:90vh; overflow-y:auto;">
+        <button onclick="closeModal('edit-profile-modal')" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#666;">&times;</button>
+        <h2 style="margin-bottom:1.5rem; color:#0a1929;">✏️ Modifier mon profil</h2>
+        <form onsubmit="saveProfile(event)">
+          <div class="form-group">
+            <label>Nom complet</label>
+            <input type="text" id="ep-name" required style="width:100%; padding:0.6rem; border:1px solid #ddd; border-radius:6px;">
+          </div>
+          <div class="form-group">
+            <label>Téléphone</label>
+            <input type="tel" id="ep-phone" required style="width:100%; padding:0.6rem; border:1px solid #ddd; border-radius:6px;">
+          </div>
+          <div class="form-group">
+            <label>Adresse</label>
+            <input type="text" id="ep-address" class="autocomplete-input" autocomplete="off" placeholder="Tapez votre adresse..." style="width:100%; padding:0.6rem; border:1px solid #ddd; border-radius:6px;">
+            <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('ep-address')" style="margin-top:0.5rem; width:100%; padding:0.5rem; background:#f5a623; color:white; border:none; border-radius:6px; cursor:pointer;">📍 Utiliser ma position GPS</button>
+          </div>
+          <div class="modal-actions" style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1.5rem;">
+            <button type="button" class="btn-sm btn-gray" onclick="closeModal('edit-profile-modal')" style="padding:0.6rem 1rem; border:1px solid #ddd; background:white; border-radius:6px; cursor:pointer;">Annuler</button>
+            <button type="submit" class="btn-sm btn-green" style="padding:0.6rem 1rem; border:none; background:#10b981; color:white; border-radius:6px; cursor:pointer; font-weight:bold;">💾 Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    `;
+    
+    // Ajouter la modale tout à la fin du body
+    document.body.appendChild(modal);
+    console.log("✅ [DEBUG] Modale créée et injectée dans le DOM avec succès !");
+  }
+
+  // 3. Remplir les champs avec les données actuelles
   const nameField = document.getElementById('ep-name');
   const phoneField = document.getElementById('ep-phone');
   const addrField = document.getElementById('ep-address');
@@ -6369,28 +6410,11 @@ function openEditProfileModal() {
     addrField._lng = currentUser.lng || null;
   }
   
-  console.log("✅ [DEBUG 4] Champs du formulaire remplis.");
+  console.log("✅ [DEBUG] Champs remplis. GPS:", currentUser.lat, currentUser.lng);
 
-  // 🔥 FORCER LA RECHERCHE DE LA MODALE
-  let modal = document.getElementById('edit-profile-modal');
-  
-  // Si la modale n'est pas trouvée, attendre 100ms et réessayer
-  if (!modal) {
-    console.warn("⚠️ [DEBUG 5] Modale introuvable, attente de 100ms...");
-    setTimeout(() => {
-      modal = document.getElementById('edit-profile-modal');
-      if (modal) {
-        modal.style.display = 'flex';
-        console.log("✅ [DEBUG 6] Modal affichée après attente !");
-      } else {
-        console.error("❌ [DEBUG 6] ÉCHEC : La modale n'existe vraiment pas dans le DOM !");
-        showToast('❌ Erreur technique : Modale introuvable');
-      }
-    }, 100);
-  } else {
-    modal.style.display = 'flex';
-    console.log("✅ [DEBUG 5] Modal affichée avec succès !");
-  }
+  // 4. Afficher la modale
+  modal.style.display = 'flex';
+  console.log("✅ [DEBUG] Modal affichée à l'écran !");
 }
 // ==========================================
 // ✅ CLIENT : SAUVEGARDE DU PROFIL
