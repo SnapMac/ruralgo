@@ -1483,7 +1483,7 @@ function updateCart() {
     feeDetails.innerHTML = `<div class="delivery-fee-breakdown" style="background:#fee2e2;border-color:#dc2626">
       <h4 style="color:#991b1b">⚠️ Adresse de livraison incomplète</h4>
       <p style="font-size:0.85rem;color:#991b1b">Pour calculer les frais, votre profil doit avoir une adresse avec coordonnées GPS. 
-      <a onclick="showProfile()" style="color:#0a1929;font-weight:bold;cursor:pointer;text-decoration:underline">Modifier mon profil</a></p>
+      <a onclick="showProfiless()" style="color:#0a1929;font-weight:bold;cursor:pointer;text-decoration:underline">Modifier mon profil</a></p>
       <p style="font-size:0.85rem;margin-top:0.5rem;color:#991b1b">Frais de base appliqués : <strong>${baseFee.toFixed(2)} $</strong></p>
     </div>`;
   }
@@ -1806,7 +1806,7 @@ async function cancelOrder(orderId) {
 }
 
 // ============ PROFIL ============
-function showProfile() {
+function showProfiless() {
   if (!currentUser) return;
   switchView('view-client');
   document.getElementById('stores-section').style.display = 'none';
@@ -1815,10 +1815,10 @@ function showProfile() {
   document.getElementById('client-orders-section').style.display = 'none';
   document.getElementById('client-order-detail-section').style.display = 'none';
   document.getElementById('client-profile-section').style.display = 'block';
-  renderProfile();
+  renderProfiless();
 }
 
-function renderProfile() {
+function renderProfiless() {
   const content = document.getElementById('client-profile-content');
   const myOrders = orders.filter(o => o.clientId === currentUser.id);
   const totalSpent = myOrders.reduce((s, o) => s + o.total, 0);
@@ -1837,7 +1837,7 @@ function renderProfile() {
       <div class="profile-field"><label>📞 Téléphone</label><div class="value">${currentUser.phone}</div></div>
       <div class="profile-field" style="grid-column:1/-1"><label>📍 Adresse</label><div class="value">${currentUser.address}</div></div>
     </div>
-    <button class="btn" style="margin-top:1rem" onclick="openEditProfile()">✏️ Modifier mon profil</button>
+    <button class="btn" style="margin-top:1rem" onclick="openEditProfiles()">✏️ Modifier mon profil</button>
   </div>`;
 
   if (currentUser.role === 'client') {
@@ -1850,7 +1850,7 @@ function renderProfile() {
   content.innerHTML = html;
 }
 
-function openEditProfile() {
+function openEditProfiless() {
   document.getElementById('ep-name').value = currentUser.name;
   document.getElementById('ep-phone').value = currentUser.phone;
   document.getElementById('ep-address').value = currentUser.address;
@@ -1858,39 +1858,50 @@ function openEditProfile() {
   setTimeout(() => initAutocomplete('ep-address', 'ep-address-suggestions'), 100);
 }
 
-async function saveProfile(e) {
+async function saveProfiless(e) {
   e.preventDefault();
+  
+  console.log("💾 [PROFIL] Début de la sauvegarde...");
+
+  // 1. Récupérer les nouvelles valeurs
   const addrInput = document.getElementById('ep-address');
-  currentUser.name = document.getElementById('ep-name').value;
-  currentUser.phone = document.getElementById('ep-phone').value;
-  currentUser.address = addrInput.value;
+  const newName = document.getElementById('ep-name').value;
+  const newPhone = document.getElementById('ep-phone').value;
+  const newAddress = addrInput.value;
+  
+  // 2. Mettre à jour la mémoire locale
+  currentUser.name = newName;
+  currentUser.phone = newPhone;
+  currentUser.address = newAddress;
   if (addrInput._lat) currentUser.lat = addrInput._lat;
-  if (addrInput._lng) currentUser.lng = addrInput._lng;
 
   try {
-    await supabaseClient.from('profiles').update({
-      name: currentUser.name,
-      phone: currentUser.phone,
-      address: currentUser.address,
-      lat: currentUser.lat,
-      lng: currentUser.lng
-    }).eq('id', currentUser.id);
+    // 3. ✅ SAUVEGARDER DANS SUPABASE (Table 'profiles')
+    const { error } = await supabaseClient
+      .from('profiles') // ⚠️ Si ta table s'appelle 'users', change ici
+      .update({ 
+        name: newName, 
+        phone: newPhone, 
+        address: newAddress,
+        lat: currentUser.lat || null
+      })
+      .eq('id', currentUser.id);
 
-    if (currentUser.role === 'client') {
-      const idx = clients.findIndex(c => c.id === currentUser.id);
-      if (idx >= 0) clients[idx] = currentUser;
-    } else if (currentUser.role === 'driver') {
-      const idx = drivers.findIndex(d => d.id === currentUser.id);
-      if (idx >= 0) drivers[idx] = currentUser;
-    }
+    if (error) throw error;
 
-    closeModal('edit-profile-modal');
-    showUserInterface();
-    renderProfile();
-    showToast('✅ Profil mis à jour !');
+    // 4. Sauvegarder dans le navigateur pour les prochains rechargements
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+    // 5. ✅ METTRE À JOUR L'ÉCRAN PARTOUT
+    if (typeof updateHeader === 'function') updateHeader();
+    if (typeof renderStoreProfiles === 'function') renderStoreProfiles();
+
+    showToast('✅ Informations sauvegardées avec succès !');
+    console.log("✅ [PROFIL] Sauvegarde terminée.");
+
   } catch (err) {
-    console.error('Erreur saveProfile:', err);
-    showToast('❌ Erreur');
+    console.error("❌ Erreur sauvegarde profil:", err);
+    showToast('❌ Erreur : ' + err.message);
   }
 }
 
