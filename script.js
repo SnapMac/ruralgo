@@ -13,32 +13,42 @@ const DELIVERY_RADIUS_KM = 40;
 // ==========================================
 
 // Fonction principale : affiche le toast + sauvegarde + incrémente la cloche
+async function createNotificationForUser(userId, title, message) {
+  try {
+    await supabaseClient.from('notifications').insert({
+      user_id: String(userId), // ✅ Convertit en texte pour éviter les conflits de type
+      title: title,
+      message: message,
+      type: 'order',
+      is_read: false           // ✅ C'EST LA CLÉ : 'is_read' et NON 'read'
+      // ⚠️ Ne jamais ajouter 'created_at', Supabase le gère automatiquement
+    });
+    console.log("✅ Notification créée avec succès pour l'utilisateur :", userId);
+  } catch (err) {
+    console.error("❌ Erreur création notification:", err);
+    // On n'arrête pas tout le script si la notification échoue, on log juste l'erreur
+  }
+}
 async function showNotification(title, message, type = 'info', targetUserId = null) {
-  // 1. Afficher le toast (comme avant)
-  showToast(message);
-  
-  // 2. Déterminer à qui envoyer la notification
   let userId = targetUserId;
   if (!userId && currentUser && currentUser.id) {
     userId = currentUser.id;
   }
   
-  // 3. Sauvegarder dans la base de données
   if (userId) {
     try {
       await supabaseClient.from('notifications').insert({
-        user_id: userId,
+        user_id: String(userId), // ✅ Toujours une chaîne de caractères
         title: title,
         message: message,
         type: type,
-        is_read: false
+        is_read: false           // ✅ 'is_read' et NON 'read'
+        // ⚠️ NE PAS ajouter 'created_at', Supabase le fait tout seul
       });
       
-      // 4. Mettre à jour le badge de la cloche
-      await updateNotifBadge();
-      
+      if (typeof updateNotifBadge === 'function') await updateNotifBadge();
     } catch (err) {
-      console.error('Erreur sauvegarde notification:', err);
+      console.error('❌ Erreur sauvegarde notification:', err);
     }
   }
 }
@@ -1517,6 +1527,26 @@ function addToCart(prodId) {
 
 // ============ MISE À JOUR DU PANIER AVEC FRAIS DYNAMIQUES ============
 function updateCart() {
+  // ✅ ÉTAPE 1 : FORCER LA SYNCHRONISATION DES DONNÉES UTILISATEUR
+  // On lit les toutes dernières données sauvegardées dans le navigateur
+  const savedUser = localStorage.getItem('currentUser');
+  if (savedUser) {
+    try {
+      currentUser = JSON.parse(savedUser);
+    } catch (e) {
+      console.error("❌ Erreur lecture currentUser:", e);
+    }
+  }
+
+  // ✅ ÉTAPE 2 : VÉRIFIER SI LES GPS SONT VALIDES (pas juste présents)
+  const hasValidGPS = currentUser && 
+                      currentUser.lat && 
+                      currentUser.lng && 
+                      !isNaN(parseFloat(currentUser.lat)) && 
+                      !isNaN(parseFloat(currentUser.lng));
+
+  console.log("🛒 [PANIER] currentUser.lat:", currentUser?.lat, "currentUser.lng:", currentUser?.lng, "hasValidGPS:", hasValidGPS);
+
   document.getElementById('cart-count').textContent = cart.reduce((s, c) => s + c.qty, 0);
   const el = document.getElementById('cart-items');
   const feeDetails = document.getElementById('delivery-fee-details');
@@ -1558,13 +1588,22 @@ function updateCart() {
   const store = getCurrentStore();
   let deliveryInfo;
 
-  if (store && currentUser && currentUser.lat && currentUser.lng && store.lat && store.lng) {
-    deliveryInfo = calculateDeliveryFee(store.lat, store.lng, currentUser.lat, currentUser.lng);
+  // ✅ ÉTAPE 3 : CALCUL DES FRAIS AVEC VÉRIFICATION ROBUSTE DES GPS
+  if (store && hasValidGPS && store.lat && store.lng) {
+    console.log("✅ [PANIER] GPS valides détectés. Calcul de la distance...");
+    deliveryInfo = calculateDeliveryFee(
+      store.lat, 
+      store.lng, 
+      parseFloat(currentUser.lat), 
+      parseFloat(currentUser.lng)
+    );
   } else {
+    console.warn("⚠️ [PANIER] GPS manquants ou invalides. Application des frais de base.");
     deliveryInfo = { baseFee: baseFee, distanceKm: 0, perKmFee: 0, totalFee: baseFee };
   }
 
-  if (store && currentUser && currentUser.lat && currentUser.lng) {
+  // ✅ ÉTAPE 4 : AFFICHAGE DES DÉTAILS OU DU MESSAGE D'ALERTE
+  if (store && hasValidGPS) {
     feeDetails.innerHTML = `
       <div class="delivery-fee-breakdown">
         <h4>🚗 Détail des frais de livraison</h4>
@@ -1593,7 +1632,6 @@ function updateCart() {
   document.getElementById('delivery-fee').textContent = deliveryInfo.totalFee.toFixed(2) + ' $';
   document.getElementById('taxes').textContent = tax.toFixed(2) + ' $';
   document.getElementById('total').textContent = tot.toFixed(2) + ' $';
-localStorage.setItem('cart', JSON.stringify(cart));
 }
 
 function changeQty(i, d) {
@@ -1783,99 +1821,89 @@ function showClientOrderDetail(orderId) {
 
 // ============ PLACEORDER - LA FONCTION QUI MANQUAIT ! ============
 async function placeOrder() {
-  if (!currentUser || currentUser.role !== 'client') {
-    showToast('🔑 Connectez-vous pour commander');
-    return;
-  }
-  if (cart.length === 0) {
-    showToast('🛒 Votre panier est vide');
-    return;
-  }
+  console.log("🚀 [COMMANDE] Début du processus...");
+  
+  if (!currentUser || currentUser.role !== 'client') return showToast('🔑 Connectez-vous pour commander');
+  if (cart.length === 0) return showToast('🛒 Votre panier est vide');
 
   const store = getCurrentStore();
-  if (!store) {
-    showToast('❌ Commerce introuvable');
+  if (!store) return showToast('❌ Commerce introuvable');
+
+  // 🔥 ÉTAPE CRUCIALE : Forcer la récupération de l'adresse la plus récente dans Supabase
+  console.log("🔍 [COMMANDE] Récupération de l'adresse FRAÎCHE depuis 'profiles'...");
+  const { data: freshProfile, error: profileError } = await supabaseClient
+    .from('profiles')
+    .select('name, phone, address, lat, lng')
+    .eq('id', currentUser.id)
+    .single();
+
+  if (profileError || !freshProfile || !freshProfile.address) {
+    showToast('❌ Veuillez ajouter une adresse complète dans votre profil avant de commander.');
+    if (typeof openEditProfileModal === 'function') openEditProfileModal();
     return;
   }
 
-  const deliveryInfo = calculateDeliveryFee(store.lat, store.lng, currentUser.lat, currentUser.lng);
-  const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
-  const tax = subtotal * platformSettings.taxRate;
-  const total = subtotal + deliveryInfo.totalFee + tax;
+  console.log("✅ [COMMANDE] Adresse synchronisée :", freshProfile.address, freshProfile.lat, freshProfile.lng);
 
-  if (userWalletBalance < total) {
-    showToast(`❌ Solde insuffisant ! Vous avez ${userWalletBalance.toFixed(2)}$ mais la commande coûte ${total.toFixed(2)}$`);
-    setTimeout(() => {
-      if (confirm('Voulez-vous recharger votre compte maintenant ?')) openDepositModal();
-    }, 1000);
-    return;
+  // Calcul des frais basé sur les coordonnées FRAÎCHES
+  const subtotal = cart.reduce((s, c) => s + (c.price * c.qty), 0);
+  let distanceKm = 0, baseFee = 7.00, perKmFee = 1.00, deliveryFee = 7.00;
+  
+  if (typeof calculateDeliveryFee === 'function' && freshProfile.lat && freshProfile.lng && store.lat && store.lng) {
+    const info = calculateDeliveryFee(store.lat, store.lng, freshProfile.lat, freshProfile.lng);
+    distanceKm = info.distanceKm;
+    baseFee = info.baseFee;
+    perKmFee = info.perKmFee;
+    deliveryFee = info.totalFee;
   }
 
-  if (!confirm(`Payer ${total.toFixed(2)}$ avec votre portefeuille ?\n\nSolde actuel : ${userWalletBalance.toFixed(2)}$\nSolde après : ${(userWalletBalance - total).toFixed(2)}$`)) {
-    return;
-  }
+  const tax = subtotal * 0.14975;
+  const total = subtotal + deliveryFee + tax;
 
+  // 🔥 CRÉATION DE L'OBJET AVEC LES NOMS DE COLONNES EXACTS DE SUPABASE
   const orderData = {
-    order_number: 'RG' + Date.now().toString().slice(-6),
     client_id: currentUser.id,
-    client_name: currentUser.name,
-    client_phone: currentUser.phone,
-    client_address: currentUser.address,
-    client_lat: currentUser.lat,
-    client_lng: currentUser.lng,
-    items: cart.map(c => ({ productId: c.productId, name: c.name, icon: c.icon, price: c.price, qty: c.qty })),
+    client_name: freshProfile.name || "Client",
+    client_phone: freshProfile.phone || "Non spécifié",
+    client_address: freshProfile.address,       // ⚠️ COLONNE EXACTE
+    client_lat: freshProfile.lat,               // ⚠️ COLONNE EXACTE
+    client_lng: freshProfile.lng,               // ⚠️ COLONNE EXACTE
+    order_number: 'RG' + Date.now().toString().slice(-6),
     subtotal: subtotal,
-    delivery_base_fee: deliveryInfo.baseFee,
-    delivery_distance_km: deliveryInfo.distanceKm,
-    delivery_per_km_fee: deliveryInfo.perKmFee,
-    delivery_fee: deliveryInfo.totalFee,
+    delivery_base_fee: baseFee,
+    delivery_distance_km: distanceKm,
+    delivery_per_km_fee: perKmFee,
+    delivery_fee: deliveryFee,
     tax: tax,
     total: total,
+    items: cart.map(c => ({ productId: c.productId, name: c.name, icon: c.icon, price: c.price, qty: c.qty })),
     status: 'pending',
     store_id: store.id,
     store_name: store.name,
-    status_history: [{ status: 'pending', time: new Date().toISOString(), note: 'Commande créée et payée' }]
+    status_history: [{ status: 'pending', time: new Date().toISOString(), note: 'Commande créée' }]
   };
 
   try {
-    const { error: transactionError } = await supabaseClient.from('transactions').insert({
-      user_id: currentUser.id, type: 'payment', amount: total,
-      balance_before: userWalletBalance, balance_after: userWalletBalance - total,
-      description: `Paiement commande ${orderData.order_number}`, status: 'completed'
-    });
-    if (transactionError) throw transactionError;
+    const { data: newOrder, error: orderError } = await supabaseClient
+      .from('orders')
+      .insert(orderData)
+      .select()
+      .single();
 
-    const { error: walletError } = await supabaseClient.from('wallets').update({ 
-      balance: userWalletBalance - total, updated_at: new Date().toISOString()
-    }).eq('user_id', currentUser.id);
-    if (walletError) throw walletError;
+    if (orderError) throw orderError;
 
-    userWalletBalance -= total;
-    updateWalletDisplay();
-
-    const { data: newOrder, error } = await supabaseClient.from('orders').insert(orderData).select().single();
-    if (error) throw error;
-    // ✅ VIDER LE PANIER APRÈS UNE COMMANDE RÉUSSIE
-    cart = []; // Vide la variable globale
-    localStorage.removeItem('cart'); // ✅ Supprime définitivement le panier du navigateur
-    updateCart(); // Met à jour l'affichage (compteur à 0, total à 0)
-
-    // ✅ NOTIFICATIONS : Commerce + Admin
-    await showNotification('Nouvelle commande', `Commande ${newOrder.order_number} de ${currentUser.name} (${total.toFixed(2)}$)`, 'order', store.id);
+    console.log("✅ [COMMANDE] Enregistrée avec l'adresse synchronisée !");
     
-    const { data: admins } = await supabaseClient.from('profiles').select('id').eq('role', 'admin');
-    if (admins) {
-      for (const admin of admins) {
-        await showNotification('Nouvelle commande', `Commande ${newOrder.order_number} de ${currentUser.name} (${total.toFixed(2)}$)`, 'order', admin.id);
-      }
-    }
-
+    // Vider le panier
     cart = [];
-    updateCart();
-    showToast(`✅ Commande payée ! Nouveau solde : ${userWalletBalance.toFixed(2)}$`);
-    showClientOrders();
+    localStorage.removeItem('cart');
+    if (typeof updateCart === 'function') updateCart();
+
+    showToast(`✅ Commande #${newOrder.order_number} réussie !`);
+    if (typeof showClientOrders === 'function') showClientOrders();
+
   } catch (err) {
-    console.error('Erreur placeOrder:', err);
+    console.error('❌ [COMMANDE] Échec:', err);
     showToast('❌ Erreur : ' + err.message);
   }
 }
@@ -1905,6 +1933,26 @@ async function cancelOrder(orderId) {
   }
 }
 
+// ==========================================
+// ✅ AFFICHAGE UNIVERSEL DE L'ADRESSE (Admin, Commerce, Livreur)
+// ==========================================
+function getFormattedOrderAddress(order) {
+  if (!order) return "Adresse non disponible";
+  
+  const name = order.client_name || "Client inconnu";
+  const phone = order.client_phone || "Pas de téléphone";
+  const address = order.client_address || "Adresse non fournie";
+  
+  // On construit une chaîne propre et lisible pour tout le monde
+  return `
+    <div style="font-size: 0.9rem; line-height: 1.4;">
+      <strong>👤 ${name}</strong><br>
+      <strong>📞 ${phone}</strong><br>
+      <strong>📍 ${address}</strong>
+      ${order.client_lat && order.client_lng ? `<br><span style="color:#666; font-size:0.8rem;">(GPS: ${order.client_lat}, ${order.client_lng})</span>` : ''}
+    </div>
+  `;
+}
 // ============ PROFIL ============
 function showProfiles() {
   if (!currentUser) return;
@@ -3750,12 +3798,11 @@ function closeModal(modalId) {
 // ✅ SAUVEGARDE DU PROFIL CLIENT (TABLE : clients)
 // ==========================================
 async function saveProfile(e) {
-  console.log("🔍 ÉTAPE 1 : saveProfile déclenchée");
-  
   if (e) e.preventDefault();
+  console.log("💾 [PROFIL] Début de la sauvegarde...");
 
   if (!currentUser || !currentUser.id) {
-    alert("❌ Vous n'êtes pas connecté.");
+    showToast('❌ Vous devez être connecté.');
     return;
   }
 
@@ -3763,37 +3810,18 @@ async function saveProfile(e) {
   const phoneField = document.getElementById('ep-phone');
   const addrField = document.getElementById('ep-address');
 
-  if (!nameField || !phoneField || !addrField) {
-    alert("❌ Champs du formulaire introuvables.");
-    return;
-  }
-
-  const newName = nameField.value.trim();
-  const newPhone = phoneField.value.trim();
-  const newAddress = addrField.value.trim();
+  const newName = nameField?.value.trim() || currentUser.name;
+  const newPhone = phoneField?.value.trim() || currentUser.phone;
+  const newAddress = addrField?.value.trim() || currentUser.address;
   
-  // ✅ Récupérer les coordonnées GPS si elles existent
-  const newLat = addrField._lat || null;
-  const newLng = addrField._lng || null;
+  // Récupérer les GPS stockés par l'autocomplétion
+  const newLat = addrField?._lat || null;
+  const newLng = addrField?._lng || null;
 
-  console.log("📋 DONNÉES À ENVOYER :");
-  console.log("  - Nom :", newName);
-  console.log("  - Téléphone :", newPhone);
-  console.log("  - Adresse :", newAddress);
-  console.log("  - Latitude :", newLat);
-  console.log("  - Longitude :", newLng);
-  console.log("  - ID utilisateur :", currentUser.id);
-
-  // Vérification minimale
-  if (!newName) {
-    alert("❌ Le nom ne peut pas être vide.");
-    return;
-  }
+  console.log("📍 [PROFIL] Données à sauvegarder :", { newName, newPhone, newAddress, newLat, newLng });
 
   try {
-    console.log("🚀 Envoi à Supabase...");
-    
-    const { data, error } = await supabaseClient
+    const { error } = await supabaseClient
       .from('profiles')
       .update({ 
         name: newName, 
@@ -3804,15 +3832,9 @@ async function saveProfile(e) {
       })
       .eq('id', currentUser.id);
 
-    if (error) {
-      console.error("🛑 ERREUR SUPABASE :", error);
-      alert("Erreur : " + error.message);
-      throw error;
-    }
+    if (error) throw error;
 
-    console.log("✅ SUCCÈS ! Mise à jour locale...");
-    
-    // Mise à jour locale
+    // Mise à jour immédiate de la mémoire locale
     currentUser.name = newName;
     currentUser.phone = newPhone;
     currentUser.address = newAddress;
@@ -3821,12 +3843,13 @@ async function saveProfile(e) {
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
     closeModal('edit-profile-modal');
-    showToast('✅ Profil sauvegardé avec succès !');
+    showToast('✅ Adresse et profil sauvegardés avec succès !');
     
     if (typeof syncUserProfileEverywhere === 'function') syncUserProfileEverywhere();
 
   } catch (err) {
-    console.error("🛑 ÉCHEC TOTAL :", err);
+    console.error("❌ Erreur sauvegarde profil:", err);
+    showToast('❌ Erreur : ' + err.message);
   }
 }
 
@@ -4511,120 +4534,6 @@ function viewOrderDetails(id) {
     </div>
   `;
   document.body.appendChild(modal);
-}
-// ============ SYSTÈME DE NOTIFICATIONS (VERSION FINALE) ============
-
-// ==========================================
-// SYSTÈME DE NOTIFICATIONS (VERSION UNIFIÉE - UTILISE is_read)
-// ==========================================
-
-async function showNotification(userId, title, message, type = 'info') {
-  try {
-    await supabaseClient.from('notifications').insert({
-      user_id: String(userId),
-      title: title,
-      message: message,
-      type: type,
-      is_read: false
-    });
-    loadNotifications();
-  } catch (err) {
-    console.error('Erreur showNotification:', err);
-  }
-}
-
-async function loadNotifications() {
-  if (!currentUser) return;
-  try {
-    const { data, error } = await supabaseClient
-      .from('notifications')
-      .select('*')
-      .eq('user_id', String(currentUser.id))
-      .order('created_at', { ascending: false })
-      .limit(20);
-    
-    if (error) throw error;
-    
-    const unreadCount = data.filter(n => !n.is_read).length;
-    const badge = document.getElementById('notif-badge');
-if (unreadCount > 0) {
-  badge.textContent = unreadCount;
-  badge.style.display = 'flex';
-} else {
-  badge.style.display = 'none';
-}
-    
-    renderNotifications(data);
-  } catch (err) {
-    console.error('Erreur loadNotifications:', err);
-  }
-}
-
-function renderNotifications(notifs) {
-  console.log("🚀 NOUVEAU CODE CHARGÉ - Version manuelle"); // Pour confirmer que le nouveau code est actif
-  
-  const list = document.getElementById('notif-list');
-  if (!list) return;
-  
-  if (!notifs || notifs.length === 0) {
-    list.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#666">Aucune notification</div>';
-    return;
-  }
-  
-  list.innerHTML = notifs.map(n => {
-    const icon = n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : n.type === 'warning' ? '⚠️' : 'ℹ️';
-    
-    let dateStr = 'À l\'instant';
-    if (n.created_at) {
-      try {
-        // 🚀 MÉTHODE MANUELLE INFAILLIBLE
-        const dateObj = new Date(n.created_at);
-        
-        // Détection automatique été/hiver pour le Québec
-        const now = new Date();
-        const jan = new Date(now.getFullYear(), 0, 1).getTimezoneOffset();
-        const jul = new Date(now.getFullYear(), 6, 1).getTimezoneOffset();
-        const isSummer = now.getTimezoneOffset() < Math.max(jan, jul);
-        const offsetHours = isSummer ? 4 : 5; // 4h en été, 5h en hiver
-        
-        // Soustraire manuellement les heures
-        const adjustedDate = new Date(dateObj.getTime() - (offsetHours * 60 * 60 * 1000));
-        
-        // Formater manuellement
-        const day = adjustedDate.getDate();
-        const months = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-        const month = months[adjustedDate.getMonth()];
-        const hours = String(adjustedDate.getHours()).padStart(2, '0');
-        const minutes = String(adjustedDate.getMinutes()).padStart(2, '0');
-        
-        dateStr = `${day} ${month}, ${hours} h ${minutes}`;
-        
-        console.log(`✅ Conversion: ${n.created_at} → ${dateStr} (décalage: -${offsetHours}h)`);
-        
-      } catch (e) {
-        console.error("❌ Erreur:", e);
-      }
-    }
-
-    return `
-      <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markAsRead('${n.id}')">
-        <div style="font-size:1.3rem">${icon}</div>
-        <div style="flex:1">
-          <div style="font-weight:bold;font-size:0.9rem">${n.title}</div>
-          <div style="font-size:0.85rem;color:#666">${n.message}</div>
-          <div style="font-size:0.75rem;color:#999;margin-top:0.2rem">${dateStr}</div>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-async function markAsRead(id) {
-  try {
-    await supabaseClient.from('notifications').update({ is_read: true }).eq('id', id);
-    loadNotifications();
-  } catch (err) {
-    console.error('Erreur markAsRead:', err);
-  }
 }
 
 
@@ -6430,27 +6339,6 @@ setTimeout(() => {
 // 3. Ajouter un bouton de refresh manuel dans le header (optionnel)
 console.log("💡 Astuce : Tape 'debugNotifications()' dans la console pour tester manuellement");
 
-// ==========================================
-// ✅ TOAST + NOTIFICATION AUTOMATIQUE
-// ==========================================
 
-// Nouvelle fonction qui affiche le toast ET crée une notification
 
-// Fonction pour créer une notification pour un AUTRE utilisateur (ex: commerce quand client commande)
-async function createNotificationForUser(userId, title, message) {
-  try {
-    await supabaseClient
-      .from('notifications')
-      .insert({
-        user_id: userId,
-        title: title,
-        message: message,
-        read: false,
-        created_at: new Date().toISOString()
-      });
 
-    console.log("✅ [NOTIF] Notification créée pour l'utilisateur", userId);
-  } catch (err) {
-    console.error("❌ Erreur création notification:", err);
-  }
-}
