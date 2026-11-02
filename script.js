@@ -2169,6 +2169,26 @@ function renderAllAdmin() {
   renderAdminSettings();
 }
 
+async function adminUpdateStoreName(storeId, newStoreName) {
+  if (!currentUser || currentUser.role !== 'admin') {
+    showToast('❌ Accès refusé. Réservé aux administrateurs.');
+    return;
+  }
+
+  try {
+    const { error } = await supabaseClient
+      .from('stores')
+      .update({ name: newStoreName.trim() })
+      .eq('id', storeId);
+
+    if (error) throw error;
+    showToast('✅ Nom du commerce modifié par l\'admin !');
+  } catch (err) {
+    console.error('Erreur admin modification nom:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
 function renderAdminDashboard() {
   document.getElementById('stat-clients').textContent = clients.length;
   document.getElementById('stat-drivers').textContent = drivers.filter(d => d.status === 'approved').length;
@@ -2323,7 +2343,6 @@ async function adminCancelOrder(orderId) {
   }
 }
 
-// ============ ADMIN - Commerces ============
 // ============ ADMIN - Commerces (VERSION CORRIGÉE) ============
 function renderAdminStores() {
   const c = document.getElementById('stores-table-container');
@@ -2349,9 +2368,6 @@ function renderAdminStores() {
     </thead>
     <tbody>
       ${activeStores.map(s => {
-        const prodCount = products.filter(p => p.storeId === s.id).length;
-        
-        // ✅ MODIFICATION ICI : on ajoute onclick et cursor:pointer sur le <tr>
         return `<tr onclick="viewStoreDetails(${s.id})" style="cursor:pointer">
           <td style="font-size:2rem;text-align:center">${s.icon}</td>
           <td><strong>${s.name}</strong></td>
@@ -2360,14 +2376,35 @@ function renderAdminStores() {
           <td><span class="badge badge-green">✅ Actif</span></td>
           <td>
             <div class="action-btns">
-              <button class="action-btn btn-blue" onclick="event.stopPropagation(); editStore(${s.id})">✏️</button>
-              <button class="action-btn btn-red" onclick="event.stopPropagation(); confirmDelete('store',${s.id})">🗑️</button>
+              <button class="action-btn btn-blue" onclick="event.stopPropagation(); editStore(${s.id})" title="Modifier le commerce">✏️</button>
+              
+              <!-- ✅ NOUVEAU BOUTON POUR RENOMMER -->
+              <button class="action-btn btn-green" onclick="event.stopPropagation(); promptRenameStore(${s.id}, '${s.name.replace(/'/g, "\\'")}')" title="Renommer le commerce">🏷️</button>
+              
+              <button class="action-btn btn-red" onclick="event.stopPropagation(); confirmDelete('store',${s.id})" title="Supprimer">🗑️</button>
             </div>
           </td>
         </tr>`;
       }).join('')}
     </tbody>
   </table>`;
+}
+
+// ✅ FONCTION POUR RENOMMER UN COMMERCE (ADMIN)
+async function promptRenameStore(storeId, currentName) {
+  const newName = prompt("Entrez le nouveau nom pour ce commerce :", currentName);
+  
+  // Vérifie que le nom n'est pas vide et qu'il a vraiment changé
+  if (newName && newName.trim() !== "" && newName.trim() !== currentName) {
+    showToast('⏳ Mise à jour en cours...');
+    
+    // On appelle la fonction de mise à jour qu'on a créée plus tôt
+    await adminUpdateStoreName(storeId, newName.trim());
+    
+    // Recharger les données et rafraîchir l'affichage
+    if (typeof loadStores === 'function') await loadStores();
+    renderAdminStores();
+  }
 }
 
 function openStoreModal() {
@@ -5314,3 +5351,309 @@ async function updateNotifBadge(notifications) {
     badge.style.display = 'none'; // Cache le rond rouge si tout est lu
   }
 }
+
+// ==========================================
+// ✅ 1. MODIFIER LE NOM DU COMMERCE (PAR LE PROPRIÉTAIRE)
+// ==========================================
+async function updateMyStoreName(newStoreName) {
+  if (!currentUser || currentUser.role !== 'store') {
+    showToast('❌ Accès refusé. Réservé aux commerces.');
+    return;
+  }
+
+  if (!newStoreName || newStoreName.trim() === '') {
+    showToast('❌ Le nom du commerce ne peut pas être vide.');
+    return;
+  }
+
+  try {
+    showToast('⏳ Mise à jour en cours...');
+    
+    // On met à jour la table 'stores' en ciblant l'user_id du commerce connecté
+    const { error } = await supabaseClient
+      .from('stores')
+      .update({ name: newStoreName.trim() })
+      .eq('user_id', currentUser.id);
+
+    if (error) throw error;
+
+    showToast('✅ Nom du commerce modifié avec succès !');
+    
+    // Optionnel : Recharger les données du commerce pour mettre à jour l'affichage
+    if (typeof loadStoreProfile === 'function') loadStoreProfile();
+    
+  } catch (err) {
+    console.error('Erreur modification nom commerce:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ==========================================
+// ✅ 2. MODIFIER LE NOM D'UN COMMERCE (PAR L'ADMIN)
+// ==========================================
+async function adminUpdateStoreName(storeId, newStoreName) {
+  if (!currentUser || currentUser.role !== 'admin') {
+    showToast('❌ Accès refusé. Réservé aux administrateurs.');
+    return;
+  }
+
+  if (!newStoreName || newStoreName.trim() === '') {
+    showToast('❌ Le nom du commerce ne peut pas être vide.');
+    return;
+  }
+
+  try {
+    showToast('⏳ Mise à jour par l\'admin en cours...');
+    
+    // On met à jour la table 'stores' en ciblant l'ID du commerce
+    const { error } = await supabaseClient
+      .from('stores')
+      .update({ name: newStoreName.trim() })
+      .eq('id', storeId);
+
+    if (error) throw error;
+
+    showToast('✅ Nom du commerce modifié par l\'admin !');
+    
+    // Optionnel : Recharger la liste des commerces dans le tableau admin
+    if (typeof renderAdminStores === 'function') renderAdminStores();
+    
+  } catch (err) {
+    console.error('Erreur admin modification nom commerce:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+// ==========================================
+// ✅ GESTION DISCRÈTE DU NOM DU COMMERCE (PRO)
+// ==========================================
+
+// 1. Basculer entre le mode affichage et le mode édition
+function toggleStoreNameEdit(isEditing) {
+  const display = document.getElementById('store-name-display');
+  const form = document.getElementById('store-name-edit-form');
+  const input = document.getElementById('store-name-input-pro');
+
+  if (isEditing) {
+    display.style.display = 'none';
+    form.style.display = 'block';
+    
+    // Pré-remplir avec le nom actuel si la variable existe
+    if (typeof currentStore !== 'undefined' && currentStore && currentStore.name) {
+      input.value = currentStore.name;
+    }
+    
+    // Donner le focus au champ pour une meilleure UX
+    setTimeout(() => input.focus(), 50);
+  } else {
+    display.style.display = 'flex';
+    form.style.display = 'none';
+  }
+}
+
+// 2. Sauvegarder le nouveau nom
+
+// ==========================================
+// ✅ GESTION DU NOM DU COMMERCE (DB + UI)
+// ==========================================
+
+// 1. Basculer entre le mode affichage et le mode édition
+function toggleStoreNameEdit(isEditing) {
+  const display = document.getElementById('store-name-display');
+  const form = document.getElementById('store-name-edit-form');
+  const input = document.getElementById('store-name-input-pro');
+
+  if (isEditing) {
+    display.style.display = 'none';
+    form.style.display = 'block';
+    
+    // Pré-remplir avec le nom actuel s'il existe en mémoire
+    if (typeof currentStore !== 'undefined' && currentStore && currentStore.name) {
+      input.value = currentStore.name;
+    } else if (typeof currentUser !== 'undefined' && currentUser && currentUser.storeName) {
+      input.value = currentUser.storeName;
+    }
+    
+    setTimeout(() => input.focus(), 50);
+  } else {
+    display.style.display = 'flex';
+    form.style.display = 'none';
+  }
+}
+
+// 2. Sauvegarder le nouveau nom dans Supabase et mettre à jour l'écran
+
+async function saveStoreNamePro() {
+  const newName = document.getElementById('store-name-input-pro').value.trim();
+  
+  if (!newName) {
+    showToast('❌ Le nom du commerce ne peut pas être vide.');
+    return;
+  }
+
+  showToast('⏳ Vérification et mise à jour en cours...');
+  
+  try {
+    // 1. VÉRIFIER que currentUser.id existe
+    if (!currentUser || !currentUser.id) {
+      throw new Error("Utilisateur non connecté ou ID manquant.");
+    }
+
+    // 2. TROUVER l'ID du commerce dans la base de données
+    // ⚠️ IMPORTANT : Si ta colonne ne s'appelle pas 'user_id' dans la table 'stores', 
+    // change 'user_id' ci-dessous par le bon nom (ex: 'owner_id', 'profile_id').
+    const { data: storeData, error: findError } = await supabaseClient
+      .from('stores')
+      .select('id')
+            .eq('owner_id', currentUser.id) 
+      .single();
+
+    if (findError || !storeData) {
+      console.error("Détail recherche:", findError);
+      throw new Error("Impossible de trouver ton commerce. Vérifie que la colonne s'appelle bien 'user_id' dans la table 'stores'.");
+    }
+
+    // 3. METTRE À JOUR en utilisant l'ID du commerce (beaucoup plus fiable)
+    const { error: updateError } = await supabaseClient
+      .from('stores')
+      .update({ name: newName })
+      .eq('id', storeData.id);
+
+    if (updateError) {
+      console.error("Détail update:", updateError);
+      throw updateError;
+    }
+
+    // 4. SUCCÈS : Mise à jour immédiate de l'écran
+    document.getElementById('current-store-name-display').textContent = newName;
+    
+    if (typeof currentStore !== 'undefined' && currentStore) {
+      currentStore.name = newName;
+    }
+    if (typeof currentUser !== 'undefined' && currentUser) {
+      currentUser.storeName = newName; 
+    }
+
+    showToast('✅ Nom du commerce mis à jour avec succès !');
+    toggleStoreNameEdit(false);
+
+  } catch (err) {
+    // Affiche le VRAI message d'erreur de Supabase ici
+    console.error('🚨 VRAIE ERREUR SUPABASE:', err.message, err.details);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+
+// 3. Initialiser l'affichage du nom quand on ouvre la page
+function initStoreNameDisplay() {
+  const displayEl = document.getElementById('current-store-name-display');
+  if (!displayEl) return;
+
+  if (typeof currentStore !== 'undefined' && currentStore && currentStore.name) {
+    displayEl.textContent = currentStore.name;
+  } else if (typeof currentUser !== 'undefined' && currentUser && currentUser.storeName) {
+    displayEl.textContent = currentUser.storeName;
+  } else {
+    displayEl.textContent = "Chargement...";
+  }
+}
+// ==========================================
+// ✅ SOLUTION INFAILLIBLE : Mise à jour auto du nom du commerce
+// ==========================================
+
+// 1. La fonction qui met le nom à l'écran
+function initStoreNameDisplay() {
+  const displayEl = document.getElementById('current-store-name-display');
+  if (!displayEl) return;
+
+  // On cherche le nom dans les variables globales
+  if (typeof currentStore !== 'undefined' && currentStore && currentStore.name) {
+    displayEl.textContent = currentStore.name;
+  } else if (typeof currentUser !== 'undefined' && currentUser && currentUser.storeName) {
+    displayEl.textContent = currentUser.storeName;
+  } else {
+    // Fallback : si on ne trouve pas, on essaie de le récupérer depuis le tableau 'stores'
+    if (typeof currentUser !== 'undefined' && currentUser && stores && Array.isArray(stores)) {
+      const myStore = stores.find(s => s.user_id === currentUser.id || s.id === currentUser.store_id);
+      if (myStore) {
+        displayEl.textContent = myStore.name;
+        currentUser.storeName = myStore.name; // On le sauvegarde pour la prochaine fois
+      } else {
+        displayEl.textContent = "Non défini";
+      }
+    } else {
+      displayEl.textContent = "Non défini";
+    }
+  }
+}
+
+// 2. Le "Détective" (MutationObserver) qui surveille quand la vue s'affiche
+const storeViewObserver = new MutationObserver((mutations) => {
+  mutations.forEach((mutation) => {
+    // Si la classe 'active' est ajoutée à la vue Mon Commerce
+    if (mutation.target.classList.contains('active')) {
+      initStoreNameDisplay(); // On met à jour le nom immédiatement !
+    }
+  });
+});
+
+// 3. On active le détective sur la vue #view-store
+const storeViewElement = document.getElementById('view-store');
+if (storeViewElement) {
+  // On observe les changements de classe (quand elle devient 'active')
+  storeViewObserver.observe(storeViewElement, { attributes: true, attributeFilter: ['class'] });
+  
+  // Et on lance une vérification immédiate au cas où la page est déjà chargée
+  initStoreNameDisplay();
+}
+
+// ==========================================
+// ✅ AFFICHER TOUS LES COMMERCES SUR LA PAGE D'ACCUEIL
+// ==========================================
+
+async function loadAllStoresOnHomepage() {
+  try {
+    // Charger TOUS les commerces actifs depuis Supabase
+    const { data: stores, error } = await supabaseClient
+      .from('stores')
+      .select('*')
+      .eq('status', 'active')
+      .order('name');
+
+    if (error) throw error;
+
+    // Trouver le conteneur où afficher les commerces
+    const container = document.getElementById('stores-grid') || 
+                      document.getElementById('stores-container') ||
+                      document.querySelector('.stores-grid');
+
+    if (!container) {
+      console.warn("Conteneur de commerces introuvable");
+      return;
+    }
+
+    // Afficher tous les commerces
+    if (stores && stores.length > 0) {
+      container.innerHTML = stores.map(store => `
+        <div class="store" onclick="viewStoreDetails('${store.id}')">
+          <div class="store-img">${store.icon || '🏪'}</div>
+          <div class="store-info">
+            <h3>${store.name}</h3>
+            <p style="color:#666; font-size:0.9rem; margin-top:0.3rem;">${store.type || ''}</p>
+            <p style="color:#999; font-size:0.8rem; margin-top:0.2rem;">${store.address || ''}</p>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = '<p style="text-align:center; color:#666; padding:2rem;">Aucun commerce disponible pour le moment.</p>';
+    }
+
+  } catch (err) {
+    console.error('Erreur chargement commerces:', err);
+  }
+}
+
+// Lancer le chargement au démarrage de la page
+document.addEventListener('DOMContentLoaded', () => {
+  loadAllStoresOnHomepage();
+});
