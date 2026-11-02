@@ -3814,45 +3814,69 @@ async function saveProfile(e) {
   const newPhone = phoneField?.value.trim() || currentUser.phone;
   const newAddress = addrField?.value.trim() || currentUser.address;
   
-  // Récupérer les GPS stockés par l'autocomplétion
+  // 🔥 RÉCUPÉRER LES GPS DU CHAMP D'ADRESSE
   const newLat = addrField?._lat || null;
   const newLng = addrField?._lng || null;
 
-  console.log("📍 [PROFIL] Données à sauvegarder :", { newName, newPhone, newAddress, newLat, newLng });
+  console.log("📍 [PROFIL] Données capturées :");
+  console.log("  - Nom:", newName);
+  console.log("  - Téléphone:", newPhone);
+  console.log("  - Adresse:", newAddress);
+  console.log("  - Latitude:", newLat, "(type:", typeof newLat, ")");
+  console.log("  - Longitude:", newLng, "(type:", typeof newLng, ")");
+
+  // 🔥 VÉRIFIER SI LES GPS SONT PRÉSENTS
+  if (!newLat || !newLng) {
+    console.error("❌ [PROFIL] GPS MANQUANTS ! newLat =", newLat, "newLng =", newLng);
+    showToast('⚠️ GPS manquants ! Veuillez cliquer sur une suggestion d\'adresse dans la liste.');
+    return;
+  }
+
+  console.log("✅ [PROFIL] GPS valides détectés. Envoi à Supabase...");
 
   try {
+    // 🔥 ENVOYER TOUTES LES DONNÉES À SUPABASE
     const { error } = await supabaseClient
       .from('profiles')
       .update({ 
         name: newName, 
         phone: newPhone, 
         address: newAddress,
-        lat: newLat,
-        lng: newLng
+        lat: parseFloat(newLat),  // ✅ Forcer en nombre
+        lng: parseFloat(newLng)   // ✅ Forcer en nombre
       })
       .eq('id', currentUser.id);
 
-    if (error) throw error;
+    if (error) {
+      console.error("❌ [PROFIL] Erreur Supabase:", error);
+      throw error;
+    }
 
-    // Mise à jour immédiate de la mémoire locale
+    console.log("✅ [PROFIL] Sauvegardé dans Supabase avec succès !");
+
+    // 🔥 METTRE À JOUR currentUser EN MÉMOIRE
     currentUser.name = newName;
     currentUser.phone = newPhone;
     currentUser.address = newAddress;
-    currentUser.lat = newLat;
-    currentUser.lng = newLng;
+    currentUser.lat = parseFloat(newLat);
+    currentUser.lng = parseFloat(newLng);
+    
+    // 🔥 SAUVEGARDER DANS localStorage
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
+    console.log("✅ [PROFIL] currentUser mis à jour. Lat:", currentUser.lat, "Lng:", currentUser.lng);
+
     closeModal('edit-profile-modal');
-    showToast('✅ Adresse et profil sauvegardés avec succès !');
+    showToast('✅ Adresse et GPS sauvegardés avec succès !');
     
-    if (typeof syncUserProfileEverywhere === 'function') syncUserProfileEverywhere();
+    // 🔥 METTRE À JOUR LE PANIER IMMÉDIATEMENT
+    if (typeof updateCart === 'function') updateCart();
 
   } catch (err) {
     console.error("❌ Erreur sauvegarde profil:", err);
     showToast('❌ Erreur : ' + err.message);
   }
 }
-
 // ==========================================
 // ✅ SYNCHRONISATION UNIVERSELLE DU PROFIL
 // ==========================================
@@ -6034,38 +6058,49 @@ function syncUserProfileEverywhere() {
 // ==========================================
 function openEditProfileModal() {
   console.log("🔍 [DEBUG 1] Clic sur le bouton Modifier le profil...");
-
-  // 1. Vérification de sécurité absolue
-  if (typeof currentUser === 'undefined' || !currentUser || !currentUser.id) {
-    console.error("❌ [DEBUG 2] ÉCHEC : currentUser est manquant ou non connecté !");
-    showToast('❌ Erreur : Veuillez vous reconnecter.');
+  
+  if (!currentUser || !currentUser.id) {
+    console.log("❌ [DEBUG 2] Utilisateur non connecté.");
+    showToast('🔑 Veuillez vous connecter');
     return;
   }
+  
   console.log("✅ [DEBUG 3] Utilisateur connecté :", currentUser.name);
 
-  // 2. Remplir les champs (avec vérification que les éléments existent)
+  // Remplir les champs avec les données actuelles
   const nameField = document.getElementById('ep-name');
   const phoneField = document.getElementById('ep-phone');
-  const addressField = document.getElementById('ep-address');
+  const addrField = document.getElementById('ep-address');
 
   if (nameField) nameField.value = currentUser.name || '';
   if (phoneField) phoneField.value = currentUser.phone || '';
-  if (addressField) addressField.value = currentUser.address || '';
+  if (addrField) {
+    addrField.value = currentUser.address || '';
+    addrField._lat = currentUser.lat || null;
+    addrField._lng = currentUser.lng || null;
+  }
+  
   console.log("✅ [DEBUG 4] Champs du formulaire remplis.");
 
-  // 3. Autocomplétion (seulement si la fonction existe)
-  if (typeof initAutocomplete === 'function') {
-    setTimeout(() => initAutocomplete('ep-address', 'ep-address-suggestions'), 100);
-  }
-
-  // 4. Ouvrir le modal (méthode universelle)
-  const modal = document.getElementById('edit-profile-modal');
-  if (modal) {
-    modal.style.display = 'flex'; // ou 'block' selon ton CSS
-    modal.classList.add('show');
-    console.log("✅ [DEBUG 5] Modal affiché avec succès !");
+  // 🔥 FORCER LA RECHERCHE DE LA MODALE
+  let modal = document.getElementById('edit-profile-modal');
+  
+  // Si la modale n'est pas trouvée, attendre 100ms et réessayer
+  if (!modal) {
+    console.warn("⚠️ [DEBUG 5] Modale introuvable, attente de 100ms...");
+    setTimeout(() => {
+      modal = document.getElementById('edit-profile-modal');
+      if (modal) {
+        modal.style.display = 'flex';
+        console.log("✅ [DEBUG 6] Modal affichée après attente !");
+      } else {
+        console.error("❌ [DEBUG 6] ÉCHEC : La modale n'existe vraiment pas dans le DOM !");
+        showToast('❌ Erreur technique : Modale introuvable');
+      }
+    }, 100);
   } else {
-    console.error("❌ [DEBUG 5] ÉCHEC : L'élément HTML 'edit-profile-modal' est introuvable !");
+    modal.style.display = 'flex';
+    console.log("✅ [DEBUG 5] Modal affichée avec succès !");
   }
 }
 // ==========================================
@@ -6342,3 +6377,145 @@ console.log("💡 Astuce : Tape 'debugNotifications()' dans la console pour test
 
 
 
+async function showDeliveryOrders() {
+  if (!currentUser || currentUser.role !== 'livreur') {
+    showToast('🔑 Accès réservé aux livreurs');
+    return;
+  }
+
+  console.log("🚚 [LIVREUR] Chargement des commandes en cours...");
+  console.log("🚚 [LIVREUR] Mon ID :", currentUser.id);
+  console.log("🚚 [LIVREUR] Mon nom :", currentUser.name);
+
+  try {
+    // ✅ RECHERCHER LES COMMANDES ASSIGNÉES À CE LIVREUR
+    // On cherche soit par ID, soit par nom (selon ce qui est dans driver_name)
+    const { data: myOrders, error } = await supabaseClient
+      .from('orders')
+      .select('*')
+      .in('status', ['accepted', 'assigned', 'in_delivery'])
+      .or(`driver_name.eq.${currentUser.id},driver_name.eq.${currentUser.name}`) // ✅ Cherche les deux
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("❌ Erreur requête:", error);
+      showToast('❌ Erreur : ' + error.message);
+      return;
+    }
+
+    console.log("📦 [LIVREUR] Commandes trouvées :", myOrders?.length || 0);
+
+    const container = document.getElementById('delivery-orders-list');
+    if (!container) {
+      console.error("❌ Conteneur 'delivery-orders-list' introuvable dans le HTML");
+      return;
+    }
+
+    if (!myOrders || myOrders.length === 0) {
+      container.innerHTML = '<p style="text-align:center; color:#666; padding:2rem;">📭 Aucune commande en cours pour le moment</p>';
+      return;
+    }
+
+    // ✅ AFFICHER LES COMMANDES
+    container.innerHTML = myOrders.map(order => {
+      const statusLabels = {
+        'accepted': '✅ Acceptée par le commerce',
+        'assigned': '📦 Assignée à vous',
+        'in_delivery': '🚚 En cours de livraison'
+      };
+      
+      const statusColor = {
+        'accepted': '#f59e0b',
+        'assigned': '#3b82f6',
+        'in_delivery': '#10b981'
+      };
+
+      return `
+        <div style="background:white; padding:1.5rem; border-radius:12px; margin-bottom:1rem; border:2px solid ${statusColor[order.status] || '#ddd'}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
+            <div>
+              <h3 style="margin:0; color:#0a1929;">Commande #${order.order_number}</h3>
+              <p style="margin:0.3rem 0; color:#666; font-size:0.9rem;">🏪 ${order.store_name || 'Commerce'}</p>
+            </div>
+            <span style="background:${statusColor[order.status]}; color:white; padding:0.4rem 0.8rem; border-radius:20px; font-size:0.8rem; font-weight:bold;">
+              ${statusLabels[order.status] || order.status}
+            </span>
+          </div>
+          
+          <div style="background:#f9fafb; padding:1rem; border-radius:8px; margin-bottom:1rem;">
+            <strong>📍 Adresse de livraison :</strong>
+            <p style="margin:0.5rem 0; color:#333;">${order.client_address || 'Adresse non fournie'}</p>
+            <p style="margin:0.3rem 0; color:#666; font-size:0.9rem;">👤 ${order.client_name || 'Client'} | 📞 ${order.client_phone || 'Pas de téléphone'}</p>
+          </div>
+
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            ${order.status === 'accepted' || order.status === 'assigned' ? `
+              <button onclick="startDelivery('${order.id}')" style="flex:1; background:#10b981; color:white; border:none; padding:0.8rem; border-radius:8px; cursor:pointer; font-weight:bold;">
+                🚚 Démarrer la livraison
+              </button>
+            ` : ''}
+            ${order.status === 'in_delivery' ? `
+              <button onclick="completeDelivery('${order.id}')" style="flex:1; background:#3b82f6; color:white; border:none; padding:0.8rem; border-radius:8px; cursor:pointer; font-weight:bold;">
+                ✅ Marquer comme livrée
+              </button>
+            ` : ''}
+            <button onclick="viewOrderDetails('${order.id}')" style="background:#6b7280; color:white; border:none; padding:0.8rem 1.2rem; border-radius:8px; cursor:pointer;">
+              👁️ Détails
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('❌ Erreur showDeliveryOrders:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ✅ DÉMARRER LA LIVRAISON
+async function startDelivery(orderId) {
+  if (!confirm('Démarrer la livraison de cette commande ?')) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from('orders')
+      .update({ 
+        status: 'in_delivery',
+        status_history: [{ status: 'in_delivery', time: new Date().toISOString(), note: 'Livraison démarrée par le livreur' }]
+      })
+      .eq('id', orderId);
+
+    if (error) throw error;
+
+    showToast('✅ Livraison démarrée !');
+    showDeliveryOrders(); // Rafraîchir la liste
+  } catch (err) {
+    console.error('❌ Erreur startDelivery:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ✅ MARQUER COMME LIVRÉE
+async function completeDelivery(orderId) {
+  if (!confirm('Confirmer que cette commande a été livrée ?')) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from('orders')
+      .update({ 
+        status: 'delivered',
+        delivered_at: new Date().toISOString(),
+        status_history: [{ status: 'delivered', time: new Date().toISOString(), note: 'Livraison terminée' }]
+      })
+      .eq('id', orderId);
+
+    if (error) throw error;
+
+    showToast('✅ Commande livrée avec succès !');
+    showDeliveryOrders(); // Rafraîchir la liste
+  } catch (err) {
+    console.error('❌ Erreur completeDelivery:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
