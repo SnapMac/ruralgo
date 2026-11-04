@@ -197,7 +197,7 @@ async function checkPaymentStatus() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (user) {
       const { data: wallet } = await supabaseClient
-        .from('wallets')
+        .from('profiles')
         .select('balance')
         .eq('user_id', user.id)
         .single();
@@ -5206,7 +5206,7 @@ async function loadUserWallet() {
   
   try {
     const { data, error } = await supabaseClient
-      .from('wallets')
+      .from('profiles')
       .select('balance')
       .eq('user_id', currentUser.id)
       .maybeSingle();
@@ -5218,7 +5218,7 @@ async function loadUserWallet() {
     } else {
       // Créer le wallet s'il n'existe pas
       const { error: createError } = await supabaseClient
-        .from('wallets')
+        .from('profiles')
         .insert({
           user_id: currentUser.id,
           balance: 0
@@ -5238,57 +5238,31 @@ async function loadUserWallet() {
 
 // Mettre à jour l'affichage du solde dans l'interface
 // ✅ Affiche le wallet UNIQUEMENT pour les clients et commerces (pas livreurs/admins)
-async function updateWalletDisplay() {
-  console.log("🔍 updateWalletDisplay() APPELÉE");
-  console.log("🔍 currentUser:", currentUser);
-  console.log("🔍 currentUser.id:", currentUser?.id);
-  console.log("🔍 currentUser.role:", currentUser?.role);
+function updateWalletDisplay() {
+  console.log("🔄 [WALLET] Mise à jour...");
   
-  if (!currentUser || !currentUser.id) {
-    console.error("❌ PAS D'UTILISATEUR CONNECTÉ !");
-    return;
-  }
-  
-  if (currentUser.role !== 'client') {
-    console.log("ℹ️ Pas un client, on ne charge pas le wallet");
-    return;
-  }
+  if (!currentUser || !currentUser.id) return;
 
-  try {
-    console.log("🔍 Requête SQL : SELECT balance FROM wallets WHERE user_id =", currentUser.id);
-    
-    const { data: wallet, error } = await supabaseClient
-      .from('wallets')
-      .select('balance, user_id') // ✅ Ajouter user_id pour voir ce qui est retourné
-      .eq('user_id', currentUser.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error("❌ Erreur Supabase:", error);
-      return;
-    }
-
-    console.log("✅ Données retournées par Supabase:", wallet);
-
-    const balance = wallet ? parseFloat(wallet.balance || 0).toFixed(2) : "0.00";
-    console.log("✅ Solde calculé:", balance, "$");
-
-    const balanceEl = document.getElementById('wallet-balance');
-    
-    if (balanceEl) {
-      balanceEl.textContent = balance + ' $';
-      console.log("✅ Solde affiché à l'écran:", balance, "$");
-      
-      if (typeof userWalletBalance !== 'undefined') {
-        userWalletBalance = parseFloat(balance);
+  supabaseClient
+    .from('profiles')
+    .select('wallet_balance')
+    .eq('id', currentUser.id)
+    .maybeSingle()
+    .then(({ data, error }) => {
+      if (error || !data) {
+        console.error("❌ Erreur wallet:", error);
+        return;
       }
-    } else {
-      console.error("❌ Élément #wallet-balance introuvable");
-    }
 
-  } catch (err) {
-    console.error('❌ Erreur critique wallet:', err);
-  }
+      const balance = parseFloat(data.wallet_balance) || 0;
+      currentUser.wallet_balance = balance;
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      
+      const walletEl = document.getElementById('wallet-balance');
+      if (walletEl) walletEl.textContent = balance.toFixed(2);
+      
+      console.log("✅ Solde:", balance.toFixed(2), "$");
+    });
 }
 
 
@@ -5313,7 +5287,7 @@ async function depositToWallet(amount) {
   try {
     let wallet;
     const { data: existingWallet, error: walletError } = await supabaseClient
-      .from('wallets')
+      .from('profiles')
       .select('balance')
       .eq('user_id', currentUser.id)
       .maybeSingle();
@@ -5324,7 +5298,7 @@ async function depositToWallet(amount) {
     
     if (!existingWallet) {
       const { error: createError } = await supabaseClient
-        .from('wallets')
+        .from('profiles')
         .insert({
           user_id: currentUser.id,
           balance: 0
@@ -5367,7 +5341,7 @@ async function depositToWallet(amount) {
     if (depositError) throw depositError;
     
     const { error: updateError } = await supabaseClient
-      .from('wallets')
+      .from('profiles')
       .update({ balance: balanceAfter, updated_at: new Date().toISOString() })
       .eq('user_id', currentUser.id);
     
@@ -5399,7 +5373,7 @@ async function payOrderWithWallet(orderId, amount) {
   try {
     // 1. Récupérer le solde actuel
     const { data: wallet, error: walletError } = await supabaseClient
-      .from('wallets')
+      .from('profiles')
       .select('balance')
       .eq('user_id', currentUser.id)
       .single();
@@ -5428,7 +5402,7 @@ async function payOrderWithWallet(orderId, amount) {
     
     // 3. Mettre à jour le portefeuille
     const { error: updateError } = await supabaseClient
-      .from('wallets')
+      .from('profiles')
       .update({ balance: balanceAfter, updated_at: new Date().toISOString() })
       .eq('user_id', currentUser.id);
     
@@ -5668,9 +5642,9 @@ async function checkPaymentSuccess() {
     
     if (user) {
       const { data: wallet, error: walletError } = await supabaseClient
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', user.id)
+        .from('profiles')
+        .select('wallet_balance')
+        .eq('id', user.id)
         .single();
       
       console.log("🔍 [DEBUG] Wallet :", wallet);
@@ -6325,7 +6299,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Lance le code quand la page est totalement chargée
 window.addEventListener('load', () => {
-  setTimeout(afficherCommercesAccueil, 1000);
+ // setTimeout(afficherCommercesAccueil, 1000);
 });
 
 // ==========================================
