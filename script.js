@@ -1053,53 +1053,39 @@ async function handlePlanSelection(planId, price) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
+// ==========================================
+// ✅ DÉCONNEXION PROPRE ET FORCÉE
+// ==========================================
 async function logout() {
   console.log("🚪 [DÉCONNEXION] Début du processus...");
   
   try {
-    // On essaie de se déconnecter de Supabase
-    await supabaseClient.auth.signOut({ scope: 'global' });
-    console.log("✅ [DÉCONNEXION] Supabase a confirmé la déconnexion.");
+    // 1. Tenter de se déconnecter de Supabase (on ignore l'erreur 403 si la session est déjà expirée)
+    await supabaseClient.auth.signOut({ scope: 'global' }).catch(err => {
+      if (!err.message.includes('403')) console.warn("⚠️ Info déconnexion:", err);
+    });
   } catch (err) {
-    // 🔥 SI C'EST UNE ERREUR 403, ON L'IGNORE PROPREMENT
-    if (err.status === 403 || (err.message && err.message.includes('403'))) {
-      console.warn("⚠️ [DÉCONNEXION] Session déjà expirée ou invalide (403). On force le nettoyage local.");
-    } else {
-      console.error("❌ [DÉCONNEXION] Erreur inattendue:", err);
-    }
+    console.warn("⚠️ Erreur Supabase lors de la déconnexion (ignorée):", err);
   }
 
-  // 🔥 NETTOYAGE LOCAL OBLIGATOIRE (C'est l'étape la plus importante)
+  // 2. NETTOYAGE LOCAL OBLIGATOIRE
   currentUser = null;
   localStorage.removeItem('currentUser');
   // Optionnel : vider le panier à la déconnexion pour éviter les conflits
   // localStorage.removeItem('cart'); 
-  
-  console.log("✅ [DÉCONNEXION] Données locales nettoyées.");
 
-  // 🔥 ARRÊTER LE POLLING DES NOTIFICATIONS (Règle le warning "Pas d'utilisateur connecté")
+  // 3. ARRÊTER LE POLLING DES NOTIFICATIONS (pour éviter les erreurs en arrière-plan)
   if (window.notifIntervalId) {
     clearInterval(window.notifIntervalId);
     window.notifIntervalId = null;
     console.log("⏹️ [DÉCONNEXION] Polling des notifications arrêté.");
   }
 
-  // Cacher les éléments réservés aux connectés
-  const bellContainer = document.getElementById('notif-bell-container');
-  if (bellContainer) bellContainer.style.display = 'none';
-  
-  const notifPanel = document.getElementById('notif-panel');
-  if (notifPanel) notifPanel.style.display = 'none';
-
-  // Mettre à jour l'interface (retour à l'accueil / mode visiteur)
-  if (typeof showUserInterface === 'function') {
-    showUserInterface(); 
-  } else {
-    // Fallback : recharger la page pour un reset total propre
-    window.location.href = 'index.html'; 
-  }
-  
-  showToast('👋 Déconnexion réussie !');
+  // 4. 🔥 REDIRECTION FORCÉE VERS LA PAGE D'ACCUEIL
+  // On utilise .replace() au lieu de .href pour que le bouton "Précédent" 
+  // du navigateur ne permette PAS de revenir à la session connectée.
+  console.log("✅ [DÉCONNEXION] Redirection vers l'accueil...");
+  window.location.replace('index.html'); 
 }
 
 function showUserInterface() {
@@ -1257,84 +1243,28 @@ function openStoreFromLanding(store_id) {
 // ==========================================
 // ✅ FONCTION UNIFIÉE : LISTE DES COMMERCES (DESIGN PREMIUM)
 // ==========================================
+// ==========================================
+// ✅ AFFICHER TOUS LES COMMERCES (CLIENT)
+// ==========================================
 async function showClientStores() {
-  console.log("🏪 [COMMERCES] Affichage de la liste design premium...");
+  console.log("🏪 [CLIENT] Affichage de la page commerces...");
 
-  // 1. Cacher les autres sections
-  ['home-section', 'cart-section', 'store-detail-section', 'store-dashboard-section', 'checkout-section', 'client-section'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
+  // 1. Afficher la vue client
+  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+  document.getElementById('view-client').style.display = 'block';
+  
+  // 2. Afficher la section commerces, cacher les autres
+  document.getElementById('stores-section').style.display = 'block';
+  document.getElementById('store-detail-section').style.display = 'none';
+  document.getElementById('client-orders-section').style.display = 'none';
+  document.getElementById('cart-section').style.display = 'none';
+  document.getElementById('client-profile-section').style.display = 'none';
 
-  // 2. Cibler le conteneur
-  const container = document.getElementById('stores-section');
-  if (!container) return;
+  // 3. Historique pour le bouton Retour
+  saveViewToHistory('view-client');
 
-  container.style.display = 'block';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  container.innerHTML = '<p style="text-align:center; padding:3rem; color:#666; font-size:1.1rem;">⏳ Chargement de nos commerces partenaires...</p>';
-
-  try {
-    // 3. Charger les commerces
-    const { data: storesData, error } = await supabaseClient
-      .from('stores')
-      .select('*')
-      .eq('status', 'active');
-
-    if (error) throw error;
-
-    if (!storesData || storesData.length === 0) {
-      container.innerHTML = '<p style="text-align:center; padding:3rem; color:#666;">Aucun commerce disponible pour le moment.</p>';
-      return;
-    }
-
-    window.stores = storesData;
-
-    // 4. ✅ NOUVEAU DESIGN : Grille de cartes modernes
-    container.innerHTML = `
-      <div style="text-align:center; margin-bottom:2rem; padding-top:1rem;">
-        <h2 style="color:#0a1929; font-size:2rem; margin-bottom:0.5rem;">🏪 Nos Commerces Partenaires</h2>
-        <p style="color:#64748b; font-size:1rem;">Soutenez les commerces locaux de votre région</p>
-      </div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; padding: 1rem 1.5rem 3rem 1.5rem; max-width: 1200px; margin: 0 auto;">
-        ${storesData.map(store => `
-          <div onclick="openStoreDetail('${store.id}')" style="background:white; border-radius:16px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05); cursor:pointer; transition:all 0.3s ease; border:1px solid #f1f5f9;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 25px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.05)'">
-            
-            <!-- Bannière et Icône -->
-            <div style="background: linear-gradient(135deg, #f5f1e8 0%, #e2dcc8 100%); height: 90px; position: relative; display: flex; align-items: flex-end; justify-content: center;">
-              <div style="font-size: 3.5rem; background: white; width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 4px solid white; position: absolute; bottom: -37px; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                ${store.icon || '🏪'}
-              </div>
-            </div>
-
-            <!-- Contenu de la carte -->
-            <div style="padding: 3rem 1.5rem 1.5rem 1.5rem; text-align: center;">
-              <h3 style="margin: 0 0 0.8rem 0; color: #0a1929; font-size: 1.3rem; font-weight: 700;">${store.name}</h3>
-              
-              <!-- Badge Type -->
-              <span style="display: inline-block; background: #f0f9ff; color: #0369a1; padding: 5px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem; border: 1px solid #bae6fd;">
-                ${store.type || 'Commerce local'}
-              </span>
-
-              <!-- Adresse -->
-              <p style="margin: 0; color: #64748b; font-size: 0.95rem; line-height: 1.5; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                📍 ${store.address || 'Adresse non spécifiée'}
-              </p>
-
-              <!-- Indicateur d'action -->
-              <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px dashed #e2e8f0; color: #f5a623; font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                Voir les produits <span style="transition: transform 0.3s;">→</span>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-
-  } catch (err) {
-    console.error("❌ Erreur chargement commerces:", err);
-    container.innerHTML = '<p style="text-align:center; padding:3rem; color:#ef4444;">Une erreur est survenue lors du chargement.</p>';
-  }
+  // 4. 🔥 APPEL DE LA FONCTION MAÎTRE
+  await afficherCommerces('stores-grid', 'showStoreDetail');
 }
 // ==========================================
 // ✅ FILTRAGE DES COMMERCES PAR CATÉGORIE
@@ -1885,94 +1815,147 @@ function showClientOrderDetail(orderId) {
   document.getElementById('client-order-detail-content').innerHTML = html;
 }
 
-// ============ PLACEORDER - LA FONCTION QUI MANQUAIT ! ============
 async function placeOrder() {
-  console.log("🚀 [COMMANDE] Début du processus...");
-  
-  if (!currentUser || currentUser.role !== 'client') return showToast('🔑 Connectez-vous pour commander');
-  if (cart.length === 0) return showToast('🛒 Votre panier est vide');
+  console.log("💳 [COMMANDE] Début du processus...");
 
-  const store = getCurrentStore();
-  if (!store) return showToast('❌ Commerce introuvable');
-
-  // 🔥 ÉTAPE CRUCIALE : Forcer la récupération de l'adresse la plus récente dans Supabase
-  console.log("🔍 [COMMANDE] Récupération de l'adresse FRAÎCHE depuis 'profiles'...");
-  const { data: freshProfile, error: profileError } = await supabaseClient
-    .from('profiles')
-    .select('name, phone, address, lat, lng')
-    .eq('id', currentUser.id)
-    .single();
-
-  if (profileError || !freshProfile || !freshProfile.address) {
-    showToast('❌ Veuillez ajouter une adresse complète dans votre profil avant de commander.');
-    if (typeof openEditProfileModal === 'function') openEditProfileModal();
+  if (!currentUser || !currentUser.id) {
+    showToast('🔑 Veuillez vous connecter pour commander');
+    openLoginModal();
     return;
   }
 
-  console.log("✅ [COMMANDE] Adresse synchronisée :", freshProfile.address, freshProfile.lat, freshProfile.lng);
-
-  // Calcul des frais basé sur les coordonnées FRAÎCHES
-  const subtotal = cart.reduce((s, c) => s + (c.price * c.qty), 0);
-  let distanceKm = 0, baseFee = 7.00, perKmFee = 1.00, deliveryFee = 7.00;
-  
-  if (typeof calculateDeliveryFee === 'function' && freshProfile.lat && freshProfile.lng && store.lat && store.lng) {
-    const info = calculateDeliveryFee(store.lat, store.lng, freshProfile.lat, freshProfile.lng);
-    distanceKm = info.distanceKm;
-    baseFee = info.baseFee;
-    perKmFee = info.perKmFee;
-    deliveryFee = info.totalFee;
+  if (!cart || cart.length === 0) {
+    showToast('🛒 Votre panier est vide');
+    return;
   }
 
-  const tax = subtotal * 0.14975;
-  const total = subtotal + deliveryFee + tax;
+  // 1. Calculer le total
+  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const deliveryFee = parseFloat(document.getElementById('delivery-fee')?.textContent) || 7.00;
+  const taxes = parseFloat(document.getElementById('taxes')?.textContent) || 0;
+  const total = subtotal + deliveryFee + taxes;
 
-  // 🔥 CRÉATION DE L'OBJET AVEC LES NOMS DE COLONNES EXACTS DE SUPABASE
-  const orderData = {
-    client_id: currentUser.id,
-    client_name: freshProfile.name || "Client",
-    client_phone: freshProfile.phone || "Non spécifié",
-    client_address: freshProfile.address,       // ⚠️ COLONNE EXACTE
-    client_lat: freshProfile.lat,               // ⚠️ COLONNE EXACTE
-    client_lng: freshProfile.lng,               // ⚠️ COLONNE EXACTE
-    order_number: 'RG' + Date.now().toString().slice(-6),
-    subtotal: subtotal,
-    delivery_base_fee: baseFee,
-    delivery_distance_km: distanceKm,
-    delivery_per_km_fee: perKmFee,
-    delivery_fee: deliveryFee,
-    tax: tax,
-    total: total,
-    items: cart.map(c => ({ productId: c.productId, name: c.name, icon: c.icon, price: c.price, qty: c.qty })),
-    status: 'pending',
-    store_id: store.id,
-    store_name: store.name,
-    status_history: [{ status: 'pending', time: new Date().toISOString(), note: 'Commande créée' }]
-  };
+  // Récupérer l'ID du commerce (depuis le premier article du panier ou une variable globale)
+  const storeId = cart[0]?.store_id || window.currentStoreId || null;
+
+  console.log(`💰 Total: ${total.toFixed(2)}$ | Commerce ID: ${storeId}`);
 
   try {
+    // 2. 🔥 VÉRIFICATION SOUPLE DU WALLET (Ne plante pas si la colonne n'existe pas)
+    let currentBalance = 0;
+    let walletExists = false;
+
+    try {
+      const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('wallet_balance')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (!error && profile && profile.wallet_balance !== undefined) {
+        walletExists = true;
+        currentBalance = parseFloat(profile.wallet_balance) || 0;
+        console.log(`💰 Solde actuel: ${currentBalance.toFixed(2)}$`);
+
+        if (currentBalance < total) {
+          showToast(`❌ Solde insuffisant ! (${currentBalance.toFixed(2)}$ < ${total.toFixed(2)}$)`);
+          if (typeof openDepositModal === 'function') openDepositModal();
+          return;
+        }
+      } else {
+        console.log("ℹ️ Colonne wallet_balance non trouvée, on passe à la commande normale.");
+      }
+    } catch (walletCheckErr) {
+      console.warn("⚠️ Vérification wallet ignorée:", walletCheckErr.message);
+    }
+
+    // 3. Confirmer la commande
+    if (!confirm(`Confirmer la commande de ${total.toFixed(2)}$ ?`)) {
+      return;
+    }
+
+    // 4. Préparer les données de la commande (structure standard)
+    const orderData = {
+      client_id: currentUser.id,
+      client_name: currentUser.name,
+      client_phone: currentUser.phone || '',
+      client_address: currentUser.address || '',
+      store_id: storeId, // ✅ IMPORTANT pour que le commerce reçoive la commande
+      items: cart, // Assure-toi que ta colonne 'items' est de type JSON/JSONB dans Supabase
+      subtotal: subtotal,
+      delivery_fee: deliveryFee,
+      taxes: taxes,
+      total: total,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+
+    // 5. Créer la commande
     const { data: newOrder, error: orderError } = await supabaseClient
       .from('orders')
-      .insert(orderData)
+      .insert([orderData])
       .select()
       .single();
 
-    if (orderError) throw orderError;
+    if (orderError) {
+      console.error("❌ Erreur création commande:", orderError);
+      showToast('❌ Erreur lors de la création de la commande : ' + orderError.message);
+      return;
+    }
 
-    console.log("✅ [COMMANDE] Enregistrée avec l'adresse synchronisée !");
-    
-    // Vider le panier
+    console.log("✅ Commande créée avec succès :", newOrder.id);
+
+    // 6. 🔥 DÉDUIRE LE WALLET (Seulement si la vérification a réussi plus tôt)
+    if (walletExists) {
+      const newBalance = currentBalance - total;
+      const { error: updateError } = await supabaseClient
+        .from('profiles')
+        .update({ wallet_balance: newBalance })
+        .eq('id', currentUser.id);
+
+      if (!updateError) {
+        currentUser.wallet_balance = newBalance;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        const walletEl = document.getElementById('wallet-balance');
+        if (walletEl) walletEl.textContent = newBalance.toFixed(2);
+        
+        console.log(`✅ Wallet mis à jour: ${newBalance.toFixed(2)}$`);
+      } else {
+        console.error("❌ Erreur mise à jour wallet:", updateError);
+      }
+    }
+
+    // 7. Vider le panier et notifier
     cart = [];
     localStorage.removeItem('cart');
     if (typeof updateCart === 'function') updateCart();
 
-    showToast(`✅ Commande #${newOrder.order_number} réussie !`);
-    if (typeof showClientOrders === 'function') showClientOrders();
+    showToast(`✅ Commande #${newOrder.id.substring(0, 8)} confirmée !`);
+
+    // 8. Notification au commerce (optionnel)
+    if (typeof showNotification === 'function' && storeId) {
+      showNotification(
+        'Nouvelle commande',
+        `Nouvelle commande de ${total.toFixed(2)}$`,
+        'info',
+        storeId
+      );
+    }
+
+    // 9. Rediriger vers l'historique des commandes
+    setTimeout(() => {
+      if (typeof showClientOrders === 'function') {
+        showClientOrders();
+      }
+    }, 1500);
 
   } catch (err) {
-    console.error('❌ [COMMANDE] Échec:', err);
-    showToast('❌ Erreur : ' + err.message);
+    console.error("❌ Erreur globale placeOrder:", err);
+    showToast('❌ Une erreur est survenue : ' + err.message);
   }
 }
+
 
 async function cancelOrder(orderId) {
   if (!confirm('Voulez-vous vraiment annuler cette commande ?')) return;
@@ -3384,6 +3367,176 @@ function confirmDelete(type, id) {
 // ==========================================
 // ✅ DASHBOARD COMMERCE (Version Finale et Stable)
 // ==========================================
+async function showStoreDetail(storeId) {
+  console.log("🏪 Ouverture du commerce :", storeId);
+
+  if (!storeId) {
+    showToast('❌ ID du commerce manquant');
+    return;
+  }
+
+  try {
+    // 1. Charger le commerce
+    const { data: store, error: storeError } = await supabaseClient
+      .from('stores')
+      .select('*')
+      .eq('id', storeId)
+      .single();
+
+    if (storeError) throw storeError;
+    if (!store) {
+      showToast('❌ Commerce introuvable');
+      return;
+    }
+
+    console.log("✅ Commerce :", store.name);
+
+    // 2. Charger les produits
+    const { data: products, error: productsError } = await supabaseClient
+      .from('products')
+      .select('*')
+      .eq('store_id', storeId)
+      .order('name', { ascending: true });
+
+    if (productsError) throw productsError;
+
+    console.log("📦 Produits trouvés :", products?.length || 0);
+
+    // 3. Afficher la vue client
+    document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+    document.getElementById('view-client').style.display = 'block';
+
+    // 4. Afficher la section détail
+    document.getElementById('stores-section').style.display = 'none';
+    document.getElementById('store-detail-section').style.display = 'block';
+    document.getElementById('client-orders-section').style.display = 'none';
+    document.getElementById('cart-section').style.display = 'none';
+    document.getElementById('client-profile-section').style.display = 'none';
+
+    // 5. Historique pour le bouton Retour
+    saveViewToHistory('view-client');
+
+    // 6. Générer le HTML avec design moderne
+    const container = document.getElementById('store-detail-content');
+    if (!container) {
+      console.error("❌ Conteneur 'store-detail-content' introuvable !");
+      return;
+    }
+
+    // Produits en grille
+    let productsHtml = '';
+    if (products && products.length > 0) {
+      productsHtml = `
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:1.5rem;">
+          ${products.map(p => `
+            <div style="background:white; border-radius:16px; overflow:hidden; border:1px solid #e5e7eb; transition:all 0.3s ease; box-shadow:0 2px 8px rgba(0,0,0,0.05);"
+                 onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 24px rgba(245,166,35,0.2)'; this.style.borderColor='#f5a623'"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'; this.style.borderColor='#e5e7eb'">
+              
+              <!-- Image/Icône du produit -->
+              <div style="background:linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); padding:2rem; text-align:center; border-bottom:1px solid #e5e7eb;">
+                <div style="font-size:4rem; margin-bottom:0.5rem;">${p.icon || '📦'}</div>
+              </div>
+              
+              <!-- Contenu -->
+              <div style="padding:1.5rem;">
+                <h4 style="margin:0 0 0.5rem 0; color:#0a1929; font-size:1.1rem; font-weight:700; line-height:1.3;">${p.name}</h4>
+                ${p.description ? `<p style="margin:0 0 1rem 0; color:#6b7280; font-size:0.9rem; line-height:1.5;">${p.description}</p>` : ''}
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding-top:1rem; border-top:1px solid #f3f4f6;">
+                  <div style="color:#f5a623; font-size:1.4rem; font-weight:800;">${parseFloat(p.price).toFixed(2)} $</div>
+                  <button onclick="addToCart('${p.id}', '${p.name.replace(/'/g, "\\'")}', ${p.price}, '${p.icon || '📦'}', '${storeId}', '${store.name.replace(/'/g, "\\'")}')" 
+                          style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; padding:0.6rem 1.2rem; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.9rem; transition:all 0.2s; box-shadow:0 2px 8px rgba(16,185,129,0.3);"
+                          onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 12px rgba(16,185,129,0.4)'"
+                          onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 8px rgba(16,185,129,0.3)'">
+                    ➕ Ajouter
+                  </button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      productsHtml = `
+        <div style="text-align:center; padding:4rem 2rem; background:white; border-radius:16px; border:2px dashed #e5e7eb;">
+          <div style="font-size:4rem; margin-bottom:1rem;">📭</div>
+          <p style="color:#6b7280; font-size:1.1rem; margin:0;">Aucun produit disponible pour le moment</p>
+          <p style="color:#9ca3af; font-size:0.9rem; margin-top:0.5rem;">Revenez plus tard !</p>
+        </div>
+      `;
+    }
+
+    container.innerHTML = `
+      <!-- HERO DU COMMERCE -->
+      <div style="background:linear-gradient(135deg, #0a1929 0%, #1a3a5c 100%); border-radius:20px; padding:3rem 2rem; margin-bottom:2rem; color:white; position:relative; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+        
+        <!-- Effet décoratif -->
+        <div style="position:absolute; top:-50%; right:-20%; width:400px; height:400px; background:radial-gradient(circle, rgba(245,166,35,0.15) 0%, transparent 70%);"></div>
+        
+        <button onclick="showClientStores()" 
+                style="background:rgba(255,255,255,0.1); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.2); color:white; padding:0.6rem 1.2rem; border-radius:8px; cursor:pointer; font-weight:600; margin-bottom:2rem; font-size:0.95rem; transition:all 0.2s; position:relative; z-index:2;"
+                onmouseover="this.style.background='rgba(255,255,255,0.2)'"
+                onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+          ← Retour aux commerces
+        </button>
+        
+        <div style="display:flex; align-items:center; gap:2rem; position:relative; z-index:2; flex-wrap:wrap;">
+          <!-- Icône du commerce -->
+          <div style="background:white; width:120px; height:120px; border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:5rem; box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+            ${store.icon || '🏪'}
+          </div>
+          
+          <!-- Infos -->
+          <div style="flex:1; min-width:250px;">
+            <h1 style="margin:0 0 0.5rem 0; font-size:2.5rem; font-weight:800; line-height:1.2;">${store.name}</h1>
+            <div style="display:inline-block; background:#f5a623; color:#0a1929; padding:0.4rem 1rem; border-radius:20px; font-weight:700; font-size:0.9rem; margin-bottom:1rem;">
+              ${store.type || 'Commerce'}
+            </div>
+            <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-top:1rem;">
+              ${store.address ? `
+                <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.95rem; opacity:0.9;">
+                  <span style="font-size:1.2rem;">📍</span>
+                  <span>${store.address}</span>
+                </div>
+              ` : ''}
+              ${store.phone ? `
+                <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.95rem; opacity:0.9;">
+                  <span style="font-size:1.2rem;">📞</span>
+                  <span>${store.phone}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION PRODUITS -->
+      <div style="background:#f5f1e8; border-radius:16px; padding:2rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <h2 style="margin:0 0 0.5rem 0; color:#0a1929; font-size:1.8rem; font-weight:800;">🛍️ Produits disponibles</h2>
+            <p style="margin:0; color:#6b7280; font-size:1rem;">${products?.length || 0} article${(products?.length || 0) > 1 ? 's' : ''} à découvrir</p>
+          </div>
+          ${products && products.length > 0 ? `
+            <div style="background:white; padding:0.6rem 1.2rem; border-radius:20px; border:2px solid #f5a623; color:#f5a623; font-weight:700; font-size:0.9rem;">
+              ✨ En stock
+            </div>
+          ` : ''}
+        </div>
+        
+        ${productsHtml}
+      </div>
+    `;
+
+    window.scrollTo(0, 0);
+    console.log("✅ Détail affiché avec succès !");
+
+  } catch (err) {
+    console.error("❌ Erreur showStoreDetail:", err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
 
 async function showStoreDashboard() {
 document.getElementById('stores-section').style.display = 'none';
@@ -5527,6 +5680,14 @@ async function checkPaymentSuccess() {
         console.log("🎯 [DEBUG] NOUVEAU SOLDE :", newBalance);
         
         if (typeof currentUser !== 'undefined') currentUser = user;
+        // 🔥 FORCER LE RECHARGEMENT DU WALLET DEPUIS LA BASE DE DONNÉES
+if (typeof currentUser.wallet_balance === 'undefined' || currentUser.wallet_balance === null) {
+  currentUser.wallet_balance = 0;
+}
+const walletEl = document.getElementById('wallet-balance');
+if (walletEl) {
+  walletEl.textContent = parseFloat(currentUser.wallet_balance).toFixed(2);
+}
         if (typeof userWalletBalance !== 'undefined') userWalletBalance = newBalance;
         
         if (typeof updateWalletDisplay === 'function') {
@@ -6157,86 +6318,10 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(loadAllStoresHomepage, 1000);
 });
 
-// ✅ Et aussi la relancer quand l'utilisateur se connecte/déconnecte
-// (pour mettre à jour l'affichage immédiatement)
-const originalLoginUser = window.loginUser;
-if (originalLoginUser) {
-  window.loginUser = async function(event) {
-    await originalLoginUser(event);
-    setTimeout(loadAllStoresHomepage, 500); // Recharger après connexion
-  };
-}
-
-const originalLogout = window.logout;
-if (originalLogout) {
-  window.logout = async function() {
-    await originalLogout();
-    setTimeout(loadAllStoresHomepage, 500); // Recharger après déconnexion
-  };
-}
 
 // ==========================================
 // ✅ CODE FINAL ET INFAILLIBLE POUR L'ACCUEIL
 // ==========================================
-async function afficherCommercesAccueil() {
-  console.log("🚀 Lancement de l'affichage des commerces...");
-  
-  // Vérifie si connecté
-  const estConnecte = (typeof currentUser !== 'undefined' && currentUser && currentUser.id);
-
-  // 1. Récupère les 9 commerces actifs
-  const { data: commerces, error } = await supabaseClient
-    .from('stores')
-    .select('*')
-    .eq('status', 'active');
-
-  if (error) { console.error("Erreur DB:", error); return; }
-  console.log("📦 Commerces actifs reçus de la base :", commerces.length);
-
-  // 2. Filtre si déconnecté (On utilise == pour éviter les bugs de texte/chiffre)
-  let listeFinale = commerces;
-  if (!estConnecte) {
-    listeFinale = commerces.filter(c => c.forfait == 3 || c.forfait == 4 || c.plan_id == 3 || c.plan_id == 4);
-    console.log("🔒 Déconnecté -> On garde seulement les forfaits 3 et 4. Total :", listeFinale.length);
-  } else {
-    console.log("🔓 Connecté -> On garde TOUS les commerces. Total :", listeFinale.length);
-  }
-
-  // 3. Trouve la boîte sur la page (avec plusieurs tentatives au cas où la page charge lentement)
-  let boite = document.getElementById('stores-grid') || document.querySelector('.stores-grid');
-
-  if (!boite) {
-    console.warn("⚠️ La boîte d'affichage n'est pas encore prête, on réessaie dans 1 seconde...");
-    setTimeout(afficherCommercesAccueil, 1000); 
-    return;
-  }
-
-  // 4. Vide la boîte et affiche les commerces
-  boite.innerHTML = '';
-  
-  if (listeFinale.length === 0) {
-    boite.innerHTML = '<p style="text-align:center; padding:20px;">Aucun commerce à afficher pour le moment.</p>';
-    return;
-  }
-
-  listeFinale.forEach(c => {
-    let badge = '';
-    if (!estConnecte) {
-      if (c.forfait == 4 || c.plan_id == 4) badge = '👑 PREMIUM';
-      else if (c.forfait == 3 || c.plan_id == 3) badge = '🚀 CROISSANCE';
-    }
-
-    boite.innerHTML += `
-      <div class="store" style="border:1px solid #ddd; padding:15px; margin:10px; border-radius:8px; cursor:pointer; background:white;">
-        <div style="font-size:2rem;">${c.icon || '🏪'} <span style="font-size:0.8rem; background:#f5a623; padding:2px 6px; border-radius:4px; color:white; margin-left:5px;">${badge}</span></div>
-        <h3 style="margin:5px 0;">${c.name}</h3>
-        <p style="margin:0; color:#666;">${c.address || ''}</p>
-      </div>
-    `;
-  });
-  
-  console.log("✅ Affichage terminé avec succès !");
-}
 
 // Lance le code quand la page est totalement chargée
 window.addEventListener('load', () => {
@@ -6474,23 +6559,7 @@ if (typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
   if (wallet) wallet.style.display = 'block';
 }
 
-// 2. On intercepte le bouton "Déconnexion" pour qu'il cache le wallet automatiquement
-const ancienneFonctionLogout = window.logout; 
-window.logout = function() {
-  // On cache le wallet
-  const wallet = document.getElementById('header-wallet');
-  if (wallet) wallet.style.display = 'none';
-  
-  // On lance la vraie déconnexion de ton site
-  if (typeof ancienneFonctionLogout === 'function') {
-    ancienneFonctionLogout();
-  } else {
-    // Sécurité au cas où
-    localStorage.removeItem('currentUser');
-    currentUser = null;
-    location.reload();
-  }
-};
+
 
 // ==========================================
 // ✅ SYSTÈME DE NOTIFICATIONS INFAILLIBLE (Realtime + Polling)
@@ -6918,5 +6987,195 @@ async function deleteDriverProfile(driverId) {
     showAdminDrivers();
   } catch (err) {
     showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ==========================================
+// ✅ GESTION DU BOUTON "RETOUR" DU NAVIGATEUR
+// ==========================================
+
+// 1. Fonction pour sauvegarder la vue actuelle dans l'historique du navigateur
+function saveViewToHistory(viewId) {
+  // On pousse un nouvel état dans l'historique du navigateur
+  history.pushState({ view: viewId }, '', '#' + viewId);
+  console.log("💾 Historique mis à jour : ", viewId);
+}
+
+// 2. Écouter quand l'utilisateur clique sur le bouton "Précédent" du navigateur
+// ✅ GESTION DU BOUTON "RETOUR" DU NAVIGATEUR (VERSION CORRIGÉE)
+// ==========================================
+// ✅ GESTION DU BOUTON "RETOUR" (AVEC SÉCURITÉ DE RÔLE)
+// ==========================================
+window.addEventListener('popstate', function(event) {
+  console.log("⏪ Bouton Retour cliqué ! État:", event.state);
+
+  // 1. Cacher TOUTES les vues
+  document.querySelectorAll('.view').forEach(view => {
+    view.style.display = 'none';
+    view.classList.remove('active');
+  });
+
+  // 2. Quelle vue le navigateur veut-il afficher ?
+  let requestedView = (event.state && event.state.view) ? event.state.view : 'view-landing';
+
+  // 3. 🛡️ SÉCURITÉ : Empêcher les conflits de rôle
+  if (currentUser && currentUser.id) {
+    if (currentUser.role === 'client') {
+      // Un client ne doit JAMAIS tomber sur store, admin ou driver en revenant en arrière
+      if (requestedView === 'view-store' || requestedView === 'view-admin' || requestedView === 'view-driver') {
+        console.log("🚫 [SÉCURITÉ] Client a essayé d'accéder à", requestedView, "-> Redirection vers view-client");
+        requestedView = 'view-client';
+      }
+    } 
+    else if (currentUser.role === 'livreur' || currentUser.role === 'driver') {
+      if (requestedView === 'view-store' || requestedView === 'view-admin' || requestedView === 'view-client') {
+        console.log("🚫 [SÉCURITÉ] Livreur a essayé d'accéder à", requestedView, "-> Redirection vers view-driver");
+        requestedView = 'view-driver';
+      }
+    }
+    else if (currentUser.role === 'commerce' || currentUser.role === 'store') {
+      if (requestedView === 'view-client' || requestedView === 'view-admin' || requestedView === 'view-driver') {
+        console.log("🚫 [SÉCURITÉ] Commerce a essayé d'accéder à", requestedView, "-> Redirection vers view-store");
+        requestedView = 'view-store';
+      }
+    }
+    else if (currentUser.role === 'admin') {
+      // L'admin peut tout voir, on ne bloque rien
+    }
+  }
+
+  // 4. Afficher la vue (corrigée si nécessaire)
+  console.log("➡️ Affichage final de la vue : ", requestedView);
+  const targetView = document.getElementById(requestedView);
+  
+  if (targetView) {
+    targetView.style.display = 'block';
+    targetView.classList.add('active');
+    window.scrollTo(0, 0); // Remonter en haut de page
+  } else {
+    // Filet de sécurité ultime : si la vue n'existe pas, retour à l'accueil
+    document.getElementById('view-landing').style.display = 'block';
+  }
+});
+
+// 3. Initialiser l'historique au chargement de la page
+document.addEventListener('DOMContentLoaded', () => {
+  // Sauvegarde la vue de départ (généralement 'view-landing')
+  if (!history.state) {
+    history.replaceState({ view: 'view-landing' }, '', '#view-landing');
+  }
+});
+
+// ==========================================
+// ✅ INTERCEPTION AUTOMATIQUE DE TOUS LES CLICS DE NAVIGATION
+// ==========================================
+
+// Cette fonction écoute TOUS les clics sur les boutons/liens et sauvegarde automatiquement l'historique
+document.addEventListener('click', function(event) {
+  const target = event.target;
+  
+  // Si c'est un bouton ou un lien avec onclick
+  if (target.tagName === 'BUTTON' || target.tagName === 'A' || target.closest('button') || target.closest('a')) {
+    const element = target.closest('button') || target.closest('a') || target;
+    const onclickAttr = element.getAttribute('onclick');
+    
+    // Si le bouton a un onclick qui appelle une fonction de navigation
+    if (onclickAttr) {
+      // Liste des fonctions qui changent de vue (ajuste selon tes fonctions)
+      const navigationFunctions = [
+        'showClientStores',
+        'showClientOrders',
+        'scrollToCart',
+        'showProfile',
+        'showDriverDashboard',
+        'showDriverHistory',
+        'goToMyStore',
+        'showStoreCategories',
+        'showStoreProducts',
+        'adminTab'
+      ];
+      
+      // Vérifie si le clic appelle une fonction de navigation
+      for (const func of navigationFunctions) {
+        if (onclickAttr.includes(func)) {
+          // Déterminer quelle vue afficher selon la fonction
+          let viewId = 'view-client'; // Par défaut
+          
+          if (onclickAttr.includes('Driver')) viewId = 'view-driver';
+          else if (onclickAttr.includes('Store') || onclickAttr.includes('goToMyStore')) viewId = 'view-store';
+          else if (onclickAttr.includes('admin')) viewId = 'view-admin';
+          
+          // Sauvegarder dans l'historique
+          setTimeout(() => {
+            saveViewToHistory(viewId);
+          }, 100);
+          
+          break;
+        }
+      }
+    }
+  }
+});
+
+console.log("✅ Système de navigation avec historique activé !");
+
+
+// ==========================================
+// ✅ FONCTION MAÎTRE : AFFICHER LES COMMERCES (VERSION FINALE)
+// ==========================================
+async function afficherCommerces(idConteneur, actionAuClic) {
+  console.log("🏪 Chargement des commerces dans :", idConteneur);
+  
+  const container = document.getElementById(idConteneur);
+  if (!container) {
+    console.error("❌ Conteneur '" + idConteneur + "' introuvable !");
+    return;
+  }
+
+  container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">⏳ Chargement des commerces...</p>';
+
+  try {
+    // ✅ TABLE STORES CONFIRMÉE
+    const { data: commerces, error } = await supabaseClient
+      .from('stores') 
+      .select('*')
+      .eq('status', 'active')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error("❌ Erreur Supabase:", error);
+      throw error;
+    }
+
+    console.log("📊 Nombre de commerces trouvés:", commerces?.length || 0);
+
+    if (!commerces || commerces.length === 0) {
+      container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666; background:white; border-radius:12px;">🏪 Aucun commerce disponible pour le moment.</p>';
+      return;
+    }
+
+    // Génération du HTML (design identique partout)
+    container.innerHTML = commerces.map(c => `
+      <div onclick="${actionAuClic}('${c.id}')" 
+           style="background:white; border-radius:12px; padding:1.5rem; border:1px solid #e5e7eb; cursor:pointer; text-align:center; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"
+           onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 20px rgba(0,0,0,0.1)'; this.style.borderColor='#f5a623'"
+           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'; this.style.borderColor='#e5e7eb'">
+        
+        <div style="font-size:3rem; margin-bottom:1rem;">${c.icon || '🏪'}</div>
+        <h3 style="margin:0 0 0.5rem 0; color:#0a1929; font-size:1.1rem; font-weight:700;">${c.name || 'Sans nom'}</h3>
+        <p style="margin:0 0 0.5rem 0; color:#f5a623; font-size:0.85rem; font-weight:600;">${c.type || 'Commerce'}</p>
+        <p style="margin:0 0 1rem 0; color:#6b7280; font-size:0.85rem;">📍 ${c.address || 'Adresse non précisée'}</p>
+        
+        <div style="padding:0.6rem; background:#0a1929; color:white; border-radius:6px; font-weight:bold; font-size:0.9rem;">
+          Voir les produits →
+        </div>
+      </div>
+    `).join('');
+
+    console.log(`✅ ${commerces.length} commerces affichés avec succès !`);
+
+  } catch (err) {
+    console.error("❌ Erreur afficherCommerces:", err);
+    container.innerHTML = '<p style="text-align:center; padding:2rem; color:#ef4444; background:white; border-radius:12px;">❌ Erreur : ' + err.message + '</p>';
   }
 }
