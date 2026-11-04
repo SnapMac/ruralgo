@@ -198,8 +198,8 @@ async function checkPaymentStatus() {
     if (user) {
       const { data: wallet } = await supabaseClient
         .from('profiles')
-        .select('balance')
-        .eq('user_id', user.id)
+        .select('wallet_balance')
+        .eq('id', user.id)
         .single();
       
       if (wallet) {
@@ -5207,8 +5207,8 @@ async function loadUserWallet() {
   try {
     const { data, error } = await supabaseClient
       .from('profiles')
-      .select('balance')
-      .eq('user_id', currentUser.id)
+      .select('wallet_balance')
+      .eq('id', currentUser.id)
       .maybeSingle();
     
     if (error && error.code !== 'PGRST116') throw error;
@@ -5241,7 +5241,10 @@ async function loadUserWallet() {
 function updateWalletDisplay() {
   console.log("🔄 [WALLET] Mise à jour...");
   
-  if (!currentUser || !currentUser.id) return;
+  if (!currentUser || !currentUser.id) {
+    console.log("⚠️ Pas d'utilisateur connecté");
+    return;
+  }
 
   supabaseClient
     .from('profiles')
@@ -5249,8 +5252,13 @@ function updateWalletDisplay() {
     .eq('id', currentUser.id)
     .maybeSingle()
     .then(({ data, error }) => {
-      if (error || !data) {
-        console.error("❌ Erreur wallet:", error);
+      if (error) {
+        console.error("❌ Erreur wallet:", error.message);
+        return;
+      }
+      
+      if (!data) {
+        console.log("⚠️ Profil non trouvé");
         return;
       }
 
@@ -5259,9 +5267,11 @@ function updateWalletDisplay() {
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
       
       const walletEl = document.getElementById('wallet-balance');
-      if (walletEl) walletEl.textContent = balance.toFixed(2);
+      if (walletEl) {
+        walletEl.textContent = balance.toFixed(2);
+      }
       
-      console.log("✅ Solde:", balance.toFixed(2), "$");
+      console.log("✅ Solde mis à jour:", balance.toFixed(2), "$");
     });
 }
 
@@ -5288,8 +5298,8 @@ async function depositToWallet(amount) {
     let wallet;
     const { data: existingWallet, error: walletError } = await supabaseClient
       .from('profiles')
-      .select('balance')
-      .eq('user_id', currentUser.id)
+      .select('wallet_balance')
+      .eq('id', currentUser.id)
       .maybeSingle();
     
     if (walletError && walletError.code !== 'PGRST116') {
@@ -5374,8 +5384,8 @@ async function payOrderWithWallet(orderId, amount) {
     // 1. Récupérer le solde actuel
     const { data: wallet, error: walletError } = await supabaseClient
       .from('profiles')
-      .select('balance')
-      .eq('user_id', currentUser.id)
+      .select('wallet_balance')
+      .eq('id', currentUser.id)
       .single();
     
     if (walletError) throw walletError;
@@ -5621,61 +5631,139 @@ if (urlParams.get('payment_canceled') === 'true') {
   showToast('❌ Paiement annulé. Aucun montant n\'a été débité.');
   window.history.replaceState({}, document.title, window.location.pathname);
 }
+// ==========================================
+// 💳 PAGE DE REMERCIEMENT RURALGO QUÉBEC (Après paiement)
+// ==========================================
+
 async function checkPaymentSuccess() {
-  console.log("🔍 [DEBUG] Vérification depuis sessionStorage...");
+  // Vérifie si on revient d'un paiement Stripe réussi
+  const urlParams = new URLSearchParams(window.location.search);
+  const isSuccess = urlParams.get('payment_success') === 'true' || sessionStorage.getItem('paymentSuccess') === 'true';
   
-  // Vérifier si on a sauvegardé le succès plus tôt
-  const paymentSuccess = sessionStorage.getItem('payment_success');
-  
-  if (paymentSuccess === 'true') {
-    console.log("✅ [DEBUG] Succès trouvé dans sessionStorage !");
+  if (isSuccess) {
+    console.log("✅ [PAIEMENT] Retour de Stripe détecté ! Affichage de la page de remerciement...");
     
-    // Nettoyer le sessionStorage
-    sessionStorage.removeItem('payment_success');
-    sessionStorage.removeItem('payment_amount');
+    // 1. Nettoyer l'URL pour éviter que la page ne s'affiche si on rafraîchit (F5)
+    window.history.replaceState({}, document.title, window.location.pathname);
+    sessionStorage.removeItem('paymentSuccess');
     
-    // Attendre que la session Supabase soit prête
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    console.log("🔍 [DEBUG] Utilisateur :", user ? user.id : "NON CONNECTÉ");
-    
-    if (user) {
-      const { data: wallet, error: walletError } = await supabaseClient
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', user.id)
-        .single();
-      
-      console.log("🔍 [DEBUG] Wallet :", wallet);
-      
-      if (wallet) {
-        const newBalance = parseFloat(wallet.balance);
-        console.log("🎯 [DEBUG] NOUVEAU SOLDE :", newBalance);
-        
-        if (typeof currentUser !== 'undefined') currentUser = user;
-        // 🔥 FORCER LE RECHARGEMENT DU WALLET DEPUIS LA BASE DE DONNÉES
-if (typeof currentUser.wallet_balance === 'undefined' || currentUser.wallet_balance === null) {
-  currentUser.wallet_balance = 0;
-}
-const walletEl = document.getElementById('wallet-balance');
-if (walletEl) {
-  walletEl.textContent = parseFloat(currentUser.wallet_balance).toFixed(2);
-}
-        if (typeof userWalletBalance !== 'undefined') userWalletBalance = newBalance;
-        
-        if (typeof updateWalletDisplay === 'function') {
-          updateWalletDisplay();
-        }
-        
-        if (typeof showToast === 'function') {
-          showToast(`✅ Paiement réussi ! Solde : ${newBalance.toFixed(2)} $`);
-        }
-      }
+    // 2. Mettre à jour le solde en mémoire et dans le header AVANT d'afficher la page
+    if (typeof updateWalletDisplay === 'function') {
+      await updateWalletDisplay();
     }
-  } else {
-    console.log("ℹ️ [DEBUG] Pas de paiement réussi dans sessionStorage");
+    
+    // 3. Afficher la page de remerciement brandée
+    showRuralGoThankYouPage();
   }
+}
+
+function showRuralGoThankYouPage() {
+  // 1. Cacher TOUTES les autres sections du site pour focaliser l'attention
+  const sectionsToHide = document.querySelectorAll('section, [id*="section"], #stores-grid, #stores-container, #cart-section, #client-orders-section, main > div');
+  sectionsToHide.forEach(el => {
+    if (el.id !== 'ruralgo-thankyou-section') {
+      el.style.display = 'none !important';
+    }
+    // Force le hide pour les éléments récalcitrants
+    el.setAttribute('data-old-display', el.style.display);
+    el.style.display = 'none';
+  });
+
+  // 2. Créer ou récupérer la section de remerciement
+  let thankYouSection = document.getElementById('ruralgo-thankyou-section');
+  if (!thankYouSection) {
+    thankYouSection = document.createElement('div');
+    thankYouSection.id = 'ruralgo-thankyou-section';
+    const main = document.querySelector('main') || document.body;
+    main.appendChild(thankYouSection);
+  }
+  
+  // Récupérer le solde mis à jour
+  const currentBalance = currentUser ? (parseFloat(currentUser.wallet_balance) || 0).toFixed(2) : '0.00';
+  
+  // 3. Injecter le design professionnel "RuralGo Québec"
+  thankYouSection.style.cssText = `
+    display: block !important; 
+    padding: 3rem 1.5rem; 
+    text-align: center; 
+    max-width: 600px; 
+    margin: 3rem auto; 
+    background: white; 
+    border-radius: 20px; 
+    box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+    border-top: 5px solid #f5a623;
+  `;
+  
+  thankYouSection.innerHTML = `
+    <div style="font-size: 4rem; margin-bottom: 1rem; animation: popIn 0.5s ease;">✅</div>
+    <h1 style="color: #0a1929; margin-bottom: 0.5rem; font-size: 1.8rem; font-weight: 800;">Merci pour votre transaction !</h1>
+    <p style="font-size: 1.1rem; color: #6b7280; margin-bottom: 2rem; line-height: 1.6;">
+      Votre portefeuille <strong>RuralGo Québec</strong> a été crédité avec succès.<br>
+      Vous pouvez maintenant soutenir les commerces locaux en toute tranquillité.
+    </p>
+    
+    <div style="background: #f0fdf4; border: 2px solid #10b981; padding: 1.5rem; border-radius: 16px; margin-bottom: 2.5rem;">
+      <p style="font-size: 0.9rem; color: #065f46; margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Votre nouveau solde</p>
+      <p style="font-size: 3rem; font-weight: 800; color: #10b981; margin: 0;" id="thank-you-balance">${currentBalance} $</p>
+    </div>
+    
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <button onclick="goToStoresAfterThankYou()" style="
+        background: #f5a623; color: #0a1929; border: none; padding: 1rem 2rem; 
+        border-radius: 12px; font-size: 1.05rem; font-weight: 700; cursor: pointer; 
+        box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3); transition: transform 0.2s;
+      " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+        🛍️ Continuer mes achats
+      </button>
+      <button onclick="goHomeAfterThankYou()" style="
+        background: #f3f4f6; color: #374151; border: none; padding: 1rem 2rem; 
+        border-radius: 12px; font-size: 1.05rem; font-weight: 600; cursor: pointer; 
+        transition: background 0.2s;
+      " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+        🏠 Retour à l'accueil
+      </button>
+    </div>
+    
+    <p style="margin-top: 2rem; font-size: 0.8rem; color: #9ca3af;">
+      🌲 Fièrement propulsé par <strong>RuralGo Québec</strong>
+    </p>
+  `;
+  
+  // Scroll en haut de la page pour bien voir le message
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Fonction pour le bouton "Continuer mes achats"
+function goToStoresAfterThankYou() {
+  const thankYouSection = document.getElementById('ruralgo-thankyou-section');
+  if (thankYouSection) thankYouSection.style.display = 'none';
+  
+  // Réafficher les sections cachées
+  document.querySelectorAll('[data-old-display]').forEach(el => {
+    el.style.display = el.getAttribute('data-old-display') || 'block';
+  });
+
+  // Appeler la fonction qui affiche les commerces (celle qui marchait dans ton code d'origine)
+  if (typeof showClientStores === 'function') {
+    showClientStores();
+  } else if (typeof renderStoresPremium === 'function') {
+    renderStoresPremium();
+  } else {
+    window.location.href = '/';
+  }
+}
+
+// Fonction pour le bouton "Retour à l'accueil"
+function goHomeAfterThankYou() {
+  window.location.href = '/'; // Ou la fonction goHome() si tu en as une
+}
+
+// Lancer la vérification au chargement de la page
+setTimeout(checkPaymentSuccess, 1000);
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  checkPaymentSuccess();
+} else {
+  window.addEventListener('DOMContentLoaded', checkPaymentSuccess);
 }
 
 // Lancer après un délai pour laisser le temps au reste du code de se charger
@@ -7153,3 +7241,9 @@ async function afficherCommerces(idConteneur, actionAuClic) {
     container.innerHTML = '<p style="text-align:center; padding:2rem; color:#ef4444; background:white; border-radius:12px;">❌ Erreur : ' + err.message + '</p>';
   }
 }
+
+// Forcer la vérification du paiement au chargement
+console.log("🔍 [AUTO] Vérification automatique du paiement...");
+setTimeout(() => {
+  checkPaymentSuccess();
+}, 500);
