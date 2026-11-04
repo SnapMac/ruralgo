@@ -169,61 +169,13 @@ async function initNotifications() {
 // ==========================================
 // ✅ GESTION DU RETOUR DE PAIEMENT (SUCCÈS OU ANNULATION)
 // ==========================================
-const initialParams = new URLSearchParams(window.location.search);
 
-// 1. Capturer l'état immédiatement avant que l'URL ne soit nettoyée
-if (initialParams.get('payment_success') === 'true') {
-  sessionStorage.setItem('payment_status', 'success');
-  sessionStorage.setItem('payment_amount', initialParams.get('amount') || '0');
-  window.history.replaceState({}, document.title, window.location.pathname);
-} 
-else if (initialParams.get('payment_canceled') === 'true') {
-  sessionStorage.setItem('payment_status', 'canceled');
-  window.history.replaceState({}, document.title, window.location.pathname);
-}
 
 // 2. Fonction qui vérifie le statut et met à jour l'affichage
-async function checkPaymentStatus() {
-  const status = sessionStorage.getItem('payment_status');
-  
-  if (status === 'success') {
-    // --- CAS DU SUCCÈS ---
-    sessionStorage.removeItem('payment_status');
-    sessionStorage.removeItem('payment_amount');
-    
-    // Attendre un peu que la session Supabase soit bien restaurée
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (user) {
-      const { data: wallet } = await supabaseClient
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', user.id)
-        .single();
-      
-      if (wallet) {
-        const newBalance = parseFloat(wallet.balance);
-        if (typeof currentUser !== 'undefined') currentUser = user;
-        if (typeof userWalletBalance !== 'undefined') userWalletBalance = newBalance;
-        if (typeof updateWalletDisplay === 'function') updateWalletDisplay();
-        if (typeof showToast === 'function') showToast(`✅ Paiement réussi ! Solde : ${newBalance.toFixed(2)} $`);
-      }
-    }
-  } 
-  else if (status === 'canceled') {
-    // --- CAS DE L'ANNULATION ---
-    sessionStorage.removeItem('payment_status');
-    
-    // Afficher un message clair à l'utilisateur
-    if (typeof showToast === 'function') {
-      showToast('❌ Paiement annulé. Votre solde n\'a pas été modifié.');
-    }
-  }
-}
+
 
 // Lancer la vérification après un court délai pour laisser le reste de la page se charger
-setTimeout(checkPaymentStatus, 1500);
+//setTimeout(checkPaymentStatus, 1500);
 // ==========================================
 
 
@@ -371,6 +323,7 @@ const STATUS_LABELS = {
   'delivered': {label:'Livrée', class:'status-delivered'},
   'cancelled': {label:'Annulée', class:'status-cancelled'}
 };
+
 
 // ============ CALCUL DES FRAIS DE LIVRAISON ============
 function calculateDeliveryFee(storeLat, storeLng, clientLat, clientLng) {
@@ -1089,6 +1042,12 @@ async function logout() {
 }
 
 function showUserInterface() {
+  // 🛡️ BOUCLIER : Si la page de remerciement est active, on annule tout pour ne pas l'écraser
+  if (typeof isThankYouPageActive !== 'undefined' && isThankYouPageActive) {
+    console.log("🛡️ [BOUCLIER] showUserInterface bloqué pour protéger la page de remerciement");
+    return; // ✅ MAINTENANT C'EST VALIDE CAR ON EST À L'INTÉRIEUR DE LA FONCTION
+  }
+
   // 1. Afficher la section utilisateur et la cloche
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('user-section').style.display = 'flex';
@@ -1099,37 +1058,26 @@ function showUserInterface() {
   const ini = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('user-avatar').textContent = ini;
   document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
-  
+
   const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
   document.getElementById('user-role').textContent = labels[currentUser.role] || currentUser.role;
-  
-  // 3. ✅ APPROCHE BRUTALE : Cacher TOUS les éléments liés au wallet pour les non-clients
+
+  // 3. Cacher les éléments wallet pour les non-clients
   if (currentUser.role !== 'client') {
-    // Chercher TOUS les éléments dont l'ID ou la classe contient wallet/balance/recharge/transaction
     const allWalletElements = document.querySelectorAll(
       '[id*="wallet"], [id*="balance"], [id*="recharge"], [id*="transaction"], ' +
       '[class*="wallet"], [class*="balance"], [class*="recharge"], [class*="transaction"]'
     );
-    
-    allWalletElements.forEach(el => {
-      el.style.display = 'none';
-    });
-    
-    console.log(`✅ ${allWalletElements.length} éléments wallet cachés pour ${currentUser.role}`);
+    allWalletElements.forEach(el => { el.style.display = 'none'; });
   } else {
-    // ✅ Pour les clients : s'assurer que le wallet est visible
     const walletBalance = document.getElementById('wallet-balance');
     if (walletBalance) walletBalance.style.display = 'inline';
-    
-    // Charger le solde après un court délai
     setTimeout(() => {
-      if (typeof updateWalletDisplay === 'function') {
-        updateWalletDisplay();
-      }
+      if (typeof updateWalletDisplay === 'function') updateWalletDisplay();
     }, 500);
   }
 
-  // 4. Réinitialiser l'affichage des menus de navigation
+  // 4. Réinitialiser l'affichage des menus
   document.getElementById('nav-client').style.display = 'none';
   document.getElementById('nav-driver').style.display = 'none';
   document.getElementById('nav-admin').style.display = 'none';
@@ -1143,21 +1091,17 @@ function showUserInterface() {
     if (typeof updateDeliveryAddress === 'function') updateDeliveryAddress();
     switchView('view-client');
     if (typeof showClientStores === 'function') showClientStores();
-    
   } else if (currentUser.role === 'driver') {
     document.getElementById('nav-driver').style.display = 'block';
     document.getElementById('driver-firstname').textContent = currentUser.name.split(' ')[0];
     switchView('view-driver');
     if (typeof showDriverDashboard === 'function') showDriverDashboard();
-    
   } else if (currentUser.role === 'admin') {
     document.getElementById('nav-admin').style.display = 'block';
     switchView('view-admin');
     if (typeof renderAllAdmin === 'function') renderAllAdmin();
-    
-  } else if (currentUser.role === 'store') { 
+  } else if (currentUser.role === 'store') {
     if (navStore) navStore.style.display = 'block';
-    
     if (currentUser.status === 'pending') {
       switchView('view-landing');
       showToast('⏳ Votre commerce est en attente d\'approbation.');
@@ -1166,13 +1110,11 @@ function showUserInterface() {
       showToast('❌ Votre demande a été refusée.');
     } else {
       switchView('view-store');
-      if (typeof showStoreDashboard === 'function') {
-        showStoreDashboard();
-      }
+      if (typeof showStoreDashboard === 'function') showStoreDashboard();
     }
   }
-  
-  // 6. Mettre à jour le badge de la cloche de notification
+
+  // 6. Mettre à jour le badge de notification
   if (typeof updateNotifBadge === 'function') {
     updateNotifBadge();
   }
@@ -1247,6 +1189,12 @@ function openStoreFromLanding(store_id) {
 // ✅ AFFICHER TOUS LES COMMERCES (CLIENT)
 // ==========================================
 async function showClientStores() {
+       // 🛡️ BOUCLIER : Si on vient de payer, on annule tout pour ne pas effacer la page de remerciement
+     const urlParams = new URLSearchParams(window.location.search);
+     if (urlParams.has('session_id') || urlParams.get('payment_success') === 'true') {
+       console.log("🛡️ [BLOQUÉ] showClientStores annulé pour protéger la page de remerciement");
+       return;
+     }
   console.log("🏪 [CLIENT] Affichage de la page commerces...");
 
   // 1. Afficher la vue client
@@ -1266,6 +1214,7 @@ async function showClientStores() {
   // 4. 🔥 APPEL DE LA FONCTION MAÎTRE
   await afficherCommerces('stores-grid', 'showStoreDetail');
 }
+
 // ==========================================
 // ✅ FILTRAGE DES COMMERCES PAR CATÉGORIE
 // ==========================================
@@ -1875,20 +1824,8 @@ async function placeOrder() {
     }
 
     // 4. Préparer les données de la commande (structure standard)
-    const orderData = {
-      client_id: currentUser.id,
-      client_name: currentUser.name,
-      client_phone: currentUser.phone || '',
-      client_address: currentUser.address || '',
-      store_id: storeId, // ✅ IMPORTANT pour que le commerce reçoive la commande
-      items: cart, // Assure-toi que ta colonne 'items' est de type JSON/JSONB dans Supabase
-      subtotal: subtotal,
-      delivery_fee: deliveryFee,
-      taxes: taxes,
-      total: total,
-      status: 'pending',
-      created_at: new Date().toISOString()
-    };
+// 4. Préparer les données de la commande (structure standard)
+
 
     // 5. Créer la commande
     const { data: newOrder, error: orderError } = await supabaseClient
@@ -5613,168 +5550,26 @@ async function confirmDeposit() {
     showToast('❌ Erreur : ' + err.message);
   }
 }
-// === RETOUR DE PAIEMENT STRIPE (affichage uniquement) ===
-const urlParams = new URLSearchParams(window.location.search);
-
-if (urlParams.get('payment_success') === 'true') {
-  showToast('✅ Paiement effectué. Ton solde va être mis à jour automatiquement.');
-  window.history.replaceState({}, document.title, window.location.pathname);
-  
-  // ✅ Attendre 2 secondes pour le webhook Stripe, puis rafraîchir
-  setTimeout(async () => {
-    await updateWalletDisplay();
-    // ✅ C'est ici la correction : on utilise la variable au lieu de chercher un ID qui n'existe pas
-    showToast('💰 Solde mis à jour : ' + userWalletBalance.toFixed(2) + ' $');
-  }, 2000);
-}
-if (urlParams.get('payment_canceled') === 'true') {
-  showToast('❌ Paiement annulé. Aucun montant n\'a été débité.');
-  window.history.replaceState({}, document.title, window.location.pathname);
-}
 // ==========================================
 // 💳 PAGE DE REMERCIEMENT RURALGO QUÉBEC (Après paiement)
 // ==========================================
 
-async function checkPaymentSuccess() {
-  // Vérifie si on revient d'un paiement Stripe réussi
-  const urlParams = new URLSearchParams(window.location.search);
-  const isSuccess = urlParams.get('payment_success') === 'true' || sessionStorage.getItem('paymentSuccess') === 'true';
-  
-  if (isSuccess) {
-    console.log("✅ [PAIEMENT] Retour de Stripe détecté ! Affichage de la page de remerciement...");
-    
-    // 1. Nettoyer l'URL pour éviter que la page ne s'affiche si on rafraîchit (F5)
-    window.history.replaceState({}, document.title, window.location.pathname);
-    sessionStorage.removeItem('paymentSuccess');
-    
-    // 2. Mettre à jour le solde en mémoire et dans le header AVANT d'afficher la page
-    if (typeof updateWalletDisplay === 'function') {
-      await updateWalletDisplay();
-    }
-    
-    // 3. Afficher la page de remerciement brandée
-    showRuralGoThankYouPage();
-  }
-}
+ 
+// ==========================================
+// 💳 PAGE DE REMERCIEMENT RURALGO QUÉBEC (Après paiement)
+// ==========================================
 
-function showRuralGoThankYouPage() {
-  // 1. Cacher TOUTES les autres sections du site pour focaliser l'attention
-  const sectionsToHide = document.querySelectorAll('section, [id*="section"], #stores-grid, #stores-container, #cart-section, #client-orders-section, main > div');
-  sectionsToHide.forEach(el => {
-    if (el.id !== 'ruralgo-thankyou-section') {
-      el.style.display = 'none !important';
-    }
-    // Force le hide pour les éléments récalcitrants
-    el.setAttribute('data-old-display', el.style.display);
-    el.style.display = 'none';
-  });
 
-  // 2. Créer ou récupérer la section de remerciement
-  let thankYouSection = document.getElementById('ruralgo-thankyou-section');
-  if (!thankYouSection) {
-    thankYouSection = document.createElement('div');
-    thankYouSection.id = 'ruralgo-thankyou-section';
-    const main = document.querySelector('main') || document.body;
-    main.appendChild(thankYouSection);
-  }
-  
-  // Récupérer le solde mis à jour
-  const currentBalance = currentUser ? (parseFloat(currentUser.wallet_balance) || 0).toFixed(2) : '0.00';
-  
-  // 3. Injecter le design professionnel "RuralGo Québec"
-  thankYouSection.style.cssText = `
-    display: block !important; 
-    padding: 3rem 1.5rem; 
-    text-align: center; 
-    max-width: 600px; 
-    margin: 3rem auto; 
-    background: white; 
-    border-radius: 20px; 
-    box-shadow: 0 15px 40px rgba(0,0,0,0.08);
-    border-top: 5px solid #f5a623;
-  `;
-  
-  thankYouSection.innerHTML = `
-    <div style="font-size: 4rem; margin-bottom: 1rem; animation: popIn 0.5s ease;">✅</div>
-    <h1 style="color: #0a1929; margin-bottom: 0.5rem; font-size: 1.8rem; font-weight: 800;">Merci pour votre transaction !</h1>
-    <p style="font-size: 1.1rem; color: #6b7280; margin-bottom: 2rem; line-height: 1.6;">
-      Votre portefeuille <strong>RuralGo Québec</strong> a été crédité avec succès.<br>
-      Vous pouvez maintenant soutenir les commerces locaux en toute tranquillité.
-    </p>
-    
-    <div style="background: #f0fdf4; border: 2px solid #10b981; padding: 1.5rem; border-radius: 16px; margin-bottom: 2.5rem;">
-      <p style="font-size: 0.9rem; color: #065f46; margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Votre nouveau solde</p>
-      <p style="font-size: 3rem; font-weight: 800; color: #10b981; margin: 0;" id="thank-you-balance">${currentBalance} $</p>
-    </div>
-    
-    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-      <button onclick="goToStoresAfterThankYou()" style="
-        background: #f5a623; color: #0a1929; border: none; padding: 1rem 2rem; 
-        border-radius: 12px; font-size: 1.05rem; font-weight: 700; cursor: pointer; 
-        box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3); transition: transform 0.2s;
-      " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-        🛍️ Continuer mes achats
-      </button>
-      <button onclick="goHomeAfterThankYou()" style="
-        background: #f3f4f6; color: #374151; border: none; padding: 1rem 2rem; 
-        border-radius: 12px; font-size: 1.05rem; font-weight: 600; cursor: pointer; 
-        transition: background 0.2s;
-      " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-        🏠 Retour à l'accueil
-      </button>
-    </div>
-    
-    <p style="margin-top: 2rem; font-size: 0.8rem; color: #9ca3af;">
-      🌲 Fièrement propulsé par <strong>RuralGo Québec</strong>
-    </p>
-  `;
-  
-  // Scroll en haut de la page pour bien voir le message
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
 
-// Fonction pour le bouton "Continuer mes achats"
-function goToStoresAfterThankYou() {
-  const thankYouSection = document.getElementById('ruralgo-thankyou-section');
-  if (thankYouSection) thankYouSection.style.display = 'none';
-  
-  // Réafficher les sections cachées
-  document.querySelectorAll('[data-old-display]').forEach(el => {
-    el.style.display = el.getAttribute('data-old-display') || 'block';
-  });
-
-  // Appeler la fonction qui affiche les commerces (celle qui marchait dans ton code d'origine)
-  if (typeof showClientStores === 'function') {
-    showClientStores();
-  } else if (typeof renderStoresPremium === 'function') {
-    renderStoresPremium();
-  } else {
-    window.location.href = '/';
-  }
-}
-
-// Fonction pour le bouton "Retour à l'accueil"
 function goHomeAfterThankYou() {
-  window.location.href = '/'; // Ou la fonction goHome() si tu en as une
+  isThankYouPageActive = false;
+console.log("🛡️ [BOUCLIER] Protection désactivée - retour aux commerces");
+  window.location.href = '/';
 }
 
 // Lancer la vérification au chargement de la page
 setTimeout(checkPaymentSuccess, 1000);
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  checkPaymentSuccess();
-} else {
-  window.addEventListener('DOMContentLoaded', checkPaymentSuccess);
-}
-
-// Lancer après un délai pour laisser le temps au reste du code de se charger
-setTimeout(checkPaymentSuccess, 1500);
-
-// Lancer la vérification
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  checkPaymentSuccess();
-} else {
-  window.addEventListener('DOMContentLoaded', checkPaymentSuccess);
-}
+  
 // ✅ Créer le commerce dans 'stores' à la connexion s'il n'existe pas encore
 async function ensureStoreExists() {
   if (!currentUser || currentUser.role !== 'store') return;
@@ -7242,8 +7037,142 @@ async function afficherCommerces(idConteneur, actionAuClic) {
   }
 }
 
-// Forcer la vérification du paiement au chargement
-console.log("🔍 [AUTO] Vérification automatique du paiement...");
+
+// ==========================================
+// 💳 PAGE DE REMERCIEMENT RURALGO QUÉBEC (Après paiement)
+// ==========================================
+
+async function checkPaymentSuccess() {
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  // Stripe ajoute TOUJOURS 'session_id' en cas de succès
+  const hasSessionId = urlParams.has('session_id');
+  const isSuccessParam = urlParams.get('payment_success') === 'true';
+  const isSessionStorageSuccess = sessionStorage.getItem('paymentSuccess') === 'true';
+  
+  if (hasSessionId || isSuccessParam || isSessionStorageSuccess) {
+    console.log("✅ [PAIEMENT] Succès Stripe détecté !");
+    
+    // 1. Nettoyer l'URL et le sessionStorage
+    if (isSessionStorageSuccess) sessionStorage.removeItem('paymentSuccess');
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // 2. Afficher la page de remerciement IMMÉDIATEMENT (pour une bonne expérience utilisateur)
+    showRuralGoThankYouPage();
+    
+    // 3. ⏳ ATTENDRE 2.5 SECONDES que le Webhook Stripe mette à jour la base de données Supabase
+    // Avant de demander le nouveau solde, sinon on récupère l'ancien (0).
+    setTimeout(async () => {
+      console.log("🔄 [WALLET] Récupération du nouveau solde après délai webhook...");
+      
+      if (typeof updateWalletDisplay === 'function') {
+        await updateWalletDisplay();
+      }
+      
+      // Mettre à jour aussi le texte dans la page de remerciement si elle est encore visible
+      const thankYouBalance = document.getElementById('thank-you-balance');
+      if (thankYouBalance && currentUser && currentUser.wallet_balance !== undefined) {
+        thankYouBalance.textContent = parseFloat(currentUser.wallet_balance).toFixed(2) + ' $';
+      }
+      
+      console.log("✅ Solde final affiché :", currentUser?.wallet_balance, "$");
+    }, 2500); // Délai de 2.5 secondes
+  }
+}
+// 🛡️ BOUCLIER : Empêche les autres fonctions d'écraser la page de remerciement
+let isThankYouPageActive = false;
+function showRuralGoThankYouPage() {
+  // 🛡️ ACTIVER LE BOUCLIER
+  isThankYouPageActive = true;
+  console.log("🛡️ [BOUCLIER] Page de remerciement activée, protection en cours...");
+
+  // Cacher TOUTES les autres sections
+  const sectionsToHide = document.querySelectorAll('section, [id*="section"], #stores-grid, #stores-container, #cart-section, #client-orders-section, main > div');
+  sectionsToHide.forEach(el => {
+    if (el.id !== 'ruralgo-thankyou-section') {
+      el.setAttribute('data-old-display', el.style.display);
+      el.style.display = 'none';
+    }
+  });
+
+  let thankYouSection = document.getElementById('ruralgo-thankyou-section');
+  if (!thankYouSection) {
+    thankYouSection = document.createElement('div');
+    thankYouSection.id = 'ruralgo-thankyou-section';
+    const main = document.querySelector('main') || document.body;
+    main.appendChild(thankYouSection);
+  }
+  
+  const currentBalance = currentUser ? (parseFloat(currentUser.wallet_balance) || 0).toFixed(2) : '0.00';
+  
+  thankYouSection.style.cssText = `
+    display: block !important; padding: 3rem 1.5rem; text-align: center;
+    max-width: 600px; margin: 3rem auto; background: white; border-radius: 20px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.08); border-top: 5px solid #f5a623;
+  `;
+  
+  thankYouSection.innerHTML = `
+    <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+    <h1 style="color: #0a1929; margin-bottom: 0.5rem; font-size: 1.8rem; font-weight: 800;">Merci pour votre transaction !</h1>
+    <p style="font-size: 1.1rem; color: #6b7280; margin-bottom: 2rem; line-height: 1.6;">
+      Votre portefeuille <strong>RuralGo Québec</strong> a été crédité avec succès.<br>
+      Vous pouvez maintenant soutenir les commerces locaux en toute tranquillité.
+    </p>
+    <div style="background: #f0fdf4; border: 2px solid #10b981; padding: 1.5rem; border-radius: 16px; margin-bottom: 2.5rem;">
+      <p style="font-size: 0.9rem; color: #065f46; margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Votre nouveau solde</p>
+      <p style="font-size: 3rem; font-weight: 800; color: #10b981; margin: 0;" id="thank-you-balance">${currentBalance} $</p>
+    </div>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <button onclick="goToStoresAfterThankYou()" style="background: #f5a623; color: #0a1929; border: none; padding: 1rem 2rem; border-radius: 12px; font-size: 1.05rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3);">
+        🛍️ Continuer mes achats
+      </button>
+      <button onclick="goHomeAfterThankYou()" style="background: #f3f4f6; color: #374151; border: none; padding: 1rem 2rem; border-radius: 12px; font-size: 1.05rem; font-weight: 600; cursor: pointer;">
+        🏠 Retour à l'accueil
+      </button>
+    </div>
+    <p style="margin-top: 2rem; font-size: 0.8rem; color: #9ca3af;">🌲 Fièrement propulsé par <strong>RuralGo Québec</strong></p>
+  `;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goToStoresAfterThankYou() {
+  // 🛡️ DÉSACTIVER LE BOUCLIER pour permettre l'affichage normal des commerces
+  isThankYouPageActive = false;
+  console.log("🛡️ [BOUCLIER] Désactivé, retour aux commerces...");
+  
+  const thankYouSection = document.getElementById('ruralgo-thankyou-section');
+  if (thankYouSection) thankYouSection.remove(); // On le supprime complètement
+  
+  // Appeler la fonction qui marche pour afficher les commerces
+  if (typeof showClientStores === 'function') {
+    showClientStores();
+  } else {
+    window.location.href = '/';
+  }
+}
+
+function goHomeAfterThankYou() {
+  isThankYouPageActive = false;
+  window.location.href = '/';
+}
+
+function goToStoresAfterThankYou() {
+  isThankYouPageActive = false;
+console.log("🛡️ [BOUCLIER] Protection désactivée - retour aux commerces");
+  // Supprimer complètement la page de remerciement
+  const thankYouSection = document.getElementById('ruralgo-thankyou-section');
+  if (thankYouSection) thankYouSection.remove();
+  
+  // Recharger la page proprement
+  window.location.href = window.location.pathname;
+}
+
+
+/// ==========================================
+// 🚀 DÉCLENCHEMENT UNIQUE ET PROPRE DU PAIEMENT
+// ==========================================
+console.log("🔍 [AUTO] Vérification automatique du paiement au chargement...");
 setTimeout(() => {
   checkPaymentSuccess();
-}, 500);
+}, 800); // 800ms suffit largement pour que tout soit chargé
+
