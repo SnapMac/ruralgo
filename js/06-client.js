@@ -232,22 +232,29 @@ function updateCart() {
     return;
   }
   
-  el.innerHTML = cart.map((c, i) => `
-    <div class="cart-item">
-      <div style="font-size:2rem">${c.icon}</div>
-      <div class="cart-item-info">
-        <h4>${c.name}</h4>
-        <p style="color:#666">${c.price.toFixed(2)} $</p>
-      </div>
-      <div class="qty-controls">
-        <button class="qty-btn" onclick="changeQty(${i},-1)">−</button>
-        <span><strong>${c.qty}</strong></span>
-        <button class="qty-btn" onclick="changeQty(${i},1)">+</button>
-      </div>
-      <strong style="min-width:70px;text-align:right">${(c.price * c.qty).toFixed(2)} $</strong>
+ // ✅ NOUVELLE VERSION : Avec bouton "Vider le panier"
+el.innerHTML = `
+  <div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
+    <button onclick="clearCart()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold; display:flex; align-items:center; gap:6px;">
+      🗑️ Vider le panier
+    </button>
+  </div>
+` + cart.map((c, i) => `
+  <div class="cart-item">
+    <div style="font-size:2rem">${c.icon}</div>
+    <div class="cart-item-info">
+      <h4>${c.name}</h4>
+      <p style="color:#666">${c.price.toFixed(2)} $</p>
     </div>
-  `).join('');
-  
+    <div class="qty-controls">
+      <button class="qty-btn" onclick="changeQty(${i},-1)">−</button>
+      <span><strong>${c.qty}</strong></span>
+      <button class="qty-btn" onclick="changeQty(${i},1)">+</button>
+    </div>
+    <strong style="min-width:70px;text-align:right">${(c.price * c.qty).toFixed(2)} $</strong>
+  </div>
+`).join('');
+
   const sub = cart.reduce((s, c) => s + c.price * c.qty, 0);
   const store = getCurrentStore();
   let deliveryInfo;
@@ -284,6 +291,24 @@ function updateCart() {
   document.getElementById('delivery-fee').textContent = deliveryInfo.totalFee.toFixed(2) + ' $';
   document.getElementById('taxes').textContent = tax.toFixed(2) + ' $';
   document.getElementById('total').textContent = tot.toFixed(2) + ' $';
+}
+
+// ==========================================
+// 🗑️ VIDER LE PANIER EN UN CLIC
+// ==========================================
+function clearCart() {
+  if (cart.length === 0) {
+    showToast('🛒 Le panier est déjà vide');
+    return;
+  }
+  
+  if (!confirm('🗑️ Vider complètement le panier ?')) return;
+  
+  cart = [];
+  localStorage.removeItem('cart');
+  updateCart();
+  if (typeof updateInlineCartCount === 'function') updateInlineCartCount();
+  showToast('✅ Panier vidé !');
 }
 
 function changeQty(i, d) {
@@ -677,33 +702,70 @@ function openEditProfileModal() {
   modal.style.display = 'flex';
 }
 
+// ==========================================
+// 💾 SAUVEGARDE DU PROFIL CLIENT (avec géocodage automatique)
+// ==========================================
+// ==========================================
+// 💾 SAUVEGARDE DU PROFIL CLIENT (avec géocodage automatique)
+// ==========================================
+// ==========================================
+// 💾 SAUVEGARDE DU PROFIL CLIENT (VERSION INFAILLIBLE)
+// ==========================================
 async function saveProfile(e) {
   if (e) e.preventDefault();
-  if (!currentUser || !currentUser.id) {
-    showToast('❌ Vous devez être connecté.');
-    return;
+  if (!currentUser || !currentUser.id) { showToast('❌ Vous devez être connecté.'); return; }
+  
+  const nameField = document.getElementById('ep-name');
+  const phoneField = document.getElementById('ep-phone');
+  const addrField = document.getElementById('ep-address');
+  
+  const newName = nameField?.value.trim() || currentUser.name;
+  const newPhone = phoneField?.value.trim() || currentUser.phone;
+  const newAddress = addrField?.value.trim() || currentUser.address;
+  
+  let newLat = addrField?._lat || null;
+  let newLng = addrField?._lng || null;
+  
+  // 🔥 GÉOCODAGE AUTO SI GPS MANQUANTS (Ne bloque plus la sauvegarde)
+  if ((!newLat || !newLng) && newAddress && newAddress.length > 5) {
+    showToast('🔍 Localisation de votre adresse...');
+    try {
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(newAddress + ', Québec, Canada')}&limit=1&lang=fr`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data && data.features && data.features.length > 0) {
+        const coords = data.features[0].geometry.coordinates;
+        newLat = parseFloat(coords[1]);
+        newLng = parseFloat(coords[0]);
+        if (addrField) { addrField._lat = newLat; addrField._lng = newLng; }
+        showToast('✅ Adresse localisée !');
+      } else {
+        showToast('⚠️ Adresse non trouvée sur la carte. Tarif de base (7$) appliqué.');
+      }
+    } catch (err) { console.warn("⚠️ Erreur géocodage:", err); }
   }
   
-  const newName = document.getElementById('ep-name').value.trim() || currentUser.name;
-  const newPhone = document.getElementById('ep-phone').value.trim() || currentUser.phone;
-  const newAddress = document.getElementById('ep-address').value.trim() || currentUser.address;
+  const updateData = { name: newName, phone: newPhone, address: newAddress };
+  if (newLat && newLng && !isNaN(newLat) && !isNaN(newLng)) {
+    updateData.lat = parseFloat(newLat);
+    updateData.lng = parseFloat(newLng);
+  }
   
   try {
-    const { error } = await supabaseClient.from('profiles').update({
-      name: newName, phone: newPhone, address: newAddress
-    }).eq('id', currentUser.id);
-    
+    const { error } = await supabaseClient.from('profiles').update(updateData).eq('id', currentUser.id);
     if (error) throw error;
     
-    currentUser.name = newName;
-    currentUser.phone = newPhone;
-    currentUser.address = newAddress;
+    currentUser.name = newName; currentUser.phone = newPhone; currentUser.address = newAddress;
+    if (updateData.lat) currentUser.lat = parseFloat(updateData.lat);
+    if (updateData.lng) currentUser.lng = parseFloat(updateData.lng);
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
     
     closeModal('edit-profile-modal');
     showToast('✅ Profil sauvegardé !');
     if (typeof updateCart === 'function') updateCart();
+    if (typeof updateDeliveryAddress === 'function') updateDeliveryAddress();
   } catch (err) {
+    console.error("❌ Erreur sauvegarde:", err);
     showToast('❌ Erreur : ' + err.message);
   }
 }
@@ -792,26 +854,64 @@ function handleSearchClick(type, id, store_id) {
 // ==========================================
 // 🏪 AFFICHAGE DES COMMERCES SUR LA LANDING PAGE
 // ==========================================
+// ==========================================
+// 🏪 AFFICHAGE DES COMMERCES SUR LA LANDING PAGE
+// ==========================================
+// ✅ NOUVEAU : Filtre par forfait (Croissance + Partenaire Plus)
+// ✅ NOUVEAU : Même design que la page "Commerces"
+// ==========================================
 function renderLandingStores() {
   const g = document.getElementById('landing-stores-grid');
   if (!g) return;
   
-  const active = stores.filter(s => s.status === 'active').slice(0, 6);
+  // 🔥 FILTRE : Seulement les commerces Croissance (3) et Partenaire Plus (4)
+  const activeStores = stores.filter(s => 
+    s.status === 'active' && 
+    (s.forfait === 3 || s.forfait === 4 || s.forfait === '3' || s.forfait === '4')
+  );
   
-  g.innerHTML = active.map(s => {
-    const count = products.filter(p => p.store_id === s.id && p.available).length;
+  if (activeStores.length === 0) {
+    g.innerHTML = '<p style="text-align:center; color:#666; grid-column:1/-1; padding:2rem; background:white; border-radius:12px;">🏪 Aucun commerce partenaire disponible pour le moment.</p>';
+    return;
+  }
+  
+  // 🔥 MÊME DESIGN que la page "Commerces" (cartes avec hover)
+  g.innerHTML = activeStores.map(s => {
+    const count = products.filter(p => String(p.store_id) === String(s.id) && p.available).length;
+    
+    // Badge selon le forfait
+    const badge = s.forfait === 4 || s.forfait === '4' 
+      ? '<span style="position:absolute; top:10px; right:10px; background:#f5a623; color:#0a1929; font-size:0.7rem; padding:4px 10px; border-radius:20px; font-weight:bold; box-shadow:0 2px 8px rgba(245,166,35,0.3);">👑 PREMIUM</span>'
+      : '<span style="position:absolute; top:10px; right:10px; background:#0a1929; color:white; font-size:0.7rem; padding:4px 10px; border-radius:20px; font-weight:bold; box-shadow:0 2px 8px rgba(10,25,41,0.3);">🚀 CROISSANCE</span>';
+    
     return `
-      <div class="store" onclick="openStoreFromLanding(${s.id})" style="cursor:pointer">
-        <div class="store-img" style="font-size:3rem;text-align:center;padding:1rem;">${s.icon}</div>
-        <div class="store-info" style="padding:0 1rem 1rem 1rem;">
-          <h3 style="margin:0 0 0.3rem 0;color:#0a1929;">${s.name}</h3>
-          <p style="color:#666;font-size:0.9rem;margin:0;">${s.type}</p>
-          <p style="color:#999;font-size:0.85rem;margin:0.3rem 0;">📍 ${s.address}</p>
-          <p style="color:#0a1929;font-size:0.85rem;margin:0.3rem 0 0 0;font-weight:bold;">📦 ${count} produit(s)</p>
+      <div onclick="openStoreFromLanding('${s.id}')" 
+        style="background:white; border-radius:12px; padding:1.5rem; border:1px solid #e5e7eb; cursor:pointer; text-align:center; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position:relative; overflow:hidden;"
+        onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 20px rgba(0,0,0,0.1)'; this.style.borderColor='#f5a623'"
+        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'; this.style.borderColor='#e5e7eb'">
+        ${badge}
+        <div style="font-size:3rem; margin-bottom:1rem;">${s.icon || '🏪'}</div>
+        <h3 style="margin:0 0 0.5rem 0; color:#0a1929; font-size:1.1rem; font-weight:700;">${s.name}</h3>
+        <p style="margin:0 0 0.5rem 0; color:#f5a623; font-size:0.85rem; font-weight:600;">${s.type || 'Commerce'}</p>
+        <p style="margin:0 0 1rem 0; color:#6b7280; font-size:0.85rem;">📍 ${s.address || 'Adresse non précisée'}</p>
+        <p style="color:#0a1929; font-size:0.85rem; margin-top:0.5rem; font-weight:bold;">📦 ${count} produit(s)</p>
+        <div style="padding:0.6rem; background:#0a1929; color:white; border-radius:6px; font-weight:bold; font-size:0.9rem; margin-top:1rem;">
+          Voir les produits →
         </div>
       </div>
     `;
   }).join('');
+  
+  console.log(`✅ [LANDING] ${activeStores.length} commerces partenaires affichés (Croissance + Premium)`);
+}
+
+function openStoreFromLanding(store_id) {
+  if (!currentUser) {
+    showToast('🔑 Connectez-vous pour voir les commerces');
+    setTimeout(() => openChooseTypeModal(), 1000);
+    return;
+  }
+  openStoreDetail(store_id);
 }
 
 function openStoreFromLanding(store_id) {

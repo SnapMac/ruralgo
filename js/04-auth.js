@@ -68,18 +68,27 @@ async function registerClient(e) {
     return;
   }
   
-  // 2. Créer le profil dans la table 'profiles'
-  const { error: dbError } = await supabaseClient.from('profiles').insert({
-    id: authData.user.id,
-    role: 'client',
-    email: email,
-    name: name,
-    phone: phone,
-    address: addressInput.value,
-    lat: addressInput._lat || userPosition?.lat || null,
-    lng: addressInput._lng || userPosition?.lng || null,
-    status: 'approved'
-  });
+ // ✅ NOUVELLE VERSION : GPS forcés en nombres
+const finalLat = addressInput._lat 
+  ? parseFloat(addressInput._lat) 
+  : (userPosition?.lat ? parseFloat(userPosition.lat) : null);
+const finalLng = addressInput._lng 
+  ? parseFloat(addressInput._lng) 
+  : (userPosition?.lng ? parseFloat(userPosition.lng) : null);
+
+console.log("📍 [INSCRIPTION] GPS finaux :", finalLat, finalLng);
+
+const { error: dbError } = await supabaseClient.from('profiles').insert({
+  id: authData.user.id,
+  role: 'client',
+  email: email,
+  name: name,
+  phone: phone,
+  address: addressInput.value,
+  lat: finalLat,
+  lng: finalLng,
+  status: 'approved'
+});
   
   if (dbError) {
     console.error("❌ Erreur d'insertion profil:", dbError);
@@ -114,9 +123,13 @@ function correctPassword(pass) {
 // ==========================================
 // 🏪 INSCRIPTION COMMERCE
 // ==========================================
+// ==========================================
+// 🏪 INSCRIPTION COMMERCE (AVEC GPS)
+// ==========================================
 async function registerStore(event) {
   event.preventDefault();
   
+  // 1. Récupérer tous les champs du formulaire
   const name = document.getElementById('rs-name').value.trim();
   const type = document.getElementById('rs-type').value;
   const owner = document.getElementById('rs-owner').value.trim();
@@ -124,9 +137,11 @@ async function registerStore(event) {
   const pass = document.getElementById('rs-pass').value;
   const passConfirm = document.getElementById('rs-pass-confirm').value;
   const phone = document.getElementById('rs-phone').value.trim();
-  const address = document.getElementById('rs-address').value.trim();
+  const addressInput = document.getElementById('rs-address');
+  const address = addressInput.value.trim();
   const forfaitChoisi = document.getElementById('rs-forfait').value;
   
+  // 2. Validation des champs
   if (pass !== passConfirm) { showToast('❌ Les mots de passe ne correspondent pas'); return; }
   if (pass.length < 6) { showToast('❌ Le mot de passe doit contenir au moins 6 caractères'); return; }
   if (!name || !type || !owner || !email || !phone || !address || !forfaitChoisi) { 
@@ -134,6 +149,7 @@ async function registerStore(event) {
     return; 
   }
   
+  // 3. Déterminer l'ID du forfait choisi
   let planId = null;
   if (forfaitChoisi === 'essai') planId = 1;
   else if (forfaitChoisi === 'base') planId = 2;
@@ -142,9 +158,39 @@ async function registerStore(event) {
   
   if (!planId) { showToast('❌ Forfait invalide'); return; }
   
+  // 🔥 4. RÉCUPÉRER LES GPS DU COMMERCE (LE VRAI FIX !)
+  let storeLat = addressInput._lat || null;
+  let storeLng = addressInput._lng || null;
+  
+  console.log("📍 [INSCRIPTION COMMERCE] GPS avant géocodage - Lat:", storeLat, "Lng:", storeLng);
+  
+  // 🔥 GÉOCODAGE AUTOMATIQUE SI GPS MANQUANTS
+  if ((!storeLat || !storeLng) && address && address.length > 5) {
+    showToast('🔍 Localisation de votre commerce...');
+    try {
+      const searchQuery = `${address}, Québec, Canada`;
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=1&lang=fr`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data && data.features && data.features.length > 0) {
+        const coords = data.features[0].geometry.coordinates; // [longitude, latitude]
+        storeLat = parseFloat(coords[1]);
+        storeLng = parseFloat(coords[0]);
+        console.log("✅ [INSCRIPTION COMMERCE] GPS trouvés automatiquement :", storeLat, storeLng);
+        showToast('✅ Commerce localisé !');
+      } else {
+        console.warn("⚠️ [INSCRIPTION COMMERCE] Adresse introuvable via géocodage.");
+      }
+    } catch (err) {
+      console.warn("⚠️ [INSCRIPTION COMMERCE] Erreur géocodage:", err);
+    }
+  }
+  
   try {
     showToast('📨 Envoi de votre demande en cours...');
     
+    // 5. Créer le compte d'authentification
     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
       email: email, 
       password: pass, 
@@ -153,6 +199,7 @@ async function registerStore(event) {
     
     if (authError) throw authError;
     
+    // 6. Créer le profil dans la table 'profiles'
     const { error: profileError } = await supabaseClient.from('profiles').insert({
       id: authData.user.id, 
       email: email, 
@@ -166,18 +213,30 @@ async function registerStore(event) {
     
     if (profileError) throw profileError;
     
-    const { error: storeError } = await supabaseClient.from('stores').insert({
+    // 🔥 7. CRÉER LE COMMERCE AVEC LES GPS (LE VRAI FIX !)
+    const storeData = {
       user_id: authData.user.id, 
       name: name, 
       type: type, 
       address: address, 
       phone: phone, 
       status: 'pending'
-    });
+    };
+    
+    // Ajouter les GPS seulement s'ils sont valides
+    if (storeLat && storeLng && !isNaN(storeLat) && !isNaN(storeLng)) {
+      storeData.lat = parseFloat(storeLat);
+      storeData.lng = parseFloat(storeLng);
+      console.log("✅ [INSCRIPTION COMMERCE] GPS envoyés à Supabase :", storeData.lat, storeData.lng);
+    } else {
+      console.warn("⚠️ [INSCRIPTION COMMERCE] Inscription sans GPS. Le commerce pourra les ajouter plus tard.");
+    }
+    
+    const { error: storeError } = await supabaseClient.from('stores').insert(storeData);
     
     if (storeError) console.error('Erreur store:', storeError);
     
-    // Notifier les admins
+    // 8. Notifier les admins
     const { data: admins } = await supabaseClient.from('profiles').select('id').eq('role', 'admin');
     if (admins) {
       for (const admin of admins) {
@@ -279,15 +338,33 @@ async function loginUser(event) {
     if (profileError) throw profileError;
     
     currentUser = {
-      id: authData.user.id,
-      email: authData.user.email,
-      role: profile.role,
-      name: profile.name,
-      status: profile.status,
-      selected_plan_id: profile.selected_plan_id
-    };
+  id: authData.user.id,
+  email: authData.user.email,
+  role: profile.role,
+  name: profile.name,
+  status: profile.status,
+  selected_plan_id: profile.selected_plan_id
+};
+
+// ✅ NOUVEAU : Si c'est un commerce, récupérer le VRAI nom du commerce
+if (currentUser.role === 'store') {
+  try {
+    const { data: store } = await supabaseClient
+      .from('stores')
+      .select('name')
+      .eq('owner_id', currentUser.id)
+      .maybeSingle();
     
-    closeModal('login-modal');
+    if (store && store.name) {
+      currentUser.storeName = store.name;  // ✅ Nom du commerce
+    }
+  } catch (err) {
+    console.warn('⚠️ Impossible de récupérer le nom du commerce:', err);
+  }
+}
+
+closeModal('login-modal');
+    
     
     // Logique spéciale pour les commerces
     if (currentUser.role === 'store') {
@@ -355,27 +432,87 @@ async function logout() {
 // 👤 INTERFACE UTILISATEUR
 // ==========================================
 function showUserInterface() {
-  // Bouclier pour la page de remerciement
+  // 🛡️ BOUCLIER : Si la page de remerciement est active, on annule tout pour ne pas l'écraser
   if (typeof isThankYouPageActive !== 'undefined' && isThankYouPageActive) {
-    console.log("🛡️ [BOUCLIER] showUserInterface bloqué");
+    console.log("🛡️ [BOUCLIER] showUserInterface bloqué pour protéger la page de remerciement");
     return;
   }
-  
-  // Afficher la section utilisateur
-  document.getElementById('auth-section').style.display = 'none';
-  document.getElementById('user-section').style.display = 'flex';
-  document.getElementById('header-wallet').style.display = 'block';
-  document.getElementById('notif-bell-container').style.display = 'block';
-  
-  // Mise à jour avatar et nom
-  const ini = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  document.getElementById('user-avatar').textContent = ini;
-  document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
-  
-  const labels = { client: '👤 Client', driver: '🚗 Livreur', admin: '⚙️ Admin', store: '🏪 Commerce' };
-  document.getElementById('user-role').textContent = labels[currentUser.role] || currentUser.role;
-  
-  // Cacher wallet pour non-clients
+
+  // 🛡️ SÉCURITÉ : Vérifier que currentUser existe
+  if (!currentUser || !currentUser.id) {
+    console.warn("⚠️ showUserInterface appelé sans utilisateur connecté.");
+    return;
+  }
+
+  // 👁️ AFFICHER LA SECTION UTILISATEUR
+  const authSection = document.getElementById('auth-section');
+  const userSection = document.getElementById('user-section');
+  const headerWallet = document.getElementById('header-wallet');
+  const notifBell = document.getElementById('notif-bell-container');
+
+  if (authSection) authSection.style.display = 'none';
+  if (userSection) userSection.style.display = 'flex';
+  if (headerWallet) headerWallet.style.display = 'block';
+  if (notifBell) notifBell.style.display = 'block';
+
+  // 👤 MISE À JOUR DE L'AVATAR ET DU NOM
+  const userAvatar = document.getElementById('user-avatar');
+  const userName = document.getElementById('user-name');
+  const userRole = document.getElementById('user-role');
+
+  if (userAvatar) {
+    const ini = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    userAvatar.textContent = ini;
+  }
+
+  if (userName) {
+    // 🔥 LOGIQUE CRITIQUE POUR LE NOM :
+    let displayName = currentUser.name; // Par défaut : nom du responsable
+    
+    if (currentUser.role === 'store') {
+      // On cherche le commerce qui appartient à cet utilisateur dans le tableau 'stores'
+      const myStore = Array.isArray(stores) ? stores.find(s => String(s.owner_id) === String(currentUser.id)) : null;
+      
+      // Priorité : 1. myStore.name, 2. currentUser.storeName, 3. currentUser.name
+      if (myStore && myStore.name) {
+        displayName = myStore.name; // ✅ On garde le nom COMPLET du commerce (pas de split)
+      } else if (currentUser.storeName) {
+        displayName = currentUser.storeName;
+      }
+    }
+    
+    // Pour les clients/livreurs/admin, on garde juste le prénom
+    if (currentUser.role !== 'store') {
+      displayName = displayName.split(' ')[0];
+    }
+    
+    userName.textContent = displayName;
+    console.log(`✅ Nom affiché dans le header : "${displayName}" (Rôle: ${currentUser.role})`);
+  }
+
+  if (userRole) {
+    const labels = { 
+      client: '👤 Client', 
+      driver: '🚗 Livreur', 
+      livreur: '🚗 Livreur', 
+      admin: '⚙️ Admin', 
+      store: '🏪 Commerce' 
+    };
+    userRole.textContent = labels[currentUser.role] || currentUser.role;
+  }
+
+ // ✅ NOUVELLE VERSION (cache pour commerces ET admin) :
+const editProfileBtn = document.querySelector('#user-section button[onclick="openEditProfileModal()"]');
+if (editProfileBtn) {
+  // Cacher le bouton pour les commerces ET l'admin
+  if (currentUser.role === 'store' || currentUser.role === 'admin') {
+    editProfileBtn.style.display = 'none';
+  } else {
+    editProfileBtn.style.display = 'flex';
+  }
+}
+
+  // 💰 GESTION DU WALLET (Visible seulement pour les clients)
   if (currentUser.role !== 'client') {
     const allWalletElements = document.querySelectorAll(
       '[id*="wallet"], [id*="balance"], [id*="recharge"], [id*="transaction"]'
@@ -388,32 +525,44 @@ function showUserInterface() {
       if (typeof updateWalletDisplay === 'function') updateWalletDisplay();
     }, 500);
   }
-  
-  // Réinitialiser les menus
-  document.getElementById('nav-client').style.display = 'none';
-  document.getElementById('nav-driver').style.display = 'none';
-  document.getElementById('nav-admin').style.display = 'none';
+
+  // 🧭 RÉINITIALISER LES MENUS DE NAVIGATION
+  const navClient = document.getElementById('nav-client');
+  const navDriver = document.getElementById('nav-driver');
+  const navAdmin = document.getElementById('nav-admin');
   const navStore = document.getElementById('nav-store');
+
+  if (navClient) navClient.style.display = 'none';
+  if (navDriver) navDriver.style.display = 'none';
+  if (navAdmin) navAdmin.style.display = 'none';
   if (navStore) navStore.style.display = 'none';
-  
-  // Afficher l'interface spécifique au rôle
+
+  // 🚀 AFFICHER L'INTERFACE SPÉCIFIQUE AU RÔLE
   if (currentUser.role === 'client') {
-    document.getElementById('nav-client').style.display = 'block';
-    document.getElementById('client-firstname').textContent = currentUser.name.split(' ')[0];
+    if (navClient) navClient.style.display = 'block';
+    const clientFirstname = document.getElementById('client-firstname');
+    if (clientFirstname) clientFirstname.textContent = currentUser.name.split(' ')[0];
+    
     if (typeof updateDeliveryAddress === 'function') updateDeliveryAddress();
     switchView('view-client');
     if (typeof showClientStores === 'function') showClientStores();
+    
   } else if (currentUser.role === 'driver' || currentUser.role === 'livreur') {
-    document.getElementById('nav-driver').style.display = 'block';
-    document.getElementById('driver-firstname').textContent = currentUser.name.split(' ')[0];
+    if (navDriver) navDriver.style.display = 'block';
+    const driverFirstname = document.getElementById('driver-firstname');
+    if (driverFirstname) driverFirstname.textContent = currentUser.name.split(' ')[0];
+    
     switchView('view-driver');
     if (typeof showDriverDashboard === 'function') showDriverDashboard();
+    
   } else if (currentUser.role === 'admin') {
-    document.getElementById('nav-admin').style.display = 'block';
+    if (navAdmin) navAdmin.style.display = 'block';
     switchView('view-admin');
     if (typeof renderAllAdmin === 'function') renderAllAdmin();
+    
   } else if (currentUser.role === 'store') {
     if (navStore) navStore.style.display = 'block';
+    
     if (currentUser.status === 'pending') {
       switchView('view-landing');
       showToast('⏳ Votre commerce est en attente d\'approbation.');
@@ -425,8 +574,11 @@ function showUserInterface() {
       if (typeof showStoreDashboard === 'function') showStoreDashboard();
     }
   }
-  
-  if (typeof updateNotifBadge === 'function') updateNotifBadge();
+
+  // 🔔 METTRE À JOUR LE BADGE DE NOTIFICATIONS
+  if (typeof updateNotifBadge === 'function') {
+    updateNotifBadge();
+  }
 }
 
 // ==========================================

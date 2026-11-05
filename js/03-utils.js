@@ -287,8 +287,192 @@ function getPlanName(planId) {
   if (planId === 4) return '👑 Partenaire Plus (89.99$)';
   return 'Non spécifié';
 }
+// ==========================================
+// 🔍 RECHERCHE D'ADRESSE AMÉLIORÉE (API Photon - Plus rapide pour le Québec)
+// ==========================================
+async function searchAddress(query, suggestionsId, inputId) {
+  const suggestions = document.getElementById(suggestionsId);
+  if (!suggestions) return;
+  
+  try {
+    // ✅ API Photon : Plus rapide et précise pour le Canada/Québec
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=fr&lat=46.3767&lon=-75.9653`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (!data || !data.features || data.features.length === 0) {
+      // Fallback sur Nominatim si Photon échoue
+      return await searchAddressFallback(query, suggestionsId, inputId);
+    }
+    
+    suggestions.innerHTML = data.features.map((item, index) => {
+      const coords = item.geometry.coordinates; // [lon, lat]
+      const props = item.properties;
+      
+      // Construire une adresse lisible
+      let mainText = props.name || '';
+      let subText = '';
+      
+      if (props.street) {
+        mainText = `${props.housenumber || ''} ${props.street}`.trim();
+      }
+      
+      const city = props.city || props.town || props.village || props.district || '';
+      const postcode = props.postcode || '';
+      const state = props.state || 'QC';
+      subText = `${city}${postcode ? ', ' + postcode : ''}, ${state}`.trim();
+      
+      if (!mainText && props.label) {
+        mainText = props.label;
+      }
+      
+      return `
+        <div class="autocomplete-item" onclick="selectAddressPhoton('${inputId}', '${suggestionsId}', ${index})" 
+             style="padding:0.8rem; cursor:pointer; border-bottom:1px solid #eee; display:flex; align-items:center; gap:0.8rem; transition:background 0.2s;"
+             onmouseover="this.style.background='#f5f1e8'"
+             onmouseout="this.style.background='white'">
+          <div style="font-size:1.3rem;">📍</div>
+          <div style="flex:1;">
+            <div style="font-weight:600; color:#0a1929; font-size:0.95rem;">${mainText}</div>
+            ${subText ? `<div style="font-size:0.8rem; color:#6b7280; margin-top:0.2rem;">${subText}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Stocker les données pour le clic
+    suggestions._data = data.features.map(f => ({
+      display_name: f.properties.label || f.properties.name,
+      lat: f.geometry.coordinates[1],
+      lon: f.geometry.coordinates[0]
+    }));
+    
+  } catch (error) {
+    console.error("❌ Erreur recherche adresse:", error);
+    suggestions.innerHTML = '<div style="padding:1rem; color:#ef4444; text-align:center;">❌ Erreur de recherche</div>';
+  }
+}
+
+// Fallback sur Nominatim si Photon échoue
+async function searchAddressFallback(query, suggestionsId, inputId) {
+  const suggestions = document.getElementById(suggestionsId);
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ca&limit=5&addressdetails=1&accept-language=fr&viewbox=-77,45,-75,47&bounded=1`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (!data || data.length === 0) {
+      suggestions.innerHTML = '<div style="padding:1rem; color:#666; text-align:center;">Aucune adresse trouvée</div>';
+      return;
+    }
+    
+    suggestions.innerHTML = data.map((item, index) => `
+      <div class="autocomplete-item" onclick="selectAddress('${inputId}', '${suggestionsId}', ${index})"
+           style="padding:0.8rem; cursor:pointer; border-bottom:1px solid #eee; display:flex; align-items:center; gap:0.8rem; transition:background 0.2s;"
+           onmouseover="this.style.background='#f5f1e8'"
+           onmouseout="this.style.background='white'">
+        <div style="font-size:1.3rem;">📍</div>
+        <div style="flex:1;">
+          <div style="font-weight:600; color:#0a1929; font-size:0.95rem;">${item.display_name.split(',')[0]}</div>
+          <div style="font-size:0.8rem; color:#6b7280; margin-top:0.2rem;">${item.display_name.split(',').slice(1).join(',').trim()}</div>
+        </div>
+      </div>
+    `).join('');
+    
+    suggestions._data = data;
+  } catch (error) {
+    console.error("❌ Erreur fallback:", error);
+  }
+}
+
+// ==========================================
+// 📍 SÉLECTION D'ADRESSE PHOTON (Nouvelle version)
+// ==========================================
+function selectAddressPhoton(inputId, suggestionsId, index) {
+  const suggestions = document.getElementById(suggestionsId);
+  const input = document.getElementById(inputId);
+  const data = suggestions._data;
+  
+  if (!data || !data[index]) return;
+  
+  const item = data[index];
+  input.value = item.display_name;
+  
+  // ✅ STOCKER LES GPS EN NOMBRES (pas en texte !)
+  if (item.lat && item.lon) {
+    input._lat = parseFloat(item.lat);
+    input._lng = parseFloat(item.lon);
+    console.log("✅ GPS Photon stockés :", input._lat, input._lng);
+  }
+  
+  suggestions.classList.remove('show');
+  suggestions.style.display = 'none';
+  showToast('✅ Adresse sélectionnée !');
+  
+  // Mettre à jour le panier si client connecté
+  if (currentUser && currentUser.role === 'client' && typeof updateCart === 'function') {
+    updateCart();
+  }
+}
+// ==========================================
+// 📍 SÉLECTION D'ADRESSE PHOTON (Nouvelle version)
+// ==========================================
+function selectAddressPhoton(inputId, suggestionsId, index) {
+  const suggestions = document.getElementById(suggestionsId);
+  const input = document.getElementById(inputId);
+  const data = suggestions._data;
+  
+  if (!data || !data[index]) return;
+  
+  const item = data[index];
+  input.value = item.display_name;
+  
+  // ✅ STOCKER LES GPS EN NOMBRES (pas en texte !)
+  if (item.lat && item.lon) {
+    input._lat = parseFloat(item.lat);
+    input._lng = parseFloat(item.lon);
+    console.log("✅ GPS Photon stockés :", input._lat, input._lng);
+  }
+  
+  suggestions.classList.remove('show');
+  suggestions.style.display = 'none';
+  showToast('✅ Adresse sélectionnée !');
+  
+  // Mettre à jour le panier si client connecté
+  if (currentUser && currentUser.role === 'client' && typeof updateCart === 'function') {
+    updateCart();
+  }
+}
+// ==========================================
+// 📍 SÉLECTION D'ADRESSE NOMINATIM (Ancienne version, garde pour fallback)
+// ==========================================
+function selectAddress(inputId, suggestionsId, index) {
+  const suggestions = document.getElementById(suggestionsId);
+  const input = document.getElementById(inputId);
+  const data = suggestions._data;
+  
+  if (!data || !data[index]) return;
+  
+  const item = data[index];
+  input.value = item.display_name;
+  
+  if (item.lat && item.lon) {
+    input._lat = parseFloat(item.lat);
+    input._lng = parseFloat(item.lon);
+    console.log("✅ GPS Nominatim stockés :", input._lat, input._lng);
+  }
+  
+  suggestions.classList.remove('show');
+  suggestions.style.display = 'none';
+  showToast('✅ Adresse sélectionnée !');
+  
+  if (currentUser && currentUser.role === 'client' && typeof updateCart === 'function') {
+    updateCart();
+  }
+}
 
 // ==========================================
 // ✅ FIN DU CHARGEMENT
 // ==========================================
+
 console.log("✅ [03-utils.js] Utilitaires chargés avec succès !");

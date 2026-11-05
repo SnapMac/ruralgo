@@ -10,61 +10,103 @@ console.log("🔄 [07-store.js] Chargement du dashboard commerce...");
 // 🏪 AFFICHAGE DU DASHBOARD COMMERCE
 // ==========================================
 async function showStoreDashboard() {
+  // 1. Cacher les autres sections
   document.getElementById('stores-section').style.display = 'none';
   document.getElementById('cart-section').style.display = 'none';
-  
   console.log("🔍 showStoreDashboard démarré");
-  
+
+  // 2. Vérifier que c'est bien un commerce
   if (!currentUser || currentUser.role !== 'store') {
     console.log("⚠️ Pas un commerce");
     return;
   }
-  
+
   const container = document.getElementById('store-info-content');
   if (!container) {
     console.error("❌ Conteneur 'store-info-content' introuvable dans le HTML");
     return;
   }
-  
+
   try {
+    // 3. Récupérer les données du commerce depuis Supabase
     const { data: store, error } = await supabaseClient
       .from('stores')
       .select('*')
       .eq('owner_id', currentUser.id)
       .maybeSingle();
-    
+
     if (error || !store) {
       container.innerHTML = `
         <div style="padding:2rem; text-align:center; background:#fee2e2; border-radius:8px;">
           <h3>⏳ Chargement en cours ou commerce introuvable</h3>
-          <p>Veuillez rafraîchir la page (F5) ou contacter l'administrateur.</p>
+          <p>Veuillez rafraîchir laa page (F5) ou contacter l'administrateur.</p>
         </div>`;
       return;
     }
-    
+
+    // 4. Construire l'interface avec 2 sections bien distinctes
     container.innerHTML = `
       <div style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-          <h2 style="color:#0a1929; margin:0;">🏪 ${store.name}</h2>
-          <button onclick="openStoreDetail('${store.id}')" style="padding:8px 16px; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer;">
-            👁️ Voir mon commerce (Vue Client)
+        
+        <!-- EN-TÊTE : Nom du commerce en grand -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:2px solid #f5a623;">
+          <div>
+            <div style="font-size:0.8rem; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Mon Commerce</div>
+            <h2 style="color:#0a1929; margin:0.3rem 0 0 0; font-size:1.5rem;">🏪 ${store.name}</h2>
+          </div>
+          <button onclick="openStoreDetail('${store.id}')" style="padding:8px 16px; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.85rem;">
+            👁️ Voir (Vue Client)
           </button>
         </div>
-        <p><strong>📍 Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
-        <p><strong>📞 Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
-        <p><strong>📧 Email :</strong> ${store.email || 'Non spécifié'}</p>
-        <p><strong>📊 Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
+        
+        <!-- SECTION 1 : INFOS DU COMMERCE (Utilisé pour les calculs de livraison) -->
+        <div style="background:#f5f1e8; padding:1.25rem; border-radius:8px; margin-bottom:1.5rem; border-left: 4px solid #f5a623;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+            <h3 style="margin:0; color:#0a1929; font-size:1.1rem;">📋 Informations du commerce</h3>
+            <button onclick="openEditStoreInfoModal()" style="background:#0a1929; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+              <span>✏️</span> Modifier
+            </button>
+          </div>
+          <p style="margin:0.4rem 0;"><strong>📍 Adresse (pour livraisons) :</strong> ${store.address || 'Non spécifiée'}</p>
+          <p style="margin:0.4rem 0;"><strong>📞 Téléphone du commerce :</strong> ${store.phone || 'Non spécifié'}</p>
+          <p style="margin:0.4rem 0;"><strong>📧 Email du commerce :</strong> ${store.email || 'Non spécifié'}</p>
+          <p style="margin:0.4rem 0;"><strong>📊 Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
+        </div>
+
+        <!-- SECTION 2 : INFOS DU RESPONSABLE -->
+        <div style="background:#e6f7ff; padding:1.25rem; border-radius:8px; margin-bottom:1.5rem; border-left: 4px solid #2563eb;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+            <h3 style="margin:0; color:#0a1929; font-size:1.1rem;">👤 Responsable du commerce</h3>
+            <button onclick="openEditOwnerInfoModal()" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+              <span>✏️</span> Modifier
+            </button>
+          </div>
+          <p style="margin:0.4rem 0;"><strong>Nom complet :</strong> ${currentUser.name || 'Non spécifié'}</p>
+          <p style="margin:0.4rem 0;"><strong>Email de connexion :</strong> ${currentUser.email || 'Non spécifié'}</p>
+          <p style="margin:0.4rem 0;"><strong>Téléphone personnel :</strong> ${currentUser.phone || 'Non spécifié'}</p>
+        </div>
+
         <hr style="margin:1.5rem 0; border:0; border-top:1px solid #eee;">
-        <h3 style="color:#0a1929;">📦 Mon Inventaire</h3>
-        <button onclick="openAddProductModal('${store.id}')" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">➕ Ajouter un produit</button>
-        <div id="store-products-list" style="margin-top:1rem; display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;"></div>
+        
+        <!-- SECTION 3 : INVENTAIRE -->
+        <h3 style="color:#0a1929; margin-bottom:1rem;">📦 Mon Inventaire</h3>
+        <button onclick="openAddProductModal('${store.id}')" style="padding:10px 20px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; margin-bottom:1rem;">
+          ➕ Ajouter un produit
+        </button>
+        <div id="store-products-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
+          <!-- Les produits seront chargés ici par loadStoreProducts() -->
+        </div>
       </div>
     `;
-    
-    loadStoreProducts(store.id);
+
+    // 5. Charger les produits du commerce
+    if (typeof loadStoreProducts === 'function') {
+      loadStoreProducts(store.id);
+    }
+
   } catch (err) {
-    console.error("❌ Erreur:", err);
-    container.innerHTML = `<div style="padding:2rem; color:red;">❌ Erreur : ${err.message}</div>`;
+    console.error("❌ Erreur showStoreDashboard:", err);
+    container.innerHTML = `<div style="padding:2rem; color:red; text-align:center;">❌ Erreur : ${err.message}</div>`;
   }
 }
 
@@ -513,3 +555,169 @@ async function saveStoreNamePro() {
 // ✅ FIN DU CHARGEMENT
 // ==========================================
 console.log("✅ [07-store.js] Dashboard commerce chargé !");
+
+// ==========================================
+// ✏️ MODIFIER LES INFOS DU COMMERCE
+// ==========================================
+function openEditStoreInfoModal() {
+  let modal = document.getElementById('edit-store-info-modal');
+  if (modal) modal.remove();
+  
+  modal = document.createElement('div');
+  modal.id = 'edit-store-info-modal';
+  modal.className = 'modal-bg show';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:500px">
+      <h2 style="color:#0a1929; margin-bottom:1.5rem;">🏪 Modifier mon commerce</h2>
+      <form onsubmit="saveStoreInfo(event)">
+        <div class="form-group">
+          <label>🏪 Nom du commerce *</label>
+          <input type="text" id="esi-name" required value="${currentUser.storeName || ''}">
+        </div>
+        <div class="form-group">
+          <label>📍 Adresse du commerce *</label>
+          <div class="autocomplete-wrapper">
+            <input type="text" id="esi-address" class="autocomplete-input" required value="${currentUser.storeAddress || ''}" autocomplete="off">
+            <div id="esi-address-suggestions" class="autocomplete-suggestions"></div>
+          </div>
+          <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('esi-address')">📍 Utiliser GPS</button>
+        </div>
+        <div class="form-group">
+          <label>📞 Téléphone</label>
+          <input type="tel" id="esi-phone" value="${currentUser.storePhone || ''}">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-sm btn-gray" onclick="document.getElementById('edit-store-info-modal').remove()">Annuler</button>
+          <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  setTimeout(() => initAutocomplete('esi-address', 'esi-address-suggestions'), 100);
+}
+
+// ==========================================
+// 💾 SAUVEGARDE DES INFOS DU COMMERCE (AVEC GÉOCODAGE AUTO)
+// ==========================================
+async function saveStoreInfo(e) {
+  e.preventDefault();
+  const newName = document.getElementById('esi-name').value.trim();
+  const newAddress = document.getElementById('esi-address').value.trim();
+  const newPhone = document.getElementById('esi-phone').value.trim();
+  const addressInput = document.getElementById('esi-address');
+  
+  let newLat = addressInput?._lat || null;
+  let newLng = addressInput?._lng || null;
+  
+  // 🔥 GÉOCODAGE AUTO SI GPS MANQUANTS
+  if ((!newLat || !newLng) && newAddress && newAddress.length > 5) {
+    showToast('🔍 Localisation du commerce...');
+    try {
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(newAddress + ', Québec, Canada')}&limit=1&lang=fr`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data && data.features && data.features.length > 0) {
+        const coords = data.features[0].geometry.coordinates;
+        newLat = parseFloat(coords[1]);
+        newLng = parseFloat(coords[0]);
+        if (addressInput) { addressInput._lat = newLat; addressInput._lng = newLng; }
+        showToast('✅ Commerce localisé !');
+      }
+    } catch (err) { console.warn("⚠️ Erreur géocodage commerce:", err); }
+  }
+  
+  const updateData = { name: newName, address: newAddress, phone: newPhone };
+  if (newLat && newLng && !isNaN(newLat) && !isNaN(newLng)) {
+    updateData.lat = parseFloat(newLat);
+    updateData.lng = parseFloat(newLng);
+  }
+  
+  try {
+    const { error } = await supabaseClient.from('stores').update(updateData).eq('owner_id', currentUser.id);
+    if (error) throw error;
+    
+    if (currentUser) {
+      currentUser.storeName = newName; currentUser.storeAddress = newAddress;
+      if (updateData.lat) currentUser.storeLat = parseFloat(updateData.lat);
+      if (updateData.lng) currentUser.storeLng = parseFloat(updateData.lng);
+    }
+    
+    const storeIndex = stores.findIndex(s => String(s.owner_id) === String(currentUser.id));
+    if (storeIndex !== -1) stores[storeIndex] = { ...stores[storeIndex], ...updateData };
+    
+    const modal = document.getElementById('edit-store-info-modal');
+    if (modal) modal.remove();
+    
+    showToast('✅ Commerce mis à jour !');
+    if (typeof showStoreDashboard === 'function') showStoreDashboard();
+  } catch (err) {
+    console.error("❌ Erreur sauvegarde commerce:", err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// ==========================================
+// 👤 MODIFIER LES INFOS DU RESPONSABLE
+// ==========================================
+function openEditOwnerInfoModal() {
+  let modal = document.getElementById('edit-owner-info-modal');
+  if (modal) modal.remove();
+  
+  modal = document.createElement('div');
+  modal.id = 'edit-owner-info-modal';
+  modal.className = 'modal-bg show';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:500px">
+      <h2 style="color:#0a1929; margin-bottom:1.5rem;">👤 Modifier mes infos (Responsable)</h2>
+      <form onsubmit="saveOwnerInfo(event)">
+        <div class="form-group">
+          <label>👤 Nom complet *</label>
+          <input type="text" id="eoi-name" required value="${currentUser.name || ''}">
+        </div>
+        <div class="form-group">
+          <label>📞 Téléphone</label>
+          <input type="tel" id="eoi-phone" value="${currentUser.phone || ''}">
+        </div>
+        <div class="info-box" style="background:#e6f7ff; border-left:4px solid #2563eb; padding:0.8rem; border-radius:6px; font-size:0.85rem; color:#0050b3;">
+          💡 <strong>Note :</strong> L'email de connexion ne peut pas être modifié ici.
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-sm btn-gray" onclick="document.getElementById('edit-owner-info-modal').remove()">Annuler</button>
+          <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function saveOwnerInfo(e) {
+  e.preventDefault();
+  
+  const newName = document.getElementById('eoi-name').value.trim();
+  const newPhone = document.getElementById('eoi-phone').value.trim();
+  
+  try {
+    const { error } = await supabaseClient
+      .from('profiles')
+      .update({
+        name: newName,
+        phone: newPhone
+      })
+      .eq('id', currentUser.id);
+    
+    if (error) throw error;
+    
+    // Mettre à jour en mémoire
+    currentUser.name = newName;
+    currentUser.phone = newPhone;
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    
+    document.getElementById('edit-owner-info-modal').remove();
+    showToast('✅ Infos mises à jour !');
+    showStoreDashboard();
+  } catch (err) {
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
