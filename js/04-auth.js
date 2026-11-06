@@ -158,7 +158,7 @@ async function registerStore(event) {
   
   if (!planId) { showToast('❌ Forfait invalide'); return; }
   
-  // 🔥 4. RÉCUPÉRER LES GPS DU COMMERCE (LE VRAI FIX !)
+  // 🔥 4. RÉCUPÉRER LES GPS DU COMMERCE
   let storeLat = addressInput._lat || null;
   let storeLng = addressInput._lng || null;
   
@@ -178,9 +178,6 @@ async function registerStore(event) {
         storeLat = parseFloat(coords[1]);
         storeLng = parseFloat(coords[0]);
         console.log("✅ [INSCRIPTION COMMERCE] GPS trouvés automatiquement :", storeLat, storeLng);
-        showToast('✅ Commerce localisé !');
-      } else {
-        console.warn("⚠️ [INSCRIPTION COMMERCE] Adresse introuvable via géocodage.");
       }
     } catch (err) {
       console.warn("⚠️ [INSCRIPTION COMMERCE] Erreur géocodage:", err);
@@ -188,7 +185,7 @@ async function registerStore(event) {
   }
   
   try {
-    showToast('📨 Envoi de votre demande en cours...');
+    showToast('📨 Création de votre compte en cours...');
     
     // 5. Créer le compte d'authentification
     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
@@ -199,7 +196,7 @@ async function registerStore(event) {
     
     if (authError) throw authError;
     
-    // 6. Créer le profil dans la table 'profiles'
+    // 6. Créer le profil dans la table 'profiles' AVEC payment_status
     const { error: profileError } = await supabaseClient.from('profiles').insert({
       id: authData.user.id, 
       email: email, 
@@ -207,15 +204,16 @@ async function registerStore(event) {
       name: owner, 
       phone: phone,
       address: address, 
-      status: 'pending', 
+      status: 'pending',
+      payment_status: 'unpaid', // 🔥 CRUCIAL : On marque comme non payé par défaut
       selected_plan_id: planId
     });
     
     if (profileError) throw profileError;
     
-    // 🔥 7. CRÉER LE COMMERCE AVEC LES GPS (LE VRAI FIX !)
+    // 🔥 7. CRÉER LE COMMERCE AVEC LES GPS (CORRIGÉ : owner_id au lieu de user_id)
     const storeData = {
-      user_id: authData.user.id, 
+      owner_id: authData.user.id, // ✅ CORRECTION ICI
       name: name, 
       type: type, 
       address: address, 
@@ -233,8 +231,9 @@ async function registerStore(event) {
     }
     
     const { error: storeError } = await supabaseClient.from('stores').insert(storeData);
-    
-    if (storeError) console.error('Erreur store:', storeError);
+    if (storeError) {
+      console.error('⚠️ Erreur création store:', storeError);
+    }
     
     // 8. Notifier les admins
     const { data: admins } = await supabaseClient.from('profiles').select('id').eq('role', 'admin');
@@ -244,10 +243,31 @@ async function registerStore(event) {
       }
     }
     
+    // 🔥 9. CONNECTER AUTOMATIQUEMENT ET REDIRIGER VERS LE PAIEMENT
+    currentUser = {
+      id: authData.user.id,
+      email: email,
+      role: 'store',
+      name: owner,
+      storeName: name, // 🔥 AJOUT CRUCIAL : On sauvegarde le nom du commerce ici !
+      status: 'pending',
+      payment_status: 'unpaid', // 🔥 Force la redirection vers le paiement
+      phone: phone,
+      address: address,
+      selected_plan_id: planId
+    };
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    
     closeModal('register-store-modal');
-    showToast('✅ Demande envoyée avec succès !');
+    showToast('✅ Compte créé avec succès !');
+    
+    // 🔥 Déclenche l'affichage qui va détecter "unpaid" et ouvrir la page de paiement
+    setTimeout(() => {
+      showUserInterface(); 
+    }, 500);
+
   } catch (err) {
-    console.error('Erreur inscription commerce:', err);
+    console.error('❌ Erreur inscription commerce:', err);
     showToast('❌ Erreur : ' + err.message);
   }
 }
@@ -450,19 +470,14 @@ function showUserInterface() {
   const ini = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('user-avatar').textContent = ini;
 
-  // 3. 🔥 NOM : commerce = nom complet du commerce / autres = prénom
+  // 3. 🔥 NOM : commerce = nom du commerce / autres = prénom
   if (currentUser.role === 'store') {
-    const myStore = Array.isArray(stores)
-      ? stores.find(s => String(s.owner_id) === String(currentUser.id))
-      : null;
-
-    if (myStore && myStore.name) {
-      document.getElementById('user-name').textContent = myStore.name;
-    } else if (currentUser.storeName) {
-      document.getElementById('user-name').textContent = currentUser.storeName;
-    } else {
-      document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
-    }
+    // On cherche le nom du commerce en priorité dans la session, sinon dans la liste 'stores', sinon on prend le nom du propriétaire
+    const displayName = currentUser.storeName || 
+                        (Array.isArray(stores) ? (stores.find(s => String(s.owner_id) === String(currentUser.id))?.name) : null) || 
+                        currentUser.name;
+    
+    document.getElementById('user-name').textContent = displayName;
   } else {
     document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
   }
@@ -528,7 +543,14 @@ function showUserInterface() {
   } else if (currentUser.role === 'store') {
     if (navStore) navStore.style.display = 'block';
     
-    // ✅ VÉRIFICATION EXPLICITE DU STATUT
+    // 🔥 ÉTAPE 1 : VÉRIFIER LE PAIEMENT D'ABORD
+    if (!currentUser.payment_status || currentUser.payment_status !== 'paid') {
+      switchView('view-payment');
+      showToast('💳 Veuillez effectuer le paiement de votre abonnement pour continuer.');
+      return; // 🔥 STOPPER TOUT ICI, on n'affiche pas le reste
+    }
+    
+    // 🔥 ÉTAPE 2 : ENSUITE VÉRIFIER LE STATUT D'APPROBATION
     if (currentUser.status === 'pending') {
       switchView('view-landing');
       showToast('⏳ Votre commerce est en attente d\'approbation par l\'admin.');
@@ -536,7 +558,7 @@ function showUserInterface() {
       switchView('view-landing');
       showToast('❌ Votre demande a été refusée. Contactez le support.');
     } else if (currentUser.status === 'approved') {
-      // 🎯 C'EST ICI : Si approuvé, on va DIRECTEMENT au tableau de bord
+      // 🎯 C'EST ICI : Si approuvé ET payé, on va DIRECTEMENT au tableau de bord
       switchView('view-store');
       if (typeof showStoreDashboard === 'function') showStoreDashboard();
     } else {
