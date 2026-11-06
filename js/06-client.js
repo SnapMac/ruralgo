@@ -529,14 +529,18 @@ async function placeOrder() {
     if (!confirm(`Confirmer la commande de ${total.toFixed(2)}$ ?`)) return;
     
     // 🔥 CORRECTION DU BUG : Création de orderData AVANT l'insert
+        // On force la récupération de l'adresse du client
+    const finalAddress = currentUser.address || "Adresse non spécifiée";
+    const finalLat = currentUser.lat ? parseFloat(currentUser.lat) : null;
+    const finalLng = currentUser.lng ? parseFloat(currentUser.lng) : null;
     const orderData = {
       order_number: 'RG-' + Date.now().toString().slice(-8),
       client_id: currentUser.id,
       client_name: currentUser.name,
       client_phone: currentUser.phone || '',
-      client_address: currentUser.address || '',
-      client_lat: parseFloat(currentUser.lat) || null,
-      client_lng: parseFloat(currentUser.lng) || null,
+      client_address: finalAddress,
+      client_lat: finalLat,
+      client_lng: finalLng,
       store_id: storeId,
       store_name: storeName,
       items: cart,
@@ -726,23 +730,18 @@ async function saveProfile(e) {
   let newLat = addrField?._lat || null;
   let newLng = addrField?._lng || null;
   
-  // 🔥 GÉOCODAGE AUTO SI GPS MANQUANTS (Ne bloque plus la sauvegarde)
+  // 🔥 SI PAS DE GPS, ON DEMANDE À MAPBOX DE LES TROUVER
   if ((!newLat || !newLng) && newAddress && newAddress.length > 5) {
-    showToast('🔍 Localisation de votre adresse...');
-    try {
-      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(newAddress + ', Québec, Canada')}&limit=1&lang=fr`;
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data && data.features && data.features.length > 0) {
-        const coords = data.features[0].geometry.coordinates;
-        newLat = parseFloat(coords[1]);
-        newLng = parseFloat(coords[0]);
-        if (addrField) { addrField._lat = newLat; addrField._lng = newLng; }
-        showToast('✅ Adresse localisée !');
-      } else {
-        showToast('⚠️ Adresse non trouvée sur la carte. Tarif de base (7$) appliqué.');
-      }
-    } catch (err) { console.warn("⚠️ Erreur géocodage:", err); }
+    showToast('🔍 Localisation précise de votre adresse...');
+    const coords = await geocodeAddressMapbox(newAddress);
+    if (coords) {
+      newLat = coords.lat;
+      newLng = coords.lng;
+      if (addrField) { addrField._lat = newLat; addrField._lng = newLng; }
+      showToast('✅ Adresse localisée avec précision !');
+    } else {
+      showToast('⚠️ Adresse introuvable sur la carte. Tarif de base (7$) appliqué.');
+    }
   }
   
   const updateData = { name: newName, phone: newPhone, address: newAddress };
@@ -755,13 +754,16 @@ async function saveProfile(e) {
     const { error } = await supabaseClient.from('profiles').update(updateData).eq('id', currentUser.id);
     if (error) throw error;
     
-    currentUser.name = newName; currentUser.phone = newPhone; currentUser.address = newAddress;
+    currentUser.name = newName; 
+    currentUser.phone = newPhone; 
+    currentUser.address = newAddress;
     if (updateData.lat) currentUser.lat = parseFloat(updateData.lat);
     if (updateData.lng) currentUser.lng = parseFloat(updateData.lng);
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
     
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
     closeModal('edit-profile-modal');
     showToast('✅ Profil sauvegardé !');
+    
     if (typeof updateCart === 'function') updateCart();
     if (typeof updateDeliveryAddress === 'function') updateDeliveryAddress();
   } catch (err) {

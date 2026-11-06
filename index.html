@@ -67,8 +67,9 @@
 </nav>
 <nav id="nav-store" style="display:none">
 <ul>
-<li><a onclick="goToMyStore()">Mon Commerce</a></li>
-<li><a onclick="showStoreCategories()">Catégories</a></li>
+
+<a onclick="switchView('view-store'); showStoreDashboard();">Mon Commerce</a>
+  <li><a onclick="showStoreCategories()">Catégories</a></li>
 <li><a onclick="showStoreProducts()">Produits</a></li>
 </ul>
 </nav>
@@ -589,8 +590,9 @@ RuralGo offre un service de cueillette et livraison de produits essentiels des c
 <div class="form-group"><label>📍 Province *</label><input type="text" id="rs-province" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;font-weight:bold;"></div>
 <div class="form-group"><label>🏠 Adresse *</label>
 <div class="autocomplete-wrapper">
-<input type="text" id="rs-address" class="autocomplete-input" required autocomplete="off">
+<input type="text" id="rs-address" class="autocomplete-input" oninput="searchAddress(this.value, 'rs-address-suggestions', 'rs-address')" required autocomplete="off">
 <div id="rs-address-suggestions" class="autocomplete-suggestions"></div>
+  <div id="rs-address-suggestions" class="autocomplete-suggestions"></div>
 </div>
 <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('rs-address')">📍 GPS</button>
 </div>
@@ -695,8 +697,8 @@ RuralGo offre un service de cueillette et livraison de produits essentiels des c
 <div class="form-group"><label>📍 Province</label><input type="text" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;font-weight:bold;"></div>
 <div class="form-group"><label>Adresse</label>
 <div class="autocomplete-wrapper">
-<input type="text" id="ep-address" class="autocomplete-input" autocomplete="off">
-<div id="ep-address-suggestions" class="autocomplete-suggestions"></div>
+<input type="text" id="ep-address" class="autocomplete-input" oninput="searchAddress(this.value, 'ep-address-suggestions', 'ep-address')" autocomplete="off">
+<div id="ep-address-suggestions" class="autocomplete-suggestions"></div><div id="ep-address-suggestions" class="autocomplete-suggestions"></div>
 </div>
 <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('ep-address')">📍 GPS</button>
 </div>

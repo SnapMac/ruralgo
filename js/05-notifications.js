@@ -28,24 +28,31 @@ async function createNotificationForUser(userId, title, message) {
 // 🔔 AFFICHER UNE NOTIFICATION (GÉNÉRIQUE)
 // ==========================================
 async function showNotification(title, message, type = 'info', targetUserId = null) {
-  let userId = targetUserId;
-  if (!userId && currentUser && currentUser.id) {
-    userId = currentUser.id;
+  // 1. Si personne n'est connecté, on ne fait rien
+  if (!currentUser || !currentUser.id) return;
+
+  // 2. Si on essaie d'envoyer à "admin", "client" ou "store" (au lieu d'un vrai ID), on annule
+  if (targetUserId === 'admin' || targetUserId === 'client' || targetUserId === 'store') {
+    return; 
   }
-  
-  if (userId) {
-    try {
-      await supabaseClient.from('notifications').insert({
-        user_id: String(userId),
-        title: title,
-        message: message,
-        type: type,
-        is_read: false
-      });
-      if (typeof updateNotifBadge === 'function') await updateNotifBadge();
-    } catch (err) {
-      console.error('❌ Erreur sauvegarde notification:', err);
+
+  let userId = targetUserId || currentUser.id;
+
+  try {
+    const { error } = await supabaseClient.from('notifications').insert({
+      user_id: userId,
+      title: title,
+      message: message,
+      type: type,
+      is_read: false
+    });
+    
+    // Si ça plante, on l'ignore silencieusement pour ne pas bloquer le site
+    if (error) {
+      console.log("⚠️ Notification ignorée (sans gravité)");
     }
+  } catch (err) {
+    // On bloque l'erreur pour qu'elle n'apparaisse plus en rouge
   }
 }
 

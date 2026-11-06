@@ -31,7 +31,7 @@ console.log("🔄 [01-config.js] Début du chargement...");
 // ==========================================
 const SUPABASE_URL = 'https://shopfllntsigjmayqrre.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNob3BmbGxudHNpZ2ptYXlxcnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMTE2OTMsImV4cCI6MjEwNjc4NzY5M30.O7ybJqVhqsGoyrnOYiJRo-zlg89Wa0wQLxP3xsD11wU';
-
+const MAPBOX_TOKEN = 'pk.eyJ1Ijoic25hcG1hYyIsImEiOiJjbXc0N2R1cTQwMDI4MzBxN25hYWthNWZ5In0.gloD8vlMzLZ7Uexuq6hguQ.4g7k5X8r1n6QK8f5lX7g1A';
 if (typeof window.supabase === 'undefined') {
   console.error("❌ [01-config.js] ERREUR : La librairie Supabase n'est pas chargée !");
 } else {

@@ -9,7 +9,6 @@ console.log("🔄 [03-utils.js] Chargement des utilitaires...");
 // ==========================================
 // 🔔 TOAST (MESSAGE POPUP)
 // ==========================================
-// ✅ NOUVELLE VERSION : Toast + Notification automatique
 function showToast(message, type = 'info', createNotification = true) {
   // 1. Afficher le toast visuel
   const toast = document.getElementById('toast');
@@ -23,18 +22,10 @@ function showToast(message, type = 'info', createNotification = true) {
   
   // 2. Créer automatiquement une notification dans la cloche
   if (createNotification && currentUser && currentUser.id) {
-    // Filtrer les messages qui ne doivent pas créer de notifications
-    const skipMessages = [
-      '⏳', // Messages de chargement
-      '🔄', // Messages de synchronisation
-      '✅ [', // Messages système internes
-      '🔍 [DEBUG', // Messages de debug
-    ];
-    
+    const skipMessages = ['⏳', '🔄', '✅ [', '🔍 [DEBUG'];
     const shouldSkip = skipMessages.some(skip => message.startsWith(skip));
     
     if (!shouldSkip) {
-      // Déterminer le type de notification selon le message
       let notifType = 'info';
       if (message.includes('✅') || message.includes('succès')) notifType = 'success';
       else if (message.includes('❌') || message.includes('erreur')) notifType = 'error';
@@ -42,14 +33,8 @@ function showToast(message, type = 'info', createNotification = true) {
       else if (message.includes('📦') || message.includes('commande')) notifType = 'order';
       else if (message.includes('🚗') || message.includes('livraison')) notifType = 'delivery';
       
-      // Créer la notification (sans attendre, pour ne pas bloquer l'UI)
       if (typeof showNotification === 'function') {
-        showNotification(
-          'Notification', // Titre générique
-          message, // Le message du toast
-          notifType,
-          currentUser.id
-        ).catch(err => {
+        showNotification('Notification', message, notifType, currentUser.id).catch(err => {
           console.warn('⚠️ Erreur création notification:', err.message);
         });
       }
@@ -69,7 +54,6 @@ function openModal(id) {
 }
 
 function closeModal(modalId) {
-  console.log("❌ [MODAL] Fermeture :", modalId);
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.style.display = 'none';
@@ -77,7 +61,6 @@ function closeModal(modalId) {
   }
 }
 
-// Fermer la modale si on clique en dehors
 document.querySelectorAll('.modal-bg').forEach(m => {
   m.addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('show');
@@ -200,7 +183,6 @@ function formatMoney(amount) {
 // ==========================================
 function saveViewToHistory(viewId) {
   history.pushState({ view: viewId }, '', '#' + viewId);
-  console.log("💾 Historique mis à jour : ", viewId);
 }
 
 // ==========================================
@@ -287,192 +269,103 @@ function getPlanName(planId) {
   if (planId === 4) return '👑 Partenaire Plus (89.99$)';
   return 'Non spécifié';
 }
+
 // ==========================================
-// 🔍 RECHERCHE D'ADRESSE AMÉLIORÉE (API Photon - Plus rapide pour le Québec)
+// 🔍 RECHERCHE D'ADRESSE AVEC MAPBOX (Précis pour le Québec)
 // ==========================================
 async function searchAddress(query, suggestionsId, inputId) {
   const suggestions = document.getElementById(suggestionsId);
-  if (!suggestions) return;
+  if (!suggestions || query.length < 3) {
+    if (suggestions) suggestions.style.display = 'none';
+    return;
+  }
   
   try {
-    // ✅ API Photon : Plus rapide et précise pour le Canada/Québec
-    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=fr&lat=46.3767&lon=-75.9653`;
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&country=ca&language=fr&limit=5&types=address,place`;
     const response = await fetch(url);
     const data = await response.json();
     
-    if (!data || !data.features || data.features.length === 0) {
-      // Fallback sur Nominatim si Photon échoue
-      return await searchAddressFallback(query, suggestionsId, inputId);
+    if (!data.features || data.features.length === 0) {
+      suggestions.innerHTML = '<div style="padding:1rem; color:#666; text-align:center;">Aucune adresse trouvée</div>';
+      suggestions.style.display = 'block';
+      return;
     }
     
-    suggestions.innerHTML = data.features.map((item, index) => {
-      const coords = item.geometry.coordinates; // [lon, lat]
-      const props = item.properties;
-      
-      // Construire une adresse lisible
-      let mainText = props.name || '';
-      let subText = '';
-      
-      if (props.street) {
-        mainText = `${props.housenumber || ''} ${props.street}`.trim();
-      }
-      
-      const city = props.city || props.town || props.village || props.district || '';
-      const postcode = props.postcode || '';
-      const state = props.state || 'QC';
-      subText = `${city}${postcode ? ', ' + postcode : ''}, ${state}`.trim();
-      
-      if (!mainText && props.label) {
-        mainText = props.label;
-      }
-      
+    suggestions.innerHTML = data.features.map((feature, index) => {
+      const mainText = feature.text || '';
+      const placeName = feature.place_name || '';
       return `
-        <div class="autocomplete-item" onclick="selectAddressPhoton('${inputId}', '${suggestionsId}', ${index})" 
-             style="padding:0.8rem; cursor:pointer; border-bottom:1px solid #eee; display:flex; align-items:center; gap:0.8rem; transition:background 0.2s;"
-             onmouseover="this.style.background='#f5f1e8'"
-             onmouseout="this.style.background='white'">
+        <div class="autocomplete-item" onclick="selectAddressMapbox('${inputId}', '${suggestionsId}', ${index})" 
+             style="padding:0.8rem; cursor:pointer; border-bottom:1px solid #eee; display:flex; align-items:center; gap:0.8rem;"
+             onmouseover="this.style.background='#f5f1e8'" onmouseout="this.style.background='white'">
           <div style="font-size:1.3rem;">📍</div>
           <div style="flex:1;">
-            <div style="font-weight:600; color:#0a1929; font-size:0.95rem;">${mainText}</div>
-            ${subText ? `<div style="font-size:0.8rem; color:#6b7280; margin-top:0.2rem;">${subText}</div>` : ''}
+            <div style="font-weight:600; color:#0a1929;">${mainText}</div>
+            <div style="font-size:0.8rem; color:#6b7280;">${placeName}</div>
           </div>
         </div>
       `;
     }).join('');
     
-    // Stocker les données pour le clic
     suggestions._data = data.features.map(f => ({
-      display_name: f.properties.label || f.properties.name,
-      lat: f.geometry.coordinates[1],
-      lon: f.geometry.coordinates[0]
+      display_name: f.place_name,
+      lat: f.center[1],
+      lng: f.center[0]
     }));
-    
+    suggestions.style.display = 'block';
   } catch (error) {
-    console.error("❌ Erreur recherche adresse:", error);
-    suggestions.innerHTML = '<div style="padding:1rem; color:#ef4444; text-align:center;">❌ Erreur de recherche</div>';
+    console.error("❌ Erreur Mapbox:", error);
   }
 }
 
-// Fallback sur Nominatim si Photon échoue
-async function searchAddressFallback(query, suggestionsId, inputId) {
+// ==========================================
+// 📍 QUAND ON CLIQUE SUR UNE ADRESSE MAPBOX
+// ==========================================
+function selectAddressMapbox(inputId, suggestionsId, index) {
   const suggestions = document.getElementById(suggestionsId);
+  const input = document.getElementById(inputId);
+  const data = suggestions._data;
+  
+  if (!data || !data[index]) return;
+  
+  const item = data[index];
+  input.value = item.display_name;
+  
+  // ✅ ON FORCE LES NOMBRES (pas de texte !)
+  input._lat = parseFloat(item.lat);
+  input._lng = parseFloat(item.lng);
+  
+  suggestions.style.display = 'none';
+  showToast('✅ Adresse précise sélectionnée !');
+  
+  if (currentUser && currentUser.role === 'client' && typeof updateCart === 'function') {
+    updateCart();
+  }
+}
+
+// ==========================================
+// 🗺️ GÉOCODAGE AUTOMATIQUE (Si on tape Entrée sans cliquer)
+// ==========================================
+async function geocodeAddressMapbox(address) {
+  if (!address || address.length < 5) return null;
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ca&limit=5&addressdetails=1&accept-language=fr&viewbox=-77,45,-75,47&bounded=1`;
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address + ', Québec, Canada')}.json?access_token=${MAPBOX_TOKEN}&country=ca&language=fr&limit=1&types=address`;
     const response = await fetch(url);
     const data = await response.json();
     
-    if (!data || data.length === 0) {
-      suggestions.innerHTML = '<div style="padding:1rem; color:#666; text-align:center;">Aucune adresse trouvée</div>';
-      return;
+    if (data.features && data.features.length > 0) {
+      return { 
+        lat: parseFloat(data.features[0].center[1]), 
+        lng: parseFloat(data.features[0].center[0]) 
+      };
     }
-    
-    suggestions.innerHTML = data.map((item, index) => `
-      <div class="autocomplete-item" onclick="selectAddress('${inputId}', '${suggestionsId}', ${index})"
-           style="padding:0.8rem; cursor:pointer; border-bottom:1px solid #eee; display:flex; align-items:center; gap:0.8rem; transition:background 0.2s;"
-           onmouseover="this.style.background='#f5f1e8'"
-           onmouseout="this.style.background='white'">
-        <div style="font-size:1.3rem;">📍</div>
-        <div style="flex:1;">
-          <div style="font-weight:600; color:#0a1929; font-size:0.95rem;">${item.display_name.split(',')[0]}</div>
-          <div style="font-size:0.8rem; color:#6b7280; margin-top:0.2rem;">${item.display_name.split(',').slice(1).join(',').trim()}</div>
-        </div>
-      </div>
-    `).join('');
-    
-    suggestions._data = data;
-  } catch (error) {
-    console.error("❌ Erreur fallback:", error);
-  }
-}
-
-// ==========================================
-// 📍 SÉLECTION D'ADRESSE PHOTON (Nouvelle version)
-// ==========================================
-function selectAddressPhoton(inputId, suggestionsId, index) {
-  const suggestions = document.getElementById(suggestionsId);
-  const input = document.getElementById(inputId);
-  const data = suggestions._data;
-  
-  if (!data || !data[index]) return;
-  
-  const item = data[index];
-  input.value = item.display_name;
-  
-  // ✅ STOCKER LES GPS EN NOMBRES (pas en texte !)
-  if (item.lat && item.lon) {
-    input._lat = parseFloat(item.lat);
-    input._lng = parseFloat(item.lon);
-    console.log("✅ GPS Photon stockés :", input._lat, input._lng);
-  }
-  
-  suggestions.classList.remove('show');
-  suggestions.style.display = 'none';
-  showToast('✅ Adresse sélectionnée !');
-  
-  // Mettre à jour le panier si client connecté
-  if (currentUser && currentUser.role === 'client' && typeof updateCart === 'function') {
-    updateCart();
-  }
-}
-// ==========================================
-// 📍 SÉLECTION D'ADRESSE PHOTON (Nouvelle version)
-// ==========================================
-function selectAddressPhoton(inputId, suggestionsId, index) {
-  const suggestions = document.getElementById(suggestionsId);
-  const input = document.getElementById(inputId);
-  const data = suggestions._data;
-  
-  if (!data || !data[index]) return;
-  
-  const item = data[index];
-  input.value = item.display_name;
-  
-  // ✅ STOCKER LES GPS EN NOMBRES (pas en texte !)
-  if (item.lat && item.lon) {
-    input._lat = parseFloat(item.lat);
-    input._lng = parseFloat(item.lon);
-    console.log("✅ GPS Photon stockés :", input._lat, input._lng);
-  }
-  
-  suggestions.classList.remove('show');
-  suggestions.style.display = 'none';
-  showToast('✅ Adresse sélectionnée !');
-  
-  // Mettre à jour le panier si client connecté
-  if (currentUser && currentUser.role === 'client' && typeof updateCart === 'function') {
-    updateCart();
-  }
-}
-// ==========================================
-// 📍 SÉLECTION D'ADRESSE NOMINATIM (Ancienne version, garde pour fallback)
-// ==========================================
-function selectAddress(inputId, suggestionsId, index) {
-  const suggestions = document.getElementById(suggestionsId);
-  const input = document.getElementById(inputId);
-  const data = suggestions._data;
-  
-  if (!data || !data[index]) return;
-  
-  const item = data[index];
-  input.value = item.display_name;
-  
-  if (item.lat && item.lon) {
-    input._lat = parseFloat(item.lat);
-    input._lng = parseFloat(item.lon);
-    console.log("✅ GPS Nominatim stockés :", input._lat, input._lng);
-  }
-  
-  suggestions.classList.remove('show');
-  suggestions.style.display = 'none';
-  showToast('✅ Adresse sélectionnée !');
-  
-  if (currentUser && currentUser.role === 'client' && typeof updateCart === 'function') {
-    updateCart();
+    return null;
+  } catch (err) {
+    return null;
   }
 }
 
 // ==========================================
 // ✅ FIN DU CHARGEMENT
 // ==========================================
-
 console.log("✅ [03-utils.js] Utilitaires chargés avec succès !");

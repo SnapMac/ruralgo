@@ -577,8 +577,9 @@ function openEditStoreInfoModal() {
         <div class="form-group">
           <label>📍 Adresse du commerce *</label>
           <div class="autocomplete-wrapper">
-            <input type="text" id="esi-address" class="autocomplete-input" required value="${currentUser.storeAddress || ''}" autocomplete="off">
-            <div id="esi-address-suggestions" class="autocomplete-suggestions"></div>
+<input type="text" id="esi-address" class="autocomplete-input" oninput="searchAddress(this.value, 'esi-address-suggestions', 'esi-address')" required value="${currentUser.storeAddress || ''}" autocomplete="off">
+<div id="esi-address-suggestions" class="autocomplete-suggestions"></div>
+          <div id="esi-address-suggestions" class="autocomplete-suggestions"></div>
           </div>
           <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('esi-address')">📍 Utiliser GPS</button>
         </div>
@@ -610,21 +611,16 @@ async function saveStoreInfo(e) {
   let newLat = addressInput?._lat || null;
   let newLng = addressInput?._lng || null;
   
-  // 🔥 GÉOCODAGE AUTO SI GPS MANQUANTS
+  // 🔥 SI PAS DE GPS, ON DEMANDE À MAPBOX
   if ((!newLat || !newLng) && newAddress && newAddress.length > 5) {
-    showToast('🔍 Localisation du commerce...');
-    try {
-      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(newAddress + ', Québec, Canada')}&limit=1&lang=fr`;
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data && data.features && data.features.length > 0) {
-        const coords = data.features[0].geometry.coordinates;
-        newLat = parseFloat(coords[1]);
-        newLng = parseFloat(coords[0]);
-        if (addressInput) { addressInput._lat = newLat; addressInput._lng = newLng; }
-        showToast('✅ Commerce localisé !');
-      }
-    } catch (err) { console.warn("⚠️ Erreur géocodage commerce:", err); }
+    showToast('🔍 Localisation précise du commerce...');
+    const coords = await geocodeAddressMapbox(newAddress);
+    if (coords) {
+      newLat = coords.lat;
+      newLng = coords.lng;
+      if (addressInput) { addressInput._lat = newLat; addressInput._lng = newLng; }
+      showToast('✅ Commerce localisé avec précision !');
+    }
   }
   
   const updateData = { name: newName, address: newAddress, phone: newPhone };
@@ -638,7 +634,8 @@ async function saveStoreInfo(e) {
     if (error) throw error;
     
     if (currentUser) {
-      currentUser.storeName = newName; currentUser.storeAddress = newAddress;
+      currentUser.storeName = newName; 
+      currentUser.storeAddress = newAddress;
       if (updateData.lat) currentUser.storeLat = parseFloat(updateData.lat);
       if (updateData.lng) currentUser.storeLng = parseFloat(updateData.lng);
     }
@@ -656,7 +653,6 @@ async function saveStoreInfo(e) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
-
 // ==========================================
 // 👤 MODIFIER LES INFOS DU RESPONSABLE
 // ==========================================
