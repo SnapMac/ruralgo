@@ -595,7 +595,7 @@ function openEditStoreInfoModal() {
     </div>
   `;
   document.body.appendChild(modal);
-  setTimeout(() => initAutocomplete('esi-address', 'esi-address-suggestions'), 100);
+  //setTimeout(() => initAutocomplete('esi-address', 'esi-address-suggestions'), 100);
 }
 
 // ==========================================

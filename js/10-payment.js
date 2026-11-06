@@ -307,6 +307,8 @@ async function load() {
 // ==========================================
 // 🎨 ANIMATIONS AU SCROLL
 // ==========================================
+
+
 function initScrollAnimations() {
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -323,6 +325,8 @@ function initScrollAnimations() {
 // ==========================================
 // 🔄 AUTOCOMPLETE ADRESSE
 // ==========================================
+
+/*
 function initAutocomplete(inputId, suggestionsId) {
   const input = document.getElementById(inputId);
   const suggestions = document.getElementById(suggestionsId);
@@ -435,7 +439,7 @@ function geolocateAddress(fieldId) {
     showToast('❌ Permission refusée');
   }, { enableHighAccuracy: true, timeout: 10000 });
 }
-
+*/ 
 // ==========================================
 // 🔄 GESTION DU BOUTON RETOUR NAVIGATEUR
 // ==========================================
