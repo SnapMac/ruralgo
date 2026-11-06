@@ -773,5 +773,123 @@ document.addEventListener('DOMContentLoaded', function() {
   }).addTo(map);
 });
 </script>
+<!-- ========================================== -->
+<!-- 📝 MODALE ADMIN : ÉDITER UN CLIENT -->
+<!-- ========================================== -->
+<div class="modal-bg" id="admin-edit-client-modal">
+  <div class="modal" style="max-width: 500px;">
+    <h2>✏️ Modifier le Client</h2>
+    <form onsubmit="saveAdminClient(event)">
+      <input type="hidden" id="admin-client-id">
+      
+      <div class="form-group">
+        <label>Nom complet</label>
+        <input type="text" id="admin-client-name" required>
+      </div>
+      
+      <div class="form-group">
+        <label>Courriel</label>
+        <input type="email" id="admin-client-email" required>
+      </div>
+      
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input type="tel" id="admin-client-phone" required>
+      </div>
+      
+      <!-- 🔥 STYLE FORCÉ POUR L'AFFICHAGE DES SUGGESTIONS -->
+      <div class="form-group" style="position: relative;">
+        <label>Adresse (Tapez au moins 4 caractères, ex: Maniwaki)</label>
+        <input type="text" id="admin-client-address" class="autocomplete-input" oninput="searchAddress(this.value, 'admin-client-address-sugg', 'admin-client-address')" placeholder="Ex: 100 rue Principale, Maniwaki" autocomplete="off">
+        <div id="admin-client-address-sugg" class="autocomplete-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 99999; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: none; max-height: 200px; overflow-y: auto;"></div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn-sm btn-gray" onclick="closeModal('admin-edit-client-modal')">Annuler</button>
+        <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 🏪 MODALE ADMIN : ÉDITER UN COMMERCE -->
+<!-- ========================================== -->
+<div class="modal-bg" id="admin-edit-store-modal">
+  <div class="modal" style="max-width: 500px;">
+    <h2>✏️ Modifier le Commerce</h2>
+    <form onsubmit="saveAdminStore(event)">
+      <input type="hidden" id="admin-store-id">
+      
+      <div class="form-group">
+        <label>Nom du commerce</label>
+        <input type="text" id="admin-store-name" required>
+      </div>
+      
+      <div class="form-group">
+        <label>Type de commerce</label>
+        <select id="admin-store-type" class="form-control" required>
+          <option value="general">Général</option>
+          <option value="restaurant">Restaurant</option>
+          <option value="epicerie">Épicerie</option>
+          <option value="pharmacie">Pharmacie</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input type="tel" id="admin-store-phone" required>
+      </div>
+      
+      <!-- 🔥 STYLE FORCÉ POUR L'AFFICHAGE DES SUGGESTIONS -->
+      <div class="form-group" style="position: relative;">
+        <label>Adresse du commerce (Tapez au moins 4 caractères)</label>
+        <input type="text" id="admin-store-address" class="autocomplete-input" oninput="searchAddress(this.value, 'admin-store-address-sugg', 'admin-store-address')" placeholder="Ex: 450 rue Principale, Maniwaki" autocomplete="off">
+        <div id="admin-store-address-sugg" class="autocomplete-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 99999; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: none; max-height: 200px; overflow-y: auto;"></div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn-sm btn-gray" onclick="closeModal('admin-edit-store-modal')">Annuler</button>
+        <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 🚗 MODALE ADMIN : ÉDITER UN LIVREUR -->
+<!-- ========================================== -->
+<div class="modal-bg" id="admin-edit-driver-modal">
+  <div class="modal" style="max-width: 500px;">
+    <h2>✏️ Modifier le Livreur</h2>
+    <form onsubmit="saveAdminDriver(event)">
+      <input type="hidden" id="admin-driver-id">
+      
+      <div class="form-group">
+        <label>Nom complet</label>
+        <input type="text" id="admin-driver-name" required>
+      </div>
+      
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input type="tel" id="admin-driver-phone" required>
+      </div>
+      
+      <!-- 🔥 STYLE FORCÉ POUR L'AFFICHAGE DES SUGGESTIONS -->
+      <div class="form-group" style="position: relative;">
+        <label>Adresse (Tapez au moins 4 caractères)</label>
+        <input type="text" id="admin-driver-address" class="autocomplete-input" oninput="searchAddress(this.value, 'admin-driver-address-sugg', 'admin-driver-address')" placeholder="Ex: 10 rue des Érables, Maniwaki" autocomplete="off">
+        <div id="admin-driver-address-sugg" class="autocomplete-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 99999; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: none; max-height: 200px; overflow-y: auto;"></div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn-sm btn-gray" onclick="closeModal('admin-edit-driver-modal')">Annuler</button>
+        <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 </body>
 </html>

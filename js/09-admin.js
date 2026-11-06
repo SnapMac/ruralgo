@@ -236,25 +236,83 @@ function openStoreModal() {
   setTimeout(() => initAutocomplete('store-addr', 'store-addr-suggestions'), 100);
 }
 
-function editStore(id) {
-  const s = stores.find(x => String(x.id) === String(id));
-  if (!s) return;
-  document.getElementById('store-modal-title').textContent = '✏️ Modifier';
-  document.getElementById('store-id').value = s.id;
-  document.getElementById('store-name').value = s.name;
-  document.getElementById('store-type').value = s.type;
-  document.getElementById('store-addr').value = s.address;
-  document.getElementById('store-phone').value = s.phone || '';
-  document.getElementById('store-status').value = s.status;
-  selectedStoreIcon = s.icon;
-  buildIconPicker('store-icon-picker', 'store-icon');
-  setTimeout(() => {
-    document.querySelectorAll('#store-icon-picker .icon-option').forEach(o => {
-      if (o.dataset.icon === s.icon) o.classList.add('selected');
-    });
-    initAutocomplete('store-addr', 'store-addr-suggestions');
-  }, 50);
-  openModal('store-modal');
+// ==========================================
+// 📝 ADMIN : ÉDITER UN COMMERCE (Avec Mapbox)
+// ==========================================
+// ==========================================
+// 📝 ADMIN : ÉDITER UN COMMERCE (Version Robuste)
+// ==========================================
+function editStore(storeId) {
+  console.log("🔍 [ADMIN] Recherche du commerce ID :", storeId);
+  
+  // 1. On cherche d'abord par 'id'
+  let store = stores.find(s => String(s.id) === String(storeId));
+  
+  // 2. Si pas trouvé, on cherche par 'owner_id' (souvent utilisé comme lien)
+  if (!store) {
+    store = stores.find(s => String(s.owner_id) === String(storeId));
+  }
+
+  // 3. Si toujours pas trouvé, on affiche une erreur claire
+  if (!store) {
+    console.error("❌ [ADMIN] Commerce introuvable. Liste des stores disponibles :", stores);
+    return showToast('❌ Commerce introuvable dans la liste. Vérifiez la console (F12).');
+  }
+
+  console.log("✅ [ADMIN] Commerce trouvé :", store.name);
+
+  // Remplir les champs du formulaire
+  // Note : On utilise store.id si c'est la clé primaire, sinon store.owner_id
+  const targetId = store.id || store.owner_id;
+  
+  document.getElementById('admin-store-id').value = targetId;
+  document.getElementById('admin-store-name').value = store.name || '';
+  document.getElementById('admin-store-type').value = store.type || 'general';
+  document.getElementById('admin-store-phone').value = store.phone || '';
+  
+  const addrInput = document.getElementById('admin-store-address');
+  addrInput.value = store.address || '';
+  
+  // Réinitialiser les GPS cachés
+  addrInput._lat = store.lat || null;
+  addrInput._lng = store.lng || null;
+
+  openModal('admin-edit-store-modal');
+}
+
+// ==========================================
+// 💾 ADMIN : SAUVEGARDER UN COMMERCE (Avec GPS)
+// ==========================================
+async function saveAdminStore(event) {
+  event.preventDefault();
+  const storeId = document.getElementById('admin-store-id').value;
+  const addrInput = document.getElementById('admin-store-address');
+
+  const updateData = {
+    name: document.getElementById('admin-store-name').value.trim(),
+    type: document.getElementById('admin-store-type').value,
+    phone: document.getElementById('admin-store-phone').value.trim(),
+    address: addrInput.value.trim()
+  };
+
+  // 🔥 EXTRACTION DES GPS MAPBOX (Force le format nombre)
+  if (addrInput._lat && addrInput._lng) {
+    updateData.lat = parseFloat(addrInput._lat);
+    updateData.lng = parseFloat(addrInput._lng);
+  }
+
+  try {
+    // ⚠️ NOTE : Si ta table utilise 'owner_id' comme clé principale, remplace 'id' par 'owner_id' ci-dessous
+    const { error } = await supabaseClient.from('stores').update(updateData).eq('id', storeId);
+    if (error) throw error;
+
+    closeModal('admin-edit-store-modal');
+    showToast('✅ Commerce mis à jour avec succès !');
+    if (typeof loadAdminData === 'function') loadAdminData();
+  } catch (err) {
+    console.error('❌ Erreur mise à jour commerce:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
 }
 
 async function saveStore(e) {
@@ -593,8 +651,59 @@ function viewClientDetails(id) {
   document.body.appendChild(modal);
 }
 
+// ==========================================
+// 📝 ADMIN : ÉDITER UN CLIENT (Avec Mapbox)
+// ==========================================
 function editClient(clientId) {
-  showToast('✏️ Fonctionnalité à venir');
+  const client = clients.find(c => c.id === clientId);
+  if (!client) return showToast('❌ Client introuvable');
+
+  document.getElementById('admin-client-id').value = client.id;
+  document.getElementById('admin-client-name').value = client.name || '';
+  document.getElementById('admin-client-email').value = client.email || '';
+  document.getElementById('admin-client-phone').value = client.phone || '';
+  
+  const addrInput = document.getElementById('admin-client-address');
+  addrInput.value = client.address || '';
+  // Réinitialiser les GPS cachés au cas où
+  addrInput._lat = client.lat || null;
+  addrInput._lng = client.lng || null;
+
+  openModal('admin-edit-client-modal');
+}
+
+// ==========================================
+// 💾 ADMIN : SAUVEGARDER UN CLIENT (Avec GPS)
+// ==========================================
+async function saveAdminClient(event) {
+  event.preventDefault();
+  const clientId = document.getElementById('admin-client-id').value;
+  const addrInput = document.getElementById('admin-client-address');
+
+  const updateData = {
+    name: document.getElementById('admin-client-name').value.trim(),
+    email: document.getElementById('admin-client-email').value.trim(),
+    phone: document.getElementById('admin-client-phone').value.trim(),
+    address: addrInput.value.trim()
+  };
+
+  // 🔥 EXTRACTION DES GPS MAPBOX (Force le format nombre)
+  if (addrInput._lat && addrInput._lng) {
+    updateData.lat = parseFloat(addrInput._lat);
+    updateData.lng = parseFloat(addrInput._lng);
+  }
+
+  try {
+    const { error } = await supabaseClient.from('profiles').update(updateData).eq('id', clientId);
+    if (error) throw error;
+
+    closeModal('admin-edit-client-modal');
+    showToast('✅ Client mis à jour avec succès !');
+    if (typeof loadAdminData === 'function') loadAdminData(); // Rafraîchir la liste
+  } catch (err) {
+    console.error('❌ Erreur mise à jour client:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
 }
 
 async function confirmDeleteClient(id) {
@@ -667,36 +776,56 @@ function viewDriverDetails(id) {
   document.body.appendChild(modal);
 }
 
-function editDriver(id) {
-  const d = drivers.find(x => String(x.id) === String(id));
-  if (!d) { showToast('❌ Livreur introuvable'); return; }
+// ==========================================
+// 📝 ADMIN : ÉDITER UN LIVREUR (Avec Mapbox)
+// ==========================================
+function editDriver(driverId) {
+  const driver = drivers.find(d => d.id === driverId);
+  if (!driver) return showToast('❌ Livreur introuvable');
+
+  document.getElementById('admin-driver-id').value = driver.id;
+  document.getElementById('admin-driver-name').value = driver.name || '';
+  document.getElementById('admin-driver-phone').value = driver.phone || '';
   
-  const old = document.getElementById('edit-driver-modal');
-  if (old) old.remove();
-  
-  const vehicles = ['Voiture', 'Camionnette', 'Pick-up', 'VTT/Quad', 'Motoneige'];
-  const modal = document.createElement('div');
-  modal.className = 'modal-bg show';
-  modal.id = 'edit-driver-modal';
-  modal.innerHTML = `
-    <div class="modal">
-      <h2 style="color:#0a1929;margin-bottom:1rem">✏️ Modifier le livreur</h2>
-      <form onsubmit="saveDriverEdit(event, '${id}')">
-        <div class="form-group"><label>👤 Nom complet</label><input type="text" id="ed-name" value="${d.name || ''}" required></div>
-        <div class="form-group"><label>📱 Téléphone</label><input type="tel" id="ed-phone" value="${d.phone || ''}"></div>
-        <div class="form-group"><label>🚙 Véhicule</label><select id="ed-vehicle">${vehicles.map(v => `<option value="${v}" ${d.vehicle === v ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
-        <div class="form-group"><label>📌 Statut</label><select id="ed-status">
-          <option value="approved" ${d.status === 'approved' ? 'selected' : ''}>✅ Approuvé</option>
-          <option value="pending" ${d.status === 'pending' ? 'selected' : ''}>⏳ En attente</option>
-          <option value="rejected" ${d.status === 'rejected' ? 'selected' : ''}>❌ Refusé</option>
-        </select></div>
-        <div class="modal-actions">
-          <button type="button" class="btn-sm btn-gray" onclick="document.getElementById('edit-driver-modal').remove()">Annuler</button>
-          <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
-        </div>
-      </form>
-    </div>`;
-  document.body.appendChild(modal);
+  const addrInput = document.getElementById('admin-driver-address');
+  addrInput.value = driver.address || '';
+  addrInput._lat = driver.lat || null;
+  addrInput._lng = driver.lng || null;
+
+  openModal('admin-edit-driver-modal');
+}
+
+// ==========================================
+// 💾 ADMIN : SAUVEGARDER UN LIVREUR (Avec GPS)
+// ==========================================
+async function saveAdminDriver(event) {
+  event.preventDefault();
+  const driverId = document.getElementById('admin-driver-id').value;
+  const addrInput = document.getElementById('admin-driver-address');
+
+  const updateData = {
+    name: document.getElementById('admin-driver-name').value.trim(),
+    phone: document.getElementById('admin-driver-phone').value.trim(),
+    address: addrInput.value.trim()
+  };
+
+  // 🔥 EXTRACTION DES GPS MAPBOX (Force le format nombre)
+  if (addrInput._lat && addrInput._lng) {
+    updateData.lat = parseFloat(addrInput._lat);
+    updateData.lng = parseFloat(addrInput._lng);
+  }
+
+  try {
+    const { error } = await supabaseClient.from('profiles').update(updateData).eq('id', driverId);
+    if (error) throw error;
+
+    closeModal('admin-edit-driver-modal');
+    showToast('✅ Livreur mis à jour avec succès !');
+    if (typeof loadAdminData === 'function') loadAdminData();
+  } catch (err) {
+    console.error('❌ Erreur mise à jour livreur:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
 }
 
 async function saveDriverEdit(event, id) {

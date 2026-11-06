@@ -273,20 +273,28 @@ function getPlanName(planId) {
 // ==========================================
 // 🔍 RECHERCHE D'ADRESSE AVEC MAPBOX (Précis pour le Québec)
 // ==========================================
+// ==========================================
+// 🔍 RECHERCHE D'ADRESSE AVEC MAPBOX (Optimisé pour Maniwaki/Québec)
+// ==========================================
 async function searchAddress(query, suggestionsId, inputId) {
   const suggestions = document.getElementById(suggestionsId);
-  if (!suggestions || query.length < 3) {
+  
+  // 🔥 CHANGEMENT 1 : Attendre au moins 4 caractères pour éviter les recherches trop vagues ("100")
+  if (!suggestions || query.length < 4) {
     if (suggestions) suggestions.style.display = 'none';
     return;
   }
   
   try {
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&country=ca&language=fr&limit=5&types=address,place`;
+    // 🔥 CHANGEMENT 2 : Ajouter &proximity=-75.9653,46.3767 (Longitude, Latitude de Maniwaki)
+    // Cela force Mapbox à prioriser les résultats autour de cette zone.
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&country=ca&language=fr&limit=5&types=address,place&proximity=-75.9653,46.3767`;
+    
     const response = await fetch(url);
     const data = await response.json();
     
     if (!data.features || data.features.length === 0) {
-      suggestions.innerHTML = '<div style="padding:1rem; color:#666; text-align:center;">Aucune adresse trouvée</div>';
+      suggestions.innerHTML = '<div style="padding:1rem; color:#666; text-align:center;">Aucune adresse trouvée. Essayez d\'ajouter "Maniwaki"</div>';
       suggestions.style.display = 'block';
       return;
     }
