@@ -1354,3 +1354,313 @@ html, body {
     right: 1rem !important;
   }
 }
+
+/* ==========================================
+   ✨ BOUTONS AUTH (S'INSCRIRE / CONNEXION)
+   ========================================== */
+.auth-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.auth-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.3px;
+}
+
+/* Bouton S'INSCRIRE - Principal (orange/ambiant) */
+.auth-btn:first-child {
+  background: linear-gradient(135deg, #f5a623 0%, #f7c948 100%);
+  color: #0a1929;
+  box-shadow: 0 4px 15px rgba(245, 166, 35, 0.4);
+}
+
+.auth-btn:first-child:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(245, 166, 35, 0.6);
+}
+
+/* Bouton CONNEXION - Secondaire (transparent avec bordure) */
+.auth-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.auth-btn.secondary:hover {
+  background: white;
+  color: #0a1929;
+  border-color: white;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+}
+
+/* Petit effet "ripple" au clic */
+.auth-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Responsive mobile */
+@media (max-width: 768px) {
+  .auth-btn {
+    padding: 10px 18px;
+    font-size: 0.85rem;
+  }
+}
+/* ==========================================
+   🚀 HERO COMMERCIAL - VERSION PREMIUM
+   ========================================== */
+
+/* Animation d'entrée pour le titre */
+.hero-commercial h1 {
+  animation: slideUp 1s ease-out;
+}
+
+.hero-commercial .tagline {
+  animation: slideUp 1s ease-out 0.2s both;
+  font-size: 1.3rem;
+  color: #f5a623;
+  font-weight: 600;
+}
+
+.hero-commercial .subtitle {
+  animation: slideUp 1s ease-out 0.4s both;
+  font-size: 1.15rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 600px;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Boutons hero plus beaux */
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  animation: slideUp 1s ease-out 0.6s both;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #f5a623 0%, #f7c948 100%);
+  color: #0a1929;
+  padding: 16px 32px;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(245, 166, 35, 0.4);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 40px rgba(245, 166, 35, 0.6);
+}
+
+.btn-outline {
+  background: transparent;
+  color: white;
+  padding: 16px 32px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.btn-outline:hover {
+  background: white;
+  color: #0a1929;
+  border-color: white;
+  transform: translateY(-4px);
+}
+
+/* Hero trust badges avec animation */
+.hero-trust {
+  display: flex;
+  gap: 2rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+  animation: slideUp 1s ease-out 0.8s both;
+}
+
+.hero-trust div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px 18px;
+  border-radius: 50px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Illustration hero avec flottement */
+.hero-illustration {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+/* Badges flottants autour de l'illustration */
+.floating-badge {
+  position: absolute;
+  background: white;
+  padding: 12px 18px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  animation: floatBadge 4s ease-in-out infinite;
+}
+
+.badge-1 { top: 20%; left: -20px; animation-delay: 0s; }
+.badge-2 { top: 60%; right: -20px; animation-delay: 1s; }
+.badge-3 { bottom: 10%; left: 10%; animation-delay: 2s; }
+
+@keyframes floatBadge {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.badge-icon {
+  font-size: 1.5rem;
+}
+
+/* Stats banner avec effet glass */
+.stats-banner {
+  display: flex;
+  justify-content: space-around;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(10, 25, 41, 0.95), rgba(26, 58, 92, 0.95));
+  backdrop-filter: blur(20px);
+  border-top: 3px solid #f5a623;
+  border-bottom: 3px solid #f5a623;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.stat-item {
+  text-align: center;
+  color: white;
+}
+
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #f5a623;
+  line-height: 1;
+}
+
+.stat-number .accent {
+  color: #f7c948;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  opacity: 0.9;
+}
+
+/* ==========================================
+   🔴 EFFET SURVOL BOUTON DÉCONNEXION
+   ========================================== */
+.logout-btn {
+  /* On force la transition pour que ce soit fluide */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Quand la souris approche (Survol) */
+.logout-btn:hover {
+  background: #dc2626 !important; /* Rouge plus profond et intense */
+  transform: translateY(-3px) scale(1.05); /* Le bouton monte et grandit un peu */
+  box-shadow: 0 10px 25px rgba(220, 38, 38, 0.6) !important; /* Belle lueur rouge autour */
+  letter-spacing: 1px; /* Les lettres s'écartent légèrement (effet premium) */
+  cursor: pointer;
+}
+
+/* Quand on clique dessus (Clic) */
+.logout-btn:active {
+  transform: translateY(1px) scale(0.95) !important; /* Le bouton s'enfonce */
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.4) !important;
+  transition: all 0.1s ease !important; /* Réaction instantanée au clic */
+}
+
+/* ==========================================
+   ✏️ EFFET SURVOL BOUTON MODIFIER
+   ========================================== */
+button[onclick="openEditProfileModal()"] {
+  /* On prépare la transition pour que ce soit fluide */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Quand la souris approche (Survol) */
+button[onclick="openEditProfileModal()"]:hover {
+  background: #0a1929 !important; /* Le fond devient bleu foncé RuralGo */
+  color: white !important;        /* Le texte devient blanc */
+  border-color: #0a1929 !important;
+  transform: translateY(-2px);    /* Le bouton monte légèrement */
+  box-shadow: 0 6px 15px rgba(10, 25, 41, 0.3) !important; /* Ombre douce */
+}
+
+/* Quand on clique dessus (Clic) */
+button[onclick="openEditProfileModal()"]:active {
+  transform: translateY(1px) !important; /* Le bouton s'enfonce */
+  box-shadow: 0 2px 5px rgba(10, 25, 41, 0.2) !important;
+}
+/* ==========================================
+   💰 EFFET SURVOL PORTEFEUILLE (CAISSE VERT/BLEU)
+   ========================================== */
+#wallet-display {
+  /* On prépare la transition pour que ce soit fluide */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer;
+}
+
+/* Quand la souris approche (Survol) */
+#wallet-display:hover {
+  transform: translateY(-3px) scale(1.05) !important; /* Monte et grossit légèrement */
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.6) !important; /* Belle lueur verte intense */
+  filter: brightness(1.1); /* Devient un tout petit peu plus lumineux */
+}
+
+/* Quand on clique dessus (Clic) */
+#wallet-display:active {
+  transform: translateY(1px) scale(0.98) !important; /* S'enfonce comme un vrai bouton */
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4) !important;
+  transition: all 0.1s ease !important;
+}
