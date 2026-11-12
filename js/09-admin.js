@@ -50,42 +50,122 @@ function adminTab(tabName, btnElement) {
 // 📊 DASHBOARD PRINCIPAL
 // ==========================================
 function renderAdminDashboard() {
-  const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
-  const pendingCount = orders.filter(o => ['pending', 'confirmed', 'searching_driver'].includes(o.status)).length;
+  // ==========================================
+  // 1️⃣ CALCULS SÉCURISÉS DES DONNÉES RÉELLES
+  // ==========================================
+  // On utilise parseFloat pour éviter les bugs si le total est une string
+  const totalRevenue = orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
   
-  const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  const pendingStatuses = ['pending', 'confirmed', 'searching_driver'];
+  const pendingCount = orders.filter(o => pendingStatuses.includes(o.status)).length;
+
+  // ==========================================
+  // 2️⃣ MISE À JOUR DES COMPTEURS EXISTANTS
+  // ==========================================
+  // Cette fonction met à jour tes cartes blanches existantes sans casser le design
+  const el = (id, val) => { 
+    const e = document.getElementById(id); 
+    if (e) e.textContent = val; 
+  };
+
   el('stat-profiles', clients.length);
   el('stat-drivers', drivers.length);
   el('stat-stores', stores.length);
   el('stat-orders', orders.length);
   el('stat-revenue', totalRevenue.toFixed(2) + ' $');
   el('stat-pending', pendingCount);
-  
-  const recent = document.getElementById('admin-recent-orders');
-  if (!recent) return;
-  
-  const lastOrders = orders.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+
+  // ==========================================
+  // 3️⃣ AFFICHAGE DES COMMANDES RÉCENTES
+  // ==========================================
+  const recentContainer = document.getElementById('admin-recent-orders');
+  if (!recentContainer) return; // Si le conteneur n'existe pas, on arrête ici sans planter
+
+  // Trier les commandes par date (gère à la fois created_at et createdAt selon Supabase)
+  const lastOrders = [...orders].sort((a, b) => {
+    const dateA = new Date(a.created_at || a.createdAt || 0);
+    const dateB = new Date(b.created_at || b.createdAt || 0);
+    return dateB - dateA;
+  }).slice(0, 5); // On garde les 5 plus récentes
+
   if (lastOrders.length === 0) {
-    recent.innerHTML = '<p style="text-align:center;color:#666;padding:1rem">Aucune commande récente</p>';
+    recentContainer.innerHTML = `
+      <div style="text-align:center; padding:2rem; color:#6b7280; background:#f9fafb; border-radius:8px; border:1px dashed #d1d5db;">
+        <div style="font-size:2rem; margin-bottom:0.5rem;">📭</div>
+        <p style="margin:0;">Aucune commande pour le moment.</p>
+      </div>`;
     return;
   }
-  
-  recent.innerHTML = lastOrders.map(o => {
-    const st = STATUS_LABELS[o.status] || STATUS_LABELS.pending;
-    return `<div class="order-card" style="margin-bottom:0.5rem">
-      <div class="order-card-header">
-        <div><h4>#${o.orderNumber}</h4><p style="color:#666;font-size:0.85rem">${new Date(o.createdAt).toLocaleString('fr-CA')}</p></div>
-        <span class="status-badge ${st.class}">${st.label}</span>
+
+  // Génération des cartes de commandes
+  recentContainer.innerHTML = lastOrders.map(o => {
+    // Sécurisation des données (gère les noms en snake_case ou camelCase)
+    const orderNum = o.orderNumber || o.id || 'N/A';
+    const dateStr = o.created_at || o.createdAt;
+    const clientName = o.client_name || o.clientName || 'Client inconnu';
+    const storeName = o.store_name || o.storeName || 'Commerce inconnu';
+    const total = parseFloat(o.total || 0).toFixed(2);
+    const status = o.status || 'pending';
+
+    // Gestion des statuts (avec fallback si STATUS_LABELS n'est pas chargé)
+    let stLabel = status;
+    let stClass = 'badge-yellow'; 
+    
+    if (typeof STATUS_LABELS !== 'undefined' && STATUS_LABELS[status]) {
+      stLabel = STATUS_LABELS[status].label || status;
+      stClass = STATUS_LABELS[status].class || 'badge-yellow';
+    } else {
+      // Fallback intégré au cas où
+      const fallbackStatus = {
+        'pending': { label: 'En attente', class: 'badge-yellow' },
+        'confirmed': { label: 'Confirmée', class: 'badge-blue' },
+        'searching_driver': { label: 'Recherche livreur', class: 'badge-purple' },
+        'in_progress': { label: 'En cours', class: 'badge-blue' },
+        'delivered': { label: 'Livrée', class: 'badge-green' },
+        'completed': { label: 'Terminée', class: 'badge-green' },
+        'cancelled': { label: 'Annulée', class: 'badge-red' }
+      };
+      stLabel = fallbackStatus[status]?.label || status;
+      stClass = fallbackStatus[status]?.class || 'badge-yellow';
+    }
+
+    // Couleur de la bordure gauche selon le statut
+    let borderColor = '#f59e0b'; // Orange par défaut
+    if (stClass.includes('green')) borderColor = '#10b981';
+    else if (stClass.includes('red')) borderColor = '#ef4444';
+    else if (stClass.includes('blue')) borderColor = '#3b82f6';
+    else if (stClass.includes('purple')) borderColor = '#8b5cf6';
+
+    return `
+      <div class="order-card" style="
+        margin-bottom:0.75rem; 
+        background:white; 
+        padding:1rem; 
+        border-radius:8px; 
+        border:1px solid #e5e7eb; 
+        border-left: 4px solid ${borderColor}; 
+        transition: all 0.2s ease;
+      " onmouseover="this.style.transform='translateX(5px)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.05)';" onmouseout="this.style.transform='translateX(0)'; this.style.boxShadow='none';">
+        
+        <div class="order-card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <div>
+            <h4 style="margin:0; color:#0a1929; font-size:1rem; font-weight:700;">Commande #${orderNum}</h4>
+            <p style="margin:0.2rem 0 0 0; color:#6b7280; font-size:0.8rem;">${new Date(dateStr).toLocaleString('fr-CA')}</p>
+          </div>
+          <span class="status-badge ${stClass}" style="padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:600; background:#f3f4f6; color:#374151;">
+            ${stLabel}
+          </span>
+        </div>
+        
+        <div class="order-card-details" style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; color:#374151; border-top:1px solid #f3f4f6; padding-top:0.5rem;">
+          <div>👤 ${clientName}</div>
+          <div>🏪 ${storeName}</div>
+          <div style="font-weight:bold; color:#10b981; font-size:1.1rem;">${total} $</div>
+        </div>
       </div>
-      <div class="order-card-details">
-        <div>👤 ${o.clientName}</div>
-        <div>🏪 ${o.storeName || '-'}</div>
-        <div>💰 ${o.total.toFixed(2)} $</div>
-      </div>
-    </div>`;
+    `;
   }).join('');
 }
-
 // ==========================================
 // 📦 COMMANDES ADMIN
 // ==========================================

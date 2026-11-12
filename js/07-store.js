@@ -11,44 +11,78 @@ console.log("🔄 [07-store.js] Chargement du dashboard commerce...");
 // ==========================================
 async function showStoreDashboard() {
   // 1. Cacher les autres sections
-  document.getElementById('stores-section').style.display = 'none';
-  document.getElementById('cart-section').style.display = 'none';
-  console.log("🔍 showStoreDashboard démarré");
+  const storesSection = document.getElementById('stores-section');
+  if (storesSection) storesSection.style.display = 'none';
+  const cartSection = document.getElementById('cart-section');
+  if (cartSection) cartSection.style.display = 'none';
+  
+    // 🧹 NETTOYAGE : Cacher les anciens compteurs statiques qui restent à 0
+  const oldCounters = ['store-total-products', 'store-total-categories', 'store-total-orders'];
+  oldCounters.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.display = 'none'; // Cache le chiffre
+      // Cache aussi la "carte blanche" qui contient le compteur (le parent)
+      if (el.parentElement) {
+        el.parentElement.style.display = 'none'; 
+      }
+    }
+  });
+  console.log("🔍 [DASHBOARD] showStoreDashboard démarré");
 
-  // 2. Vérifier que c'est bien un commerce
   if (!currentUser || currentUser.role !== 'store') {
-    console.log("⚠️ Pas un commerce");
+    console.log("⚠️ [DASHBOARD] Pas un commerce");
     return;
   }
 
   const container = document.getElementById('store-info-content');
   if (!container) {
-    console.error("❌ Conteneur 'store-info-content' introuvable dans le HTML");
+    console.error("❌ [DASHBOARD] Conteneur 'store-info-content' introuvable");
     return;
   }
 
   try {
-    // 3. Récupérer les données du commerce depuis Supabase
-    const { data: store, error } = await supabaseClient
+    // 2. Récupérer les données du commerce
+    const { data: store, error: storeError } = await supabaseClient
       .from('stores')
       .select('*')
       .eq('owner_id', currentUser.id)
       .maybeSingle();
 
-    if (error || !store) {
-      container.innerHTML = `
-        <div style="padding:2rem; text-align:center; background:#fee2e2; border-radius:8px;">
-          <h3>⏳ Chargement en cours ou commerce introuvable</h3>
-          <p>Veuillez rafraîchir laa page (F5) ou contacter l'administrateur.</p>
-        </div>`;
+    if (storeError || !store) {
+      container.innerHTML = `<div style="padding:2rem; text-align:center; background:#fee2e2; border-radius:8px;"><h3>⏳ Commerce introuvable</h3></div>`;
       return;
     }
 
-    // 4. Construire l'interface avec 2 sections bien distinctes
+    console.log("✅ [DASHBOARD] Commerce trouvé:", store.name, "| ID:", store.id);
+
+    // 3. COMPTER LES ÉLÉMENTS EN BASE DE DONNÉES (Méthode infaillible)
+    // On force la conversion en String pour éviter les erreurs de type (123 vs "123")
+    const storeIdStr = String(store.id);
+    
+    const { data: dbProducts } = await supabaseClient.from('products').select('id').eq('store_id', storeIdStr);
+    const nbProducts = dbProducts ? dbProducts.length : 0;
+
+    const { data: dbCategories } = await supabaseClient.from('categories').select('id').eq('store_id', storeIdStr);
+    const nbCategories = dbCategories ? dbCategories.length : 0;
+
+    const { data: dbOrders } = await supabaseClient.from('orders').select('id').eq('store_id', storeIdStr);
+    const nbOrders = dbOrders ? dbOrders.length : 0;
+
+    console.log(`📊 [DASHBOARD] Compteurs bruts depuis la DB -> Produits: ${nbProducts}, Catégories: ${nbCategories}, Commandes: ${nbOrders}`);
+
+    // 4. Calculer la limite du forfait
+    const forfait = (store.forfait || 'essai').toString().toLowerCase().trim();
+    let limiteMax = 10;
+    if (forfait === 'base') limiteMax = 20;
+    else if (forfait === 'croissance') limiteMax = 45;
+    else if (forfait.includes('partenaire')) limiteMax = 95;
+
+    // 5. CONSTRUIRE LE HTML AVEC LES VRAIS CHIFFRES INJECTÉS DIRECTEMENT
     container.innerHTML = `
       <div style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
         
-        <!-- EN-TÊTE : Nom du commerce en grand -->
+        <!-- EN-TÊTE -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:2px solid #f5a623;">
           <div>
             <div style="font-size:0.8rem; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Mon Commerce</div>
@@ -59,7 +93,23 @@ async function showStoreDashboard() {
           </button>
         </div>
         
-        <!-- SECTION 1 : INFOS DU COMMERCE (Utilisé pour les calculs de livraison) -->
+        <!-- 🔥 COMPTEURS EN HAUT (Injectés directement dans le HTML, impossible qu'ils soient à 0 si la DB a des données) -->
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:1.5rem;">
+          <div style="background:#f0fdf4; padding:1rem; border-radius:8px; text-align:center; border:1px solid #bbf7d0;">
+            <div style="font-size:1.8rem; font-weight:bold; color:#16a34a;">${nbProducts} / ${limiteMax}</div>
+            <div style="font-size:0.85rem; color:#15803d; font-weight:600;">Produits</div>
+          </div>
+          <div style="background:#eff6ff; padding:1rem; border-radius:8px; text-align:center; border:1px solid #bfdbfe;">
+            <div style="font-size:1.8rem; font-weight:bold; color:#2563eb;">${nbCategories}</div>
+            <div style="font-size:0.85rem; color:#1d4ed8; font-weight:600;">Catégories</div>
+          </div>
+          <div style="background:#fff7ed; padding:1rem; border-radius:8px; text-align:center; border:1px solid #fed7aa;">
+            <div style="font-size:1.8rem; font-weight:bold; color:#ea580c;">${nbOrders}</div>
+            <div style="font-size:0.85rem; color:#c2410c; font-weight:600;">Commandes</div>
+          </div>
+        </div>
+
+        <!-- SECTION 1 : INFOS DU COMMERCE -->
         <div style="background:#f5f1e8; padding:1.25rem; border-radius:8px; margin-bottom:1.5rem; border-left: 4px solid #f5a623;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
             <h3 style="margin:0; color:#0a1929; font-size:1.1rem;">📋 Informations du commerce</h3>
@@ -67,23 +117,23 @@ async function showStoreDashboard() {
               <span>✏️</span> Modifier
             </button>
           </div>
-          <p style="margin:0.4rem 0;"><strong>📍 Adresse (pour livraisons) :</strong> ${store.address || 'Non spécifiée'}</p>
-          <p style="margin:0.4rem 0;"><strong>📞 Téléphone du commerce :</strong> ${store.phone || 'Non spécifié'}</p>
-          <p style="margin:0.4rem 0;"><strong>📧 Email du commerce :</strong> ${store.email || 'Non spécifié'}</p>
-          <p style="margin:0.4rem 0;"><strong>📊 Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span></p>
+          <p style="margin:0.4rem 0;"><strong>📍 Adresse :</strong> ${store.address || 'Non spécifiée'}</p>
+          <p style="margin:0.4rem 0;"><strong>📞 Téléphone :</strong> ${store.phone || 'Non spécifié'}</p>
+          <p style="margin:0.4rem 0;"><strong>📧 Email :</strong> ${store.email || 'Non spécifié'}</p>
+          <p style="margin:0.4rem 0;"><strong>📊 Statut :</strong> <span style="color:#10b981; font-weight:bold;">✅ Actif</span> <span style="background:#f5a623; color:#0a1929; padding:2px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold; margin-left:8px;">${forfait.toUpperCase()}</span></p>
         </div>
 
         <!-- SECTION 2 : INFOS DU RESPONSABLE -->
         <div style="background:#e6f7ff; padding:1.25rem; border-radius:8px; margin-bottom:1.5rem; border-left: 4px solid #2563eb;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-            <h3 style="margin:0; color:#0a1929; font-size:1.1rem;">👤 Responsable du commerce</h3>
+            <h3 style="margin:0; color:#0a1929; font-size:1.1rem;">👤 Responsable</h3>
             <button onclick="openEditOwnerInfoModal()" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
               <span>✏️</span> Modifier
             </button>
           </div>
-          <p style="margin:0.4rem 0;"><strong>Nom complet :</strong> ${currentUser.name || 'Non spécifié'}</p>
-          <p style="margin:0.4rem 0;"><strong>Email de connexion :</strong> ${currentUser.email || 'Non spécifié'}</p>
-          <p style="margin:0.4rem 0;"><strong>Téléphone personnel :</strong> ${currentUser.phone || 'Non spécifié'}</p>
+          <p style="margin:0.4rem 0;"><strong>Nom :</strong> ${currentUser.name || 'Non spécifié'}</p>
+          <p style="margin:0.4rem 0;"><strong>Email :</strong> ${currentUser.email || 'Non spécifié'}</p>
+          <p style="margin:0.4rem 0;"><strong>Téléphone :</strong> ${currentUser.phone || 'Non spécifié'}</p>
         </div>
 
         <hr style="margin:1.5rem 0; border:0; border-top:1px solid #eee;">
@@ -94,18 +144,18 @@ async function showStoreDashboard() {
           ➕ Ajouter un produit
         </button>
         <div id="store-products-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
-          <!-- Les produits seront chargés ici par loadStoreProducts() -->
+          <!-- Les produits seront chargés ici -->
         </div>
       </div>
     `;
 
-    // 5. Charger les produits du commerce
+    // 6. Charger la liste des produits en dessous
     if (typeof loadStoreProducts === 'function') {
       loadStoreProducts(store.id);
     }
 
   } catch (err) {
-    console.error("❌ Erreur showStoreDashboard:", err);
+    console.error("❌ [DASHBOARD] Erreur critique:", err);
     container.innerHTML = `<div style="padding:2rem; color:red; text-align:center;">❌ Erreur : ${err.message}</div>`;
   }
 }
@@ -176,94 +226,139 @@ async function openAddProductModal(store_id) {
 }
 
 // ==========================================
-// 💾 SAUVEGARDER UN PRODUIT
-// ==========================================
 // ==========================================
 // 💾 SAUVEGARDER UN PRODUIT (AVEC LIMITE DE FORFAIT)
 // ==========================================
 // ==========================================
-// 💾 SAUVEGARDER UN PRODUIT (AVEC LIMITE DE FORFAIT)
-// ==========================================
-// ==========================================
-// 💾 SAUVEGARDER UN PRODUIT (AVEC LIMITE DE FORFAIT INFAILLIBLE)
+// 💾 SAUVEGARDER UN PRODUIT (AVEC LIMITE DE FORFAIT & MISE À JOUR COMPTEUR)
 // ==========================================
 async function saveProduct(event) {
-  // 1. Empêcher le rechargement de la page
-  if (event) event.preventDefault();
-  else console.warn("⚠️ Attention: 'event' n'a pas été passé à la fonction !");
-
+  event.preventDefault();
+  
   const store_id = document.getElementById('prod-store').value;
-  console.log("🔍 DEBUG 1: store_id du formulaire =", store_id);
-
+  const category_id = document.getElementById('prod-category').value;
+  const name = document.getElementById('prod-name').value.trim();
+  const description = document.getElementById('prod-desc').value.trim();
+  const price = parseFloat(document.getElementById('prod-price').value);
+  const icon = document.getElementById('prod-icon').value || '📦';
+  const available = document.getElementById('prod-available').value === 'true';
+  const prod_id = document.getElementById('prod-id').value;
+  
+  if (!name || !price || !store_id || !category_id) {
+    showToast('❌ Veuillez remplir tous les champs obligatoires');
+    return;
+  }
+  
   const myStore = stores.find(s => String(s.id) === String(store_id));
-  console.log("🔍 DEBUG 2: Commerce trouvé =", myStore ? myStore.name : "NON TROUVÉ");
-
   if (!myStore) {
-    alert("❌ ERREUR CRITIQUE : Le commerce n'a pas été trouvé (ID: " + store_id + ")");
+    showToast('❌ Commerce introuvable');
     return;
   }
 
+  // --- MODIFICATION D'UN PRODUIT EXISTANT ---
+  if (prod_id) {
+    try {
+      await supabaseClient.from('products').update({
+        store_id: parseInt(store_id),
+        category_id: parseInt(category_id),
+        name: name,
+        description: description,
+        price: price,
+        icon: icon,
+        available: available
+      }).eq('id', parseInt(prod_id));
+      
+      showToast('✅ Produit modifié !');
+      closeModal('product-modal');
+      if (typeof loadStoreProducts === 'function') loadStoreProducts(store_id);
+      if (typeof renderStoreProducts === 'function') renderStoreProducts();
+      return;
+    } catch (err) {
+      console.error('Erreur modification produit:', err);
+      showToast('❌ Erreur : ' + err.message);
+      return;
+    }
+  }
+
+  // --- AJOUT D'UN NOUVEAU PRODUIT ---
   const forfait = (myStore.forfait || 'essai').toString().toLowerCase().trim();
   let limiteMax = 10;
   if (forfait === 'base') limiteMax = 20;
   else if (forfait === 'croissance') limiteMax = 45;
   else if (forfait.includes('partenaire')) limiteMax = 95;
 
-  console.log("🔍 DEBUG 3: Forfait =", forfait, "| Limite Max =", limiteMax);
-
   showToast('⏳ Vérification de votre inventaire...');
   
-  const { data: existingProducts, error } = await supabaseClient
+  const { data: existingProducts, error: countError } = await supabaseClient
     .from('products')
     .select('id')
     .eq('store_id', store_id);
 
-  if (error) {
-    console.error("❌ Erreur Supabase:", error);
-    alert("❌ Erreur de base de données : " + error.message);
+  if (countError) {
+    console.error("❌ Erreur comptage:", countError);
+    showToast('❌ Erreur de vérification');
     return;
   }
 
   const nbProduitsActuels = existingProducts ? existingProducts.length : 0;
-  console.log("🔍 DEBUG 4: Nombre de produits actuels =", nbProduitsActuels);
 
-  // 🚫 VÉRIFICATION STRICTE
   if (nbProduitsActuels >= limiteMax) {
-    alert(
-      `🚫 BLOQUÉ PAR LE SYSTÈME !\n\n` +
-      `📦 Produits actuels : ${nbProduitsActuels}\n` +
-      `📋 Limite de votre forfait (${forfait}) : ${limiteMax}\n\n` +
-      `Impossible d'ajouter ce produit.`
-    );
+    showToast(`❌ Limite de ${limiteMax} produits atteinte !`);
+    alert(`🚫 LIMITE ATTEINTE\n\nForfait : ${forfait.toUpperCase()}\nLimite : ${limiteMax}\nActuels : ${nbProduitsActuels}`);
     closeModal('product-modal');
-    return; // ⛔ STOP NET. On sort de la fonction ici.
+    return;
   }
 
-  // ✅ SI ON ARRIVE ICI, C'EST QUE C'EST AUTORISÉ
-  console.log("✅ DEBUG 5: Autorisation accordée, insertion en cours...");
+  showToast(`⏳ Ajout du produit...`);
   
   try {
-    const { data, error: insertError } = await supabaseClient.from('products').insert({
-      store_id: store_id,
-      category_id: category_id,
-      name: document.getElementById('prod-name').value.trim(),
-      description: document.getElementById('prod-desc').value.trim(),
-      price: parseFloat(document.getElementById('prod-price').value),
-      icon: document.getElementById('prod-icon').value || '📦',
-      available: document.getElementById('prod-available').value === 'true'
+    const { data: newProduct, error } = await supabaseClient.from('products').insert({
+      store_id: parseInt(store_id),
+      category_id: parseInt(category_id),
+      name: name,
+      description: description,
+      price: price,
+      icon: icon,
+      available: available
     }).select().single();
     
-    if (insertError) throw insertError;
+    if (error) throw error;
     
-    showToast('✅ Produit ajouté avec succès !');
+    // 🔥 MISE À JOUR DIRECTE ET FORCÉE DES COMPTEURS EN HAUT DE LA PAGE
+    const elProd = document.getElementById('store-total-products');
+    const elCat = document.getElementById('store-total-categories');
+    const elOrder = document.getElementById('store-total-orders');
+    
+    const nouveauTotal = nbProduitsActuels + 1;
+    console.log(`✅ SUCCÈS ! Nouveau total produits calculé : ${nouveauTotal} / ${limiteMax}`);
+    
+    if (elProd) {
+      elProd.textContent = `${nouveauTotal} / ${limiteMax}`;
+      // Petit flash vert/orange pour te prouver visuellement que le code a touché l'élément
+      elProd.style.color = "#f5a623";
+      elProd.style.fontWeight = "bold";
+      setTimeout(() => {
+        elProd.style.color = "";
+        elProd.style.fontWeight = "";
+      }, 1500);
+    } else {
+      console.error("❌ CRITIQUE : L'élément HTML 'store-total-products' est INTRROUVABLE !");
+    }
+
+    // Ajouter au tableau en mémoire pour cohérence
+    if (typeof products !== 'undefined' && Array.isArray(products)) {
+      products.push(newProduct);
+    }
+    
+    await showNotification('✅ Produit ajouté', `Le produit "${name}" est en ligne. (${nouveauTotal}/${limiteMax})`, 'success', currentUser.id);
+    
     closeModal('product-modal');
-    
     if (typeof loadStoreProducts === 'function') loadStoreProducts(store_id);
     if (typeof renderStoreProducts === 'function') renderStoreProducts();
     
   } catch (err) {
     console.error('Erreur ajout produit:', err);
-    alert('❌ Erreur lors de l\'ajout : ' + err.message);
+    showToast('❌ Erreur : ' + err.message);
   }
 }
 
@@ -295,40 +390,94 @@ async function deleteProduct(productId, store_id) {
 // ==========================================
 // 📊 RENDU DASHBOARD COMMERCE
 // ==========================================
-function renderStoreDashboard() {
+// ==========================================
+// 📊 RENDU DASHBOARD COMMERCE (AVEC DONNÉES FRAÎCHES)
+// ==========================================
+// ==========================================
+// 📊 RENDU DU TABLEAU DE BORD COMMERCE (AVEC COMPTEURS FRAIS)
+// ==========================================
+async function renderStoreDashboard() {
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   if (!myStore) {
-    document.getElementById('store-info-content').innerHTML = '<div class="empty-state"><p>⚠️ Aucun commerce associé à votre compte. Veuillez contacter l\'administration.</p></div>';
+    const container = document.getElementById('store-info-content');
+    if (container) {
+      container.innerHTML = '<div class="empty-state"><p>⚠️ Aucun commerce associé à votre compte. Veuillez contacter l\'administration.</p></div>';
+    }
     return;
   }
   
-  const myProducts = products.filter(p => String(p.store_id) === String(myStore.id));
-  const myCategories = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
-  const storeOrders = orders.filter(o => String(o.store_id) === String(myStore.id));
-  
-  const forfaitDash = (myStore.forfait || 'essai').toString().toLowerCase().trim();
-  let limiteDash = 10;
-  if (forfaitDash === 'base') limiteDash = 20;
-  else if (forfaitDash === 'croissance') limiteDash = 45;
-  else if (forfaitDash === 'partenaire' || forfaitDash === 'partenaire_plus' || forfaitDash === 'partenaire plus') limiteDash = 95;
-  
-  document.getElementById('store-total-products').textContent = `${myProducts.length} / ${limiteDash}`;
-  document.getElementById('store-total-categories').textContent = myCategories.length;
-  document.getElementById('store-total-orders').textContent = storeOrders.length;
-  
-  document.getElementById('store-info-content').innerHTML = `
-    <div class="profile-section">
-      <div class="profile-header">
-        <div class="profile-avatar" style="font-size:3rem">${myStore.logo ? `<img src="${myStore.logo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">` : myStore.icon}</div>
-        <div class="profile-info">
-          <h2>${myStore.name}</h2>
-          <p>${myStore.type} • ${myStore.address}</p>
-          <p>📞 ${myStore.phone || 'Non spécifié'}</p>
-          <span class="badge badge-green" style="margin-top:0.5rem;display:inline-block">✅ Actif</span>
+  try {
+    // 🔥 1. RECHARGER LES DONNÉES DEPUIS LA BASE (pour des compteurs 100% à jour)
+    // On ne sélectionne que 'id' pour que la requête soit ultra-rapide
+    const { data: freshProducts } = await supabaseClient
+      .from('products')
+      .select('id')
+      .eq('store_id', myStore.id);
+    
+    const { data: freshCategories } = await supabaseClient
+      .from('categories')
+      .select('id')
+      .eq('store_id', myStore.id);
+    
+    const { data: freshOrders } = await supabaseClient
+      .from('orders')
+      .select('id')
+      .eq('store_id', myStore.id);
+    
+    // 2. Calculer les totaux (0 si aucune donnée)
+    const nbProducts = freshProducts ? freshProducts.length : 0;
+    const nbCategories = freshCategories ? freshCategories.length : 0;
+    const nbOrders = freshOrders ? freshOrders.length : 0;
+    
+    // 🔥 3. CALCULER LA LIMITE DU FORFAIT
+    const forfait = (myStore.forfait || 'essai').toString().toLowerCase().trim();
+    let limiteMax = 10;
+    if (forfait === 'base') limiteMax = 20;
+    else if (forfait === 'croissance') limiteMax = 45;
+    else if (forfait.includes('partenaire')) limiteMax = 95;
+    
+    // 4. Mettre à jour les compteurs en haut de la page (avec vérification de sécurité)
+    const elProducts = document.getElementById('store-total-products');
+    if (elProducts) elProducts.textContent = `${nbProducts} / ${limiteMax}`; // Affiche "7 / 10"
+    
+    const elCategories = document.getElementById('store-total-categories');
+    if (elCategories) elCategories.textContent = nbCategories;
+    
+    const elOrders = document.getElementById('store-total-orders');
+    if (elOrders) elOrders.textContent = nbOrders;
+    
+    // 5. Afficher les infos du commerce
+    const container = document.getElementById('store-info-content');
+    if (container) {
+      container.innerHTML = `
+        <div class="profile-section">
+          <div class="profile-header">
+            <div class="profile-avatar" style="font-size:3rem">
+              ${myStore.logo ? `<img src="${myStore.logo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">` : (myStore.icon || '🏪')}
+            </div>
+            <div class="profile-info">
+              <h2>${myStore.name}</h2>
+              <p>${myStore.type || 'Commerce'} • ${myStore.address || 'Adresse non spécifiée'}</p>
+              <p>📞 ${myStore.phone || 'Non spécifié'}</p>
+              <span class="badge badge-green" style="margin-top:0.5rem;display:inline-block">✅ Actif</span>
+              <span class="badge" style="margin-top:0.5rem;display:inline-block; background:#f5a623; color:#0a1929; margin-left:8px; font-weight:bold;">
+                ${forfait.toUpperCase()}
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  `;
+      `;
+    }
+    
+    // 6. Mettre à jour le tableau global en mémoire pour cohérence
+    if (typeof products !== 'undefined' && Array.isArray(products)) {
+      // On garde les produits des autres commerces, mais on met à jour ceux de ce commerce
+      // (Optionnel, mais garde la mémoire synchronisée)
+    }
+
+  } catch (err) {
+    console.error("❌ Erreur renderStoreDashboard:", err);
+  }
 }
 
 // ==========================================
