@@ -560,13 +560,13 @@ RuralGo offre un service de cueillette et livraison de produits essentiels des c
 <div class="form-group"><label>🔒 Confirmer *</label><input type="password" id="rc-pass-confirm" required minlength="6" placeholder="••••••••"></div>
 <div class="form-group"><label>📱 Téléphone *</label><input type="tel" id="rc-phone" required placeholder="(819) 123-4567"></div>
 <div class="form-group"><label>📍 Province *</label><input type="text" id="rc-province" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;"></div>
-<div class="form-group"><label>🏠 Adresse *</label>
-<div class="autocomplete-wrapper">
-<input type="text" id="rc-address" class="autocomplete-input" required placeholder="Ex: 123 rue Principale, Maniwaki" autocomplete="off">
-<div id="rc-address-suggestions" class="autocomplete-suggestions"></div>
-</div>
-<button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('rc-address')">📍 Utiliser ma position GPS</button>
-</div>
+   <div class="form-group"><label>🏠 Adresse *</label>
+     <div class="autocomplete-wrapper">
+       <input type="text" id="rc-address" class="autocomplete-input" required placeholder="Ex: 123 rue Principale, Maniwaki" autocomplete="off" oninput="searchAddress(this.value, 'rc-address-suggestions', 'rc-address')">
+       <div id="rc-address-suggestions" class="autocomplete-suggestions"></div>
+     </div>
+     <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('rc-address')">📍 Utiliser ma position GPS</button>
+   </div>
 <div class="modal-actions">
 <button type="button" class="btn-sm btn-gray" onclick="closeModal('register-client-modal')">Annuler</button>
 <button type="submit" class="btn-sm btn-green">✅ Créer mon compte</button>
