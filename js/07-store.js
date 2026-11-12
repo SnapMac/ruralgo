@@ -178,45 +178,92 @@ async function openAddProductModal(store_id) {
 // ==========================================
 // 💾 SAUVEGARDER UN PRODUIT
 // ==========================================
+// ==========================================
+// 💾 SAUVEGARDER UN PRODUIT (AVEC LIMITE DE FORFAIT)
+// ==========================================
+// ==========================================
+// 💾 SAUVEGARDER UN PRODUIT (AVEC LIMITE DE FORFAIT)
+// ==========================================
+// ==========================================
+// 💾 SAUVEGARDER UN PRODUIT (AVEC LIMITE DE FORFAIT INFAILLIBLE)
+// ==========================================
 async function saveProduct(event) {
-  event.preventDefault();
-  
+  // 1. Empêcher le rechargement de la page
+  if (event) event.preventDefault();
+  else console.warn("⚠️ Attention: 'event' n'a pas été passé à la fonction !");
+
   const store_id = document.getElementById('prod-store').value;
-  const category_id = document.getElementById('prod-category').value;
-  const name = document.getElementById('prod-name').value.trim();
-  const description = document.getElementById('prod-desc').value.trim();
-  const price = parseFloat(document.getElementById('prod-price').value);
-  const icon = document.getElementById('prod-icon').value || '📦';
-  const available = document.getElementById('prod-available').value === 'true';
-  
-  if (!name || !price || !store_id || !category_id) {
-    showToast('❌ Veuillez remplir tous les champs obligatoires');
+  console.log("🔍 DEBUG 1: store_id du formulaire =", store_id);
+
+  const myStore = stores.find(s => String(s.id) === String(store_id));
+  console.log("🔍 DEBUG 2: Commerce trouvé =", myStore ? myStore.name : "NON TROUVÉ");
+
+  if (!myStore) {
+    alert("❌ ERREUR CRITIQUE : Le commerce n'a pas été trouvé (ID: " + store_id + ")");
     return;
   }
+
+  const forfait = (myStore.forfait || 'essai').toString().toLowerCase().trim();
+  let limiteMax = 10;
+  if (forfait === 'base') limiteMax = 20;
+  else if (forfait === 'croissance') limiteMax = 45;
+  else if (forfait.includes('partenaire')) limiteMax = 95;
+
+  console.log("🔍 DEBUG 3: Forfait =", forfait, "| Limite Max =", limiteMax);
+
+  showToast('⏳ Vérification de votre inventaire...');
   
-  showToast('⏳ Ajout du produit en cours...');
+  const { data: existingProducts, error } = await supabaseClient
+    .from('products')
+    .select('id')
+    .eq('store_id', store_id);
+
+  if (error) {
+    console.error("❌ Erreur Supabase:", error);
+    alert("❌ Erreur de base de données : " + error.message);
+    return;
+  }
+
+  const nbProduitsActuels = existingProducts ? existingProducts.length : 0;
+  console.log("🔍 DEBUG 4: Nombre de produits actuels =", nbProduitsActuels);
+
+  // 🚫 VÉRIFICATION STRICTE
+  if (nbProduitsActuels >= limiteMax) {
+    alert(
+      `🚫 BLOQUÉ PAR LE SYSTÈME !\n\n` +
+      `📦 Produits actuels : ${nbProduitsActuels}\n` +
+      `📋 Limite de votre forfait (${forfait}) : ${limiteMax}\n\n` +
+      `Impossible d'ajouter ce produit.`
+    );
+    closeModal('product-modal');
+    return; // ⛔ STOP NET. On sort de la fonction ici.
+  }
+
+  // ✅ SI ON ARRIVE ICI, C'EST QUE C'EST AUTORISÉ
+  console.log("✅ DEBUG 5: Autorisation accordée, insertion en cours...");
   
   try {
-    const { data, error } = await supabaseClient.from('products').insert({
+    const { data, error: insertError } = await supabaseClient.from('products').insert({
       store_id: store_id,
       category_id: category_id,
-      name: name,
-      description: description,
-      price: price,
-      icon: icon,
-      available: available
+      name: document.getElementById('prod-name').value.trim(),
+      description: document.getElementById('prod-desc').value.trim(),
+      price: parseFloat(document.getElementById('prod-price').value),
+      icon: document.getElementById('prod-icon').value || '📦',
+      available: document.getElementById('prod-available').value === 'true'
     }).select().single();
     
-    if (error) throw error;
+    if (insertError) throw insertError;
     
-    await showNotification('✅ Produit ajouté', `Le produit "${name}" est maintenant en ligne.`, 'success', currentUser.id);
-    
+    showToast('✅ Produit ajouté avec succès !');
     closeModal('product-modal');
+    
     if (typeof loadStoreProducts === 'function') loadStoreProducts(store_id);
     if (typeof renderStoreProducts === 'function') renderStoreProducts();
+    
   } catch (err) {
     console.error('Erreur ajout produit:', err);
-    showToast('❌ Erreur : ' + err.message);
+    alert('❌ Erreur lors de l\'ajout : ' + err.message);
   }
 }
 
@@ -259,7 +306,13 @@ function renderStoreDashboard() {
   const myCategories = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
   const storeOrders = orders.filter(o => String(o.store_id) === String(myStore.id));
   
-  document.getElementById('store-total-products').textContent = myProducts.length;
+  const forfaitDash = (myStore.forfait || 'essai').toString().toLowerCase().trim();
+  let limiteDash = 10;
+  if (forfaitDash === 'base') limiteDash = 20;
+  else if (forfaitDash === 'croissance') limiteDash = 45;
+  else if (forfaitDash === 'partenaire' || forfaitDash === 'partenaire_plus' || forfaitDash === 'partenaire plus') limiteDash = 95;
+  
+  document.getElementById('store-total-products').textContent = `${myProducts.length} / ${limiteDash}`;
   document.getElementById('store-total-categories').textContent = myCategories.length;
   document.getElementById('store-total-orders').textContent = storeOrders.length;
   

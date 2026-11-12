@@ -216,7 +216,8 @@ function renderAdminStores() {
             <button class="action-btn btn-blue" onclick="event.stopPropagation(); editStore('${s.id}')" title="Modifier">✏️</button>
             <button class="action-btn btn-green" onclick="event.stopPropagation(); promptRenameStore('${s.id}', '${s.name.replace(/'/g, "\\'")}')" title="Renommer">🏷️</button>
             <button class="action-btn btn-red" onclick="event.stopPropagation(); confirmDelete('store','${s.id}')" title="Supprimer">🗑️</button>
-          </div>
+          <button class="action-btn btn-orange" onclick="openChangeForfaitModal(${s.id})" title="Modifier le forfait" style="background:#f5a623; color:#0a1929;">💳</button>
+            </div>
         </td>
       </tr>`).join('')}
     </tbody></table>`;
@@ -570,6 +571,7 @@ function editProduct(id) {
 async function saveProduct(e) {
   e.preventDefault();
   const id = document.getElementById('prod-id').value;
+  
   const prodData = {
     store_id: parseInt(document.getElementById('prod-store').value),
     category_id: parseInt(document.getElementById('prod-category').value),
@@ -582,13 +584,61 @@ async function saveProduct(e) {
   
   try {
     if (id) {
+      // ✅ MODIFICATION : pas de limite à vérifier
       await supabaseClient.from('products').update(prodData).eq('id', parseInt(id));
       showToast('✅ Produit modifié !');
     } else {
+      // 🆕 AJOUT : on vérifie la limite du forfait
+      
+      // 1️⃣ Trouver le commerce
+      const myStore = stores.find(s => String(s.id) === String(prodData.store_id));
+      if (!myStore) {
+        showToast('❌ Commerce introuvable');
+        return;
+      }
+
+      // 2️⃣ Déterminer la limite selon le forfait
+      const forfait = (myStore.forfait || 'essai').toString().toLowerCase().trim();
+      let limiteMax = 10;
+      if (forfait === 'base') limiteMax = 20;
+      else if (forfait === 'croissance') limiteMax = 45;
+      else if (forfait.includes('partenaire')) limiteMax = 95;
+
+      console.log(`🔍 [LIMITE] Forfait : ${forfait} | Limite : ${limiteMax}`);
+
+      // 3️⃣ Compter les produits actuels (méthode infaillible)
+      const { data: existingProducts, error: countError } = await supabaseClient
+        .from('products')
+        .select('id')
+        .eq('store_id', prodData.store_id);
+
+      if (countError) {
+        console.error("❌ Erreur comptage:", countError);
+        showToast('❌ Erreur de vérification');
+        return;
+      }
+
+      const nbProduitsActuels = existingProducts ? existingProducts.length : 0;
+      console.log(`📦 [LIMITE] Produits actuels : ${nbProduitsActuels} / ${limiteMax}`);
+
+      // 4️⃣ VÉRIFICATION STRICTE
+      if (nbProduitsActuels >= limiteMax) {
+        showToast(`❌ Limite de ${limiteMax} produits atteinte !`);
+        alert(
+          `🚫 LIMITE D'INVENTAIRE ATTEINTE\n\n` +
+          `📋 Forfait : ${forfait.toUpperCase()}\n` +
+          `📦 Limite : ${limiteMax} produits\n` +
+          `📊 Actuels : ${nbProduitsActuels}\n\n` +
+          `💡 Contactez l'administration pour passer à un forfait supérieur.`
+        );
+        return; // ⛔ STOP NET
+      }
+
+      // 5️⃣ Tout est bon, on ajoute
       const { data: newProd, error } = await supabaseClient.from('products').insert(prodData).select().single();
       if (error) throw error;
       products.push(newProd);
-      showToast('✅ Produit ajouté !');
+      showToast(`✅ Produit ajouté ! (${nbProduitsActuels + 1}/${limiteMax})`);
     }
     closeModal('product-modal');
     renderAdminProducts();
@@ -1136,3 +1186,144 @@ async function updateOrderStatus(orderId, newStatus) {
 // ✅ FIN DU CHARGEMENT
 // ==========================================
 console.log("✅ [09-admin.js] Dashboard admin chargé !");
+
+// ==========================================
+// 💳 MODIFIER LE FORFAIT D'UN COMMERCE (MANUELLEMENT)
+// ==========================================
+// ==========================================
+// 💳 MODIFIER LE FORFAIT ET LE PAIEMENT D'UN COMMERCE
+// ==========================================
+function openChangeForfaitModal(storeId) {
+  const store = stores.find(s => String(s.id) === String(storeId));
+  if (!store) {
+    showToast('❌ Commerce introuvable');
+    return;
+  }
+
+  const forfaitActuel = (store.forfait || 'essai').toString().toLowerCase().trim();
+  const estPaye = store.paid === true; // ✅ Nouveau : statut de paiement
+
+  let modal = document.getElementById('change-forfait-modal');
+  if (modal) modal.remove();
+
+  modal = document.createElement('div');
+  modal.id = 'change-forfait-modal';
+  modal.className = 'modal-bg show';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:550px">
+      <h2 style="color:#0a1929; margin-bottom:1rem;">💳 Forfait & Paiement</h2>
+      <p style="color:#666; margin-bottom:1.5rem;">
+        Commerce : <strong>${store.icon || '🏪'} ${store.name}</strong>
+      </p>
+      
+      <!-- SECTION FORFAIT -->
+      <div style="background:#f9fafb; padding:1rem; border-radius:8px; margin-bottom:1rem;">
+        <label style="font-weight:bold; display:block; margin-bottom:0.5rem;">📋 Forfait</label>
+        <select id="new-forfait-select" style="width:100%; padding:10px; border:2px solid #e5e7eb; border-radius:8px; font-size:1rem;">
+          <option value="essai" ${forfaitActuel === 'essai' ? 'selected' : ''}>🎁 Essai (10 produits)</option>
+          <option value="base" ${forfaitActuel === 'base' ? 'selected' : ''}>📦 Base (20 produits)</option>
+          <option value="croissance" ${forfaitActuel === 'croissance' ? 'selected' : ''}>🚀 Croissance (45 produits)</option>
+          <option value="partenaire_plus" ${forfaitActuel === 'partenaire_plus' || forfaitActuel === 'partenaire plus' ? 'selected' : ''}>⭐ Partenaire Plus (95 produits)</option>
+        </select>
+      </div>
+
+      <!-- SECTION PAIEMENT -->
+      <div style="background:#f0fdf4; padding:1rem; border-radius:8px; margin-bottom:1rem; border-left:4px solid #10b981;">
+        <label style="font-weight:bold; display:block; margin-bottom:0.5rem;">💰 Statut du paiement</label>
+        <div style="display:flex; gap:0.5rem;">
+          <button type="button" id="btn-paid-yes" onclick="togglePaidStatus(true)" 
+            style="flex:1; padding:12px; border:2px solid ${estPaye ? '#10b981' : '#e5e7eb'}; background:${estPaye ? '#10b981' : 'white'}; color:${estPaye ? 'white' : '#374151'}; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.95rem;">
+            ✅ Payé
+          </button>
+          <button type="button" id="btn-paid-no" onclick="togglePaidStatus(false)" 
+            style="flex:1; padding:12px; border:2px solid ${!estPaye ? '#ef4444' : '#e5e7eb'}; background:${!estPaye ? '#ef4444' : 'white'}; color:${!estPaye ? 'white' : '#374151'}; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.95rem;">
+            ❌ Non payé
+          </button>
+        </div>
+        <p style="margin:0.5rem 0 0 0; font-size:0.8rem; color:#666;">
+          💡 Quand c'est marqué "Payé", le rappel de paiement disparaît pour ce commerce.
+        </p>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-sm btn-gray" onclick="document.getElementById('change-forfait-modal').remove()">Annuler</button>
+        <button type="button" class="btn-sm btn-green" onclick="saveForfaitChange('${storeId}')">💾 Enregistrer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  
+  // Sauvegarder l'état actuel dans une variable temporaire
+  window._tempPaidStatus = estPaye;
+}
+
+// Fonction pour basculer le statut payé dans la modale
+function togglePaidStatus(paid) {
+  window._tempPaidStatus = paid;
+  
+  const btnYes = document.getElementById('btn-paid-yes');
+  const btnNo = document.getElementById('btn-paid-no');
+  
+  if (paid) {
+    btnYes.style.background = '#10b981';
+    btnYes.style.color = 'white';
+    btnYes.style.borderColor = '#10b981';
+    btnNo.style.background = 'white';
+    btnNo.style.color = '#374151';
+    btnNo.style.borderColor = '#e5e7eb';
+  } else {
+    btnNo.style.background = '#ef4444';
+    btnNo.style.color = 'white';
+    btnNo.style.borderColor = '#ef4444';
+    btnYes.style.background = 'white';
+    btnYes.style.color = '#374151';
+    btnYes.style.borderColor = '#e5e7eb';
+  }
+}
+
+async function saveForfaitChange(storeId) {
+  const newForfait = document.getElementById('new-forfait-select').value;
+  const newPaidStatus = window._tempPaidStatus !== undefined ? window._tempPaidStatus : false;
+  
+  showToast('⏳ Mise à jour...');
+  
+  try {
+    const { error } = await supabaseClient
+      .from('stores')
+      .update({ 
+        forfait: newForfait,
+        paid: newPaidStatus  // ✅ On sauvegarde le statut de paiement
+      })
+      .eq('id', storeId);
+    
+    if (error) throw error;
+    
+    // Mettre à jour en mémoire
+    const storeIndex = stores.findIndex(s => String(s.id) === String(storeId));
+    if (storeIndex !== -1) {
+      stores[storeIndex].forfait = newForfait;
+      stores[storeIndex].paid = newPaidStatus;
+    }
+    
+    // ✅ IMPORTANT : Mettre à jour currentUser si c'est son propre commerce
+    if (currentUser && currentUser.role === 'store') {
+      const myStoreIndex = stores.findIndex(s => String(s.owner_id) === String(currentUser.id));
+      if (myStoreIndex !== -1 && String(stores[myStoreIndex].id) === String(storeId)) {
+        currentUser.storePaid = newPaidStatus;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      }
+    }
+    
+    const modal = document.getElementById('change-forfait-modal');
+    if (modal) modal.remove();
+    
+    const statusText = newPaidStatus ? '✅ Payé' : '❌ Non payé';
+    showToast(`✅ Forfait et paiement mis à jour ! (${statusText})`);
+    
+    if (typeof renderAdminStores === 'function') renderAdminStores();
+    
+  } catch (err) {
+    console.error('❌ Erreur:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}

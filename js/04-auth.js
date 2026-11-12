@@ -544,11 +544,15 @@ function showUserInterface() {
     if (navStore) navStore.style.display = 'block';
     
     // 🔥 ÉTAPE 1 : VÉRIFIER LE PAIEMENT D'ABORD
-    if (!currentUser.payment_status || currentUser.payment_status !== 'paid') {
-      switchView('view-payment');
-      showToast('💳 Veuillez effectuer le paiement de votre abonnement pour continuer.');
-      return; // 🔥 STOPPER TOUT ICI, on n'affiche pas le reste
-    }
+   // On vérifie soit l'ancien status, soit la nouvelle case "Payé" cochée par l'admin
+   const monCommerce = (typeof stores !== 'undefined') ? stores.find(s => String(s.owner_id) === String(currentUser.id)) : null;
+   const estPaye = (currentUser.payment_status === 'paid') || (monCommerce && monCommerce.paid === true);
+
+   if (!estPaye) {
+     switchView('view-payment');
+     showToast('💳 Veuillez effectuer le paiement de votre abonnement pour continuer.');
+     return; // 🔥 STOPPER TOUT ICI, on n'affiche pas le reste
+   }
     
     // 🔥 ÉTAPE 2 : ENSUITE VÉRIFIER LE STATUT D'APPROBATION
     if (currentUser.status === 'pending') {

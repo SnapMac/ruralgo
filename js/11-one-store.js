@@ -4,6 +4,10 @@
 (function () {
   let commerceVerrouille = null; // l'id du commerce actuellement dans le panier
 
+  // 🔓 Exposés pour les autres fichiers (pour l'effet visuel "grisé")
+  window.getCommerceVerrouille = () => commerceVerrouille;
+  window.resetCommerceVerrouille = () => { commerceVerrouille = null; };
+
   // --- Trouve le produit (peu importe où il est rangé) ---
   function trouverProduit(id) {
     if (typeof products !== 'undefined' && Array.isArray(products)) {
@@ -46,7 +50,9 @@
 
   window.addToCart = function (product_id) {
     // Si le panier a été vidé, on libère le verrou
-    if (panierVide()) commerceVerrouille = null;
+    if (panierVide()) {
+      window.resetCommerceVerrouille();
+    }
 
     const p = trouverProduit(product_id);
     const storeId = p && p.store_id != null ? String(p.store_id) : null;
@@ -75,7 +81,7 @@
   if (typeof placeOrderOriginal === 'function') {
     window.placeOrder = async function () {
       const resultat = await placeOrderOriginal.apply(this, arguments);
-      commerceVerrouille = null;
+      window.resetCommerceVerrouille(); // 🔓 Utilisation de la fonction exposée
       return resultat;
     };
   }
