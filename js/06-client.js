@@ -158,8 +158,8 @@ function renderClientProductsGrid(store_id, categoryId, allProducts) {
   }
   
   grid.innerHTML = filteredProducts.map(p => `
-    <div style="background:white; padding:1rem; border-radius:12px; text-align:center; border:1px solid #eee;">
-      <div style="font-size:3rem; margin-bottom:0.5rem;">${p.icon || '📦'}</div>
+   <div style="background:white; padding:1rem; border-radius:12px; text-align:center; border:2px solid transparent; cursor:pointer; transition:all 0.3s ease;" onmouseover="this.style.background='linear-gradient(135deg, #fff4e0, #ffffff)'; this.style.transform='translateY(-10px) scale(1.05)'; this.style.boxShadow='0 15px 30px rgba(245,166,35,0.4)'; this.style.borderColor='#f5a623';" onmouseout="this.style.background='white'; this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='none'; this.style.borderColor='transparent';">
+    <div style="font-size:3rem; margin-bottom:0.5rem;">${p.icon || '📦'}</div>
       <h4 style="margin:0 0 0.5rem 0; font-size:1rem; color:#0a1929;">${p.name}</h4>
       <p style="margin:0; color:#10b981; font-weight:bold; font-size:1.2rem;">${parseFloat(p.price).toFixed(2)} $</p>
       <button onclick="addToCart(${p.id})" style="background:#0a1929; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-size:0.9rem; font-weight:bold; margin-top:1rem; width:100%;">
