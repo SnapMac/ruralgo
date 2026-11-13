@@ -542,15 +542,52 @@ RuralGo offre un service de cueillette et livraison de produits essentiels des c
 </section>
 </div>
 <!-- MODALES (inchangées) -->
-<div class="modal-bg" id="choose-type-modal"><div class="modal">
-<h2>👋 Créer un compte</h2>
-<div class="account-types">
-<div class="account-type" onclick="selectAccountType('client',this)"><div class="account-type-icon">🛒</div><div class="account-type-name">Client</div><div class="account-type-desc">Commander des produits</div></div>
-<div class="account-type" onclick="selectAccountType('driver',this)"><div class="account-type-icon">🚗</div><div class="account-type-name">Livreur</div><div class="account-type-desc">Effectuer des livraisons</div></div>
-<div class="account-type" onclick="selectAccountType('store',this)"><div class="account-type-icon">🏪</div><div class="account-type-name">Commerce</div><div class="account-type-desc">Vendre mes produits</div></div>
+
+<!-- MODALE DE CHOIX DE COMPTE (INSCRIPTIONS VERROUILLÉES) -->
+<div class="modal-bg" id="choose-type-modal">
+  <div class="modal">
+    <h2>👋 Créer un compte</h2>
+    
+    <div style="background: #fff7ed; border-left: 4px solid #f59e0b; padding: 10px; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.9rem; color: #9a3412; text-align:center;">
+      ⚠️ La plateforme est actuellement en phase de test privé.
+    </div>
+
+    <div class="account-types">
+      <!-- CLIENT VERROUILLÉ -->
+      <div class="account-type" onclick="showToast('🔒 L\'inscription n\'est pas encore disponible')" style="opacity: 0.6; cursor: not-allowed; position: relative; background: #f9fafb;">
+        <div style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;">🔒 Fermé</div>
+        <div class="account-type-icon" style="filter: grayscale(100%);">🛒</div>
+        <div class="account-type-name">Client</div>
+        <div class="account-type-desc">Commander des produits</div>
+        <div style="margin-top: 8px; color: #ef4444; font-size: 0.75rem; font-weight: bold;">L'inscription n'est pas encore disponible</div>
+      </div>
+
+      <!-- LIVREUR VERROUILLÉ -->
+      <div class="account-type" onclick="showToast('🔒 L\'inscription n\'est pas encore disponible')" style="opacity: 0.6; cursor: not-allowed; position: relative; background: #f9fafb;">
+        <div style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;">🔒 Fermé</div>
+        <div class="account-type-icon" style="filter: grayscale(100%);">🚗</div>
+        <div class="account-type-name">Livreur</div>
+        <div class="account-type-desc">Effectuer des livraisons</div>
+        <div style="margin-top: 8px; color: #ef4444; font-size: 0.75rem; font-weight: bold;">L'inscription n'est pas encore disponible</div>
+      </div>
+
+      <!-- COMMERCE VERROUILLÉ -->
+      <div class="account-type" onclick="showToast('🔒 L\'inscription n\'est pas encore disponible')" style="opacity: 0.6; cursor: not-allowed; position: relative; background: #f9fafb;">
+        <div style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;">🔒 Fermé</div>
+        <div class="account-type-icon" style="filter: grayscale(100%);">🏪</div>
+        <div class="account-type-name">Commerce</div>
+        <div class="account-type-desc">Vendre mes produits</div>
+        <div style="margin-top: 8px; color: #ef4444; font-size: 0.75rem; font-weight: bold;">L'inscription n'est pas encore disponible</div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn-sm btn-gray" onclick="closeModal('choose-type-modal')">Fermer</button>
+      <button class="btn-sm btn-gray" disabled style="opacity: 0.5; cursor: not-allowed;">Continuer →</button>
+    </div>
+  </div>
 </div>
-<div class="modal-actions" style="justify-content:center"><button class="btn-sm btn-gray" onclick="closeModal('choose-type-modal')">Annuler</button><button class="btn-sm btn-green" id="continue-type-btn" onclick="continueToRegister()" disabled>Continuer →</button></div>
-</div></div>
+
 <div class="modal-bg" id="register-client-modal"><div class="modal">
 <h2>📝 Inscription Client</h2>
 <form onsubmit="registerClient(event)">
