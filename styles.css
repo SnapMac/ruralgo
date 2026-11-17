@@ -376,7 +376,7 @@ section{padding:3rem 2rem}
 .info-box{background:#e0f2fe;border-left:4px solid #0284c7;padding:0.8rem 1rem;border-radius:6px;margin-bottom:1rem;font-size:0.9rem;color:#0c4a6e}
 .store-detail-header{background:linear-gradient(135deg,#0a1929,#1a3a5c);color:white;padding:2rem;border-radius:12px;margin-bottom:2rem;display:flex;align-items:center;gap:1.5rem}
 .store-detail-icon{font-size:4rem;background:rgba(255,255,255,0.2);width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center}
-.back-btn{background:rgba(255,255,255,0.2);color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:bold;margin-bottom:1rem;transition:all 0.3s}
+.back-btn{background:#86837e;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:bold;margin-bottom:1rem;transition:all 0.3s}
 .back-btn:hover{transform:translateX(-3px)}
 .categories-bar{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:2rem;padding:1rem;background:white;border-radius:10px}
 .cat-btn{padding:0.5rem 1rem;border:2px solid #eee;border-radius:20px;background:white;cursor:pointer;font-weight:bold;transition:all 0.3s}
