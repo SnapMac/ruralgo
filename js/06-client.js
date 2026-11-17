@@ -649,7 +649,7 @@ function renderProfiles() {
       <div class="profile-field"><label>📞 Téléphone</label><div class="value">${currentUser.phone}</div></div>
       <div class="profile-field" style="grid-column:1/-1"><label>📍 Adresse</label><div class="value">${currentUser.address}</div></div>
     </div>
-    <button class="btn" style="margin-top:1rem" onclick="openEditProfileModal()">✏️ Modifier mon profil</button>
+    <button class="btn" style="margin-top:1rem; background:#86837e" onclick="openEditProfileModal()">✏️ Modifier mon profil</button>
   </div>`;
   
   if (currentUser.role === 'client') {
