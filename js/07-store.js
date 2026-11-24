@@ -15,28 +15,28 @@ console.log("🔄 [07-store.js] Chargement du dashboard commerce...");
 // ==========================================
 function goToMyStore() {
   console.log("🧭 [NAV] goToMyStore() appelé");
-  
+
   // 1. Cacher TOUTES les autres vues possibles
   const allViews = [
     'view-client',
-    'view-cart', 
+    'view-cart',
     'view-store',
     'stores-section',
     'cart-section'
   ];
-  
+
   allViews.forEach(viewId => {
     const el = document.getElementById(viewId);
     if (el) el.style.display = 'none';
   });
-  
+
   // 2. Afficher UNIQUEMENT la vue "Mon Commerce"
   const myStoreView = document.getElementById('view-store');
   if (myStoreView) {
     myStoreView.style.display = 'block';
     console.log("✅ [NAV] view-store affiché");
   }
-  
+
   // 3. Charger le tableau de bord
   if (typeof showStoreDashboard === 'function') {
     showStoreDashboard();
@@ -48,7 +48,7 @@ function goToMyStore() {
 // ==========================================
 function retourAuCommerce() {
   console.log("🔙 [NAV] retourAuCommerce() appelé");
-  
+
   // 1. Cacher toutes les vues possibles (surtout la Vue Client)
   const allViews = [
     'view-client',
@@ -58,19 +58,19 @@ function retourAuCommerce() {
     'cart-section',
     'one-store-view'  // Vue détaillée d'un commerce
   ];
-  
+
   allViews.forEach(viewId => {
     const el = document.getElementById(viewId);
     if (el) el.style.display = 'none';
   });
-  
+
   // 2. Afficher UNIQUEMENT la vue "Mon Commerce"
   const myStoreView = document.getElementById('view-store');
   if (myStoreView) {
     myStoreView.style.display = 'block';
     console.log("✅ [NAV] Retour au tableau de bord");
   }
-  
+
   // 3. Recharger le tableau de bord avec les données à jour
   if (typeof showStoreDashboard === 'function') {
     showStoreDashboard();
@@ -87,14 +87,14 @@ async function showStoreDashboard() {
   if (storesSection) storesSection.style.display = 'none';
   const cartSection = document.getElementById('cart-section');
   if (cartSection) cartSection.style.display = 'none';
-  
+
   // 🧹 NETTOYAGE : Cacher les anciens compteurs statiques
   const oldCounters = ['store-total-products', 'store-total-categories', 'store-total-orders'];
   oldCounters.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.style.display = 'none';
-      if (el.parentElement) el.parentElement.style.display = 'none'; 
+      if (el.parentElement) el.parentElement.style.display = 'none';
     }
   });
 
@@ -146,7 +146,7 @@ async function showStoreDashboard() {
 
     // 5. COMPTER LES ÉLÉMENTS EN BASE DE DONNÉES
     const storeIdStr = String(store.id);
-    
+
     const { data: dbProducts } = await supabaseClient.from('products').select('id').eq('store_id', storeIdStr);
     const nbProducts = dbProducts ? dbProducts.length : 0;
 
@@ -234,17 +234,21 @@ async function showStoreDashboard() {
           <!-- Les produits seront chargés ici -->
         </div>
 
-        <!-- 🆕 BOUTON POUR VOIR LES COMMANDES REÇUES (AVEC REMARQUES) -->
-        <button onclick="openStoreOrdersModal('${store.id}')" style="margin-top:1.5rem; padding:14px 24px; background:#0a1929; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold; font-size:1.05rem; width:100%; box-shadow:0 4px 12px rgba(10,25,41,0.2); transition:background 0.2s;" onmouseover="this.style.background='#1e3a5f'" onmouseout="this.style.background='#0a1929'">
-          📦 Voir mes commandes reçues
-        </button>
+        <hr style="margin:1.5rem 0; border:0; border-top:1px solid #eee;">
 
+
+        <h3 style="color:#0a1929; margin-bottom:1rem;">🛒 Dernières commandes</h3>
+        <div id="store-dashboard-orders-container" style="display:grid; gap:1rem;">
+        </div>
       </div>
     `;
 
     // 8. Charger la liste des produits
     if (typeof loadStoreProducts === 'function') {
       loadStoreProducts(store.id);
+    }
+    if (typeof loadDashboardOrders === "function") {
+      loadDashboardOrders(store.id, 5);
     }
 
   } catch (err) {
@@ -260,23 +264,23 @@ async function showStoreDashboard() {
 async function loadStoreProducts(store_id) {
   const container = document.getElementById('store-products-list');
   if (!container) return;
-  
+
   const { data: products, error } = await supabaseClient
     .from('products')
     .select('*')
     .eq('store_id', store_id)
     .order('created_at', { ascending: false });
-  
+
   if (error) {
     container.innerHTML = `<p style="color:red;">Erreur chargement produits: ${error.message}</p>`;
     return;
   }
-  
+
   if (!products || products.length === 0) {
     container.innerHTML = '<p style="color:#666; grid-column:1/-1; text-align:center; padding:1rem;">Aucun produit dans votre inventaire pour le moment.</p>';
     return;
   }
-  
+
   container.innerHTML = products.map(p => `
     <div style="background:#f9f9f9; padding:1rem; border-radius:8px; border:1px solid #eee;">
       <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -308,13 +312,13 @@ async function openAddProductModal(store_id) {
   document.getElementById('prod-price').value = '';
   document.getElementById('prod-available').value = 'true';
   selectedProdIcon = '📦';
-  
+
   const myStore = stores.find(s => String(s.id) === String(store_id));
   document.getElementById('prod-store').innerHTML = `<option value="${myStore.id}" selected>${myStore.icon} ${myStore.name}</option>`;
-  
+
   const myCats = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
   document.getElementById('prod-category').innerHTML = myCats.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
-  
+
   buildIconPicker('prod-icon-picker', 'prod-icon');
   openModal('product-modal');
 }
@@ -328,7 +332,7 @@ async function openAddProductModal(store_id) {
 // ==========================================
 async function saveProduct(event) {
   event.preventDefault();
-  
+
   const store_id = document.getElementById('prod-store').value;
   const category_id = document.getElementById('prod-category').value;
   const name = document.getElementById('prod-name').value.trim();
@@ -337,12 +341,12 @@ async function saveProduct(event) {
   const icon = document.getElementById('prod-icon').value || '📦';
   const available = document.getElementById('prod-available').value === 'true';
   const prod_id = document.getElementById('prod-id').value;
-  
+
   if (!name || !price || !store_id || !category_id) {
     showToast('❌ Veuillez remplir tous les champs obligatoires');
     return;
   }
-  
+
   const myStore = stores.find(s => String(s.id) === String(store_id));
   if (!myStore) {
     showToast('❌ Commerce introuvable');
@@ -361,7 +365,7 @@ async function saveProduct(event) {
         icon: icon,
         available: available
       }).eq('id', parseInt(prod_id));
-      
+
       showToast('✅ Produit modifié !');
       closeModal('product-modal');
       if (typeof loadStoreProducts === 'function') loadStoreProducts(store_id);
@@ -382,7 +386,7 @@ async function saveProduct(event) {
   else if (forfait.includes('partenaire')) limiteMax = 95;
 
   showToast('⏳ Vérification de votre inventaire...');
-  
+
   const { data: existingProducts, error: countError } = await supabaseClient
     .from('products')
     .select('id')
@@ -404,7 +408,7 @@ async function saveProduct(event) {
   }
 
   showToast(`⏳ Ajout du produit...`);
-  
+
   try {
     const { data: newProduct, error } = await supabaseClient.from('products').insert({
       store_id: parseInt(store_id),
@@ -415,17 +419,17 @@ async function saveProduct(event) {
       icon: icon,
       available: available
     }).select().single();
-    
+
     if (error) throw error;
-    
+
     // 🔥 MISE À JOUR DIRECTE ET FORCÉE DES COMPTEURS EN HAUT DE LA PAGE
     const elProd = document.getElementById('store-total-products');
     const elCat = document.getElementById('store-total-categories');
     const elOrder = document.getElementById('store-total-orders');
-    
+
     const nouveauTotal = nbProduitsActuels + 1;
     console.log(`✅ SUCCÈS ! Nouveau total produits calculé : ${nouveauTotal} / ${limiteMax}`);
-    
+
     if (elProd) {
       elProd.textContent = `${nouveauTotal} / ${limiteMax}`;
       // Petit flash vert/orange pour te prouver visuellement que le code a touché l'élément
@@ -443,13 +447,13 @@ async function saveProduct(event) {
     if (typeof products !== 'undefined' && Array.isArray(products)) {
       products.push(newProduct);
     }
-    
+
     await showNotification('✅ Produit ajouté', `Le produit "${name}" est en ligne. (${nouveauTotal}/${limiteMax})`, 'success', currentUser.id);
-    
+
     closeModal('product-modal');
     if (typeof loadStoreProducts === 'function') loadStoreProducts(store_id);
     if (typeof renderStoreProducts === 'function') renderStoreProducts();
-    
+
   } catch (err) {
     console.error('Erreur ajout produit:', err);
     showToast('❌ Erreur : ' + err.message);
@@ -499,35 +503,35 @@ async function renderStoreDashboard() {
     }
     return;
   }
-  
+
   try {
     // 🔥 1. RECHARGER LES DONNÉES DEPUIS LA BASE (pour des compteurs 100% à jour)
     const { data: freshProducts } = await supabaseClient.from('products').select('id').eq('store_id', myStore.id);
     const { data: freshCategories } = await supabaseClient.from('categories').select('id').eq('store_id', myStore.id);
     const { data: freshOrders } = await supabaseClient.from('orders').select('id').eq('store_id', myStore.id);
-    
+
     // 2. Calculer les totaux (0 si aucune donnée)
     const nbProducts = freshProducts ? freshProducts.length : 0;
     const nbCategories = freshCategories ? freshCategories.length : 0;
     const nbOrders = freshOrders ? freshOrders.length : 0;
-    
+
     // 🔥 3. CALCULER LA LIMITE DU FORFAIT
     const forfait = (myStore.forfait || 'essai').toString().toLowerCase().trim();
     let limiteMax = 10;
     if (forfait === 'base') limiteMax = 20;
     else if (forfait === 'croissance') limiteMax = 45;
     else if (forfait.includes('partenaire')) limiteMax = 95;
-    
+
     // 4. Mettre à jour les compteurs en haut de la page
     const elProducts = document.getElementById('store-total-products');
     if (elProducts) elProducts.textContent = `${nbProducts} / ${limiteMax}`;
-    
+
     const elCategories = document.getElementById('store-total-categories');
     if (elCategories) elCategories.textContent = nbCategories;
-    
+
     const elOrders = document.getElementById('store-total-orders');
     if (elOrders) elOrders.textContent = nbOrders;
-    
+
     // 5. Afficher les infos du commerce + LE BOUTON COMMANDES
     const container = document.getElementById('store-info-content');
     if (container) {
@@ -548,11 +552,6 @@ async function renderStoreDashboard() {
                   ${forfait.toUpperCase()}
                 </span>
               </div>
-
-              <!-- 🆕 BOUTON POUR VOIR LES COMMANDES AVEC REMARQUES -->
-              <button onclick="openStoreOrdersModal('${myStore.id}')" style="padding:12px 24px; background:#0a1929; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:1rem; display:flex; align-items:center; gap:8px; width:100%; justify-content:center; transition:background 0.2s;" onmouseover="this.style.background='#1e3a5f'" onmouseout="this.style.background='#0a1929'">
-                📦 Voir mes commandes reçues
-              </button>
             </div>
           </div>
         </div>
@@ -578,15 +577,15 @@ function showStoreCategories() {
 function renderStoreCategories() {
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   if (!myStore) return;
-  
+
   const myCats = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
   const c = document.getElementById('store-categories-container');
-  
+
   if (!myCats.length) {
     c.innerHTML = '<div class="empty-state"><p>Aucune catégorie. Ajoutez-en une !</p></div>';
     return;
   }
-  
+
   c.innerHTML = `<div class="cat-grid">${myCats.map(cat => {
     const count = products.filter(p => String(p.store_id) === String(myStore.id) && String(p.category_id) === String(cat.id)).length;
     const isGlobal = !cat.store_id;
@@ -621,54 +620,54 @@ function showStoreProducts() {
 
 async function renderStoreProducts() {
   console.log("🚀 [DEBUG] renderStoreProducts démarré");
-  
+
   if (typeof currentUser === 'undefined' || !currentUser || !currentUser.id) {
     console.warn("⚠️ currentUser non défini ou non connecté.");
     return;
   }
-  
+
   if (typeof stores === 'undefined' || !Array.isArray(stores)) {
     console.warn("⚠️ Le tableau 'stores' n'est pas encore chargé.");
     return;
   }
-  
+
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   if (!myStore) {
     console.warn("⚠️ Aucun magasin trouvé pour owner_id =", currentUser.id);
     return;
   }
-  
+
   const container = document.getElementById('store-products-container');
   if (!container) {
     console.error("❌ Le conteneur HTML 'store-products-container' est introuvable !");
     return;
   }
-  
+
   container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">⏳ Chargement de votre inventaire...</p>';
-  
+
   try {
     const { data: dbProducts, error } = await supabaseClient
       .from('products')
       .select('*')
       .eq('store_id', myStore.id)
       .order('created_at', { ascending: false });
-    
+
     if (error) {
       console.error("❌ Erreur Supabase :", error);
       container.innerHTML = `<p style="color:red; text-align:center;">Erreur DB: ${error.message}</p>`;
       return;
     }
-    
+
     if (typeof products !== 'undefined' && Array.isArray(products)) {
       products = products.filter(p => String(p.store_id) !== String(myStore.id));
       if (dbProducts) products = [...products, ...dbProducts];
     }
-    
+
     if (!dbProducts || dbProducts.length === 0) {
       container.innerHTML = '<div class="empty-state"><p>Aucun produit dans votre inventaire.</p></div>';
       return;
     }
-    
+
     container.innerHTML = `
       <table class="admin-table">
         <thead>
@@ -676,9 +675,9 @@ async function renderStoreProducts() {
         </thead>
         <tbody>
           ${dbProducts.map(p => {
-            const cat = categories.find(x => String(x.id) === String(p.category_id));
-            const price = parseFloat(p.price).toFixed(2);
-            return `
+      const cat = categories.find(x => String(x.id) === String(p.category_id));
+      const price = parseFloat(p.price).toFixed(2);
+      return `
               <tr>
                 <td style="font-size:1.5rem;text-align:center">${p.icon || '📦'}</td>
                 <td><strong>${p.name}</strong></td>
@@ -692,7 +691,7 @@ async function renderStoreProducts() {
                   </div>
                 </td>
               </tr>`;
-          }).join('')}
+    }).join('')}
         </tbody>
       </table>
     `;
@@ -705,7 +704,7 @@ async function renderStoreProducts() {
 function openStoreProductModal() {
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   if (!myStore) return;
-  
+
   document.getElementById('prod-modal-title').textContent = '➕ Mon Produit';
   document.getElementById('prod-id').value = '';
   document.getElementById('prod-name').value = '';
@@ -713,12 +712,12 @@ function openStoreProductModal() {
   document.getElementById('prod-price').value = '';
   document.getElementById('prod-available').value = 'true';
   selectedProdIcon = '';
-  
+
   document.getElementById('prod-store').innerHTML = `<option value="${myStore.id}" selected>${myStore.icon} ${myStore.name}</option>`;
-  
+
   const myCats = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
   document.getElementById('prod-category').innerHTML = myCats.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
-  
+
   buildIconPicker('prod-icon-picker', 'prod-icon');
   openModal('product-modal');
 }
@@ -726,7 +725,7 @@ function openStoreProductModal() {
 function editStoreProduct(id) {
   const p = products.find(x => String(x.id) === String(id));
   if (!p) return;
-  
+
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   document.getElementById('prod-modal-title').textContent = '✏️ Modifier';
   document.getElementById('prod-id').value = p.id;
@@ -735,20 +734,20 @@ function editStoreProduct(id) {
   document.getElementById('prod-price').value = p.price;
   document.getElementById('prod-available').value = p.available ? 'true' : 'false';
   selectedProdIcon = p.icon;
-  
+
   document.getElementById('prod-store').innerHTML = `<option value="${myStore.id}" selected>${myStore.icon} ${myStore.name}</option>`;
-  
+
   const myCats = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
   document.getElementById('prod-category').innerHTML = myCats.map(c => `<option value="${c.id}" ${String(c.id) === String(p.category_id) ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('');
-  
+
   buildIconPicker('prod-icon-picker', 'prod-icon');
-  
+
   setTimeout(() => {
     document.querySelectorAll('#prod-icon-picker .icon-option').forEach(o => {
       if (o.dataset.icon === p.icon) o.classList.add('selected');
     });
   }, 50);
-  
+
   openModal('product-modal');
 }
 
@@ -760,12 +759,12 @@ function goToMyStore() {
   if (catSection) catSection.style.display = 'none';
   const prodSection = document.getElementById('store-products-section');
   if (prodSection) prodSection.style.display = 'none';
-  
+
   const dashSection = document.getElementById('store-dashboard-section');
   if (dashSection) dashSection.style.display = 'block';
-  
+
   switchView('view-store');
-  
+
   if (typeof showStoreDashboard === 'function') {
     showStoreDashboard();
   }
@@ -779,10 +778,10 @@ function initStoreNameDisplay() {
     console.log("ℹ️ initStoreNameDisplay: Pas d'utilisateur connecté");
     return;
   }
-  
+
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   const display = document.getElementById('current-store-name-display');
-  
+
   if (display && myStore) {
     display.textContent = myStore.name;
   } else if (display) {
@@ -793,11 +792,11 @@ function initStoreNameDisplay() {
 function toggleStoreNameEdit(showEdit) {
   const displayMode = document.getElementById('store-name-display');
   const editMode = document.getElementById('store-name-edit-form');
-  
+
   if (showEdit) {
     if (displayMode) displayMode.style.display = 'none';
     if (editMode) editMode.style.display = 'block';
-    
+
     const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
     const input = document.getElementById('store-name-input-pro');
     if (input && myStore) {
@@ -815,20 +814,20 @@ async function saveStoreNamePro() {
     showToast('❌ Le nom du commerce ne peut pas être vide.');
     return;
   }
-  
+
   showToast('⏳ Mise à jour en cours...');
-  
+
   try {
     const { error } = await supabaseClient
       .from('stores')
       .update({ name: newName })
       .eq('owner_id', currentUser.id);
-    
+
     if (error) throw error;
-    
+
     const displayEl = document.getElementById('current-store-name-display');
     if (displayEl) displayEl.textContent = newName;
-    
+
     showToast('✅ Nom mis à jour !');
     toggleStoreNameEdit(false);
   } catch (err) {
@@ -848,7 +847,7 @@ console.log("✅ [07-store.js] Dashboard commerce chargé !");
 function openEditStoreInfoModal() {
   let modal = document.getElementById('edit-store-info-modal');
   if (modal) modal.remove();
-  
+
   modal = document.createElement('div');
   modal.id = 'edit-store-info-modal';
   modal.className = 'modal-bg show';
@@ -893,10 +892,10 @@ async function saveStoreInfo(e) {
   const newAddress = document.getElementById('esi-address').value.trim();
   const newPhone = document.getElementById('esi-phone').value.trim();
   const addressInput = document.getElementById('esi-address');
-  
+
   let newLat = addressInput?._lat || null;
   let newLng = addressInput?._lng || null;
-  
+
   // 🔥 SI PAS DE GPS, ON DEMANDE À MAPBOX
   if ((!newLat || !newLng) && newAddress && newAddress.length > 5) {
     showToast('🔍 Localisation précise du commerce...');
@@ -908,30 +907,30 @@ async function saveStoreInfo(e) {
       showToast('✅ Commerce localisé avec précision !');
     }
   }
-  
+
   const updateData = { name: newName, address: newAddress, phone: newPhone };
   if (newLat && newLng && !isNaN(newLat) && !isNaN(newLng)) {
     updateData.lat = parseFloat(newLat);
     updateData.lng = parseFloat(newLng);
   }
-  
+
   try {
     const { error } = await supabaseClient.from('stores').update(updateData).eq('owner_id', currentUser.id);
     if (error) throw error;
-    
+
     if (currentUser) {
-      currentUser.storeName = newName; 
+      currentUser.storeName = newName;
       currentUser.storeAddress = newAddress;
       if (updateData.lat) currentUser.storeLat = parseFloat(updateData.lat);
       if (updateData.lng) currentUser.storeLng = parseFloat(updateData.lng);
     }
-    
+
     const storeIndex = stores.findIndex(s => String(s.owner_id) === String(currentUser.id));
     if (storeIndex !== -1) stores[storeIndex] = { ...stores[storeIndex], ...updateData };
-    
+
     const modal = document.getElementById('edit-store-info-modal');
     if (modal) modal.remove();
-    
+
     showToast('✅ Commerce mis à jour !');
     if (typeof showStoreDashboard === 'function') showStoreDashboard();
   } catch (err) {
@@ -945,7 +944,7 @@ async function saveStoreInfo(e) {
 function openEditOwnerInfoModal() {
   let modal = document.getElementById('edit-owner-info-modal');
   if (modal) modal.remove();
-  
+
   modal = document.createElement('div');
   modal.id = 'edit-owner-info-modal';
   modal.className = 'modal-bg show';
@@ -976,10 +975,10 @@ function openEditOwnerInfoModal() {
 
 async function saveOwnerInfo(e) {
   e.preventDefault();
-  
+
   const newName = document.getElementById('eoi-name').value.trim();
   const newPhone = document.getElementById('eoi-phone').value.trim();
-  
+
   try {
     const { error } = await supabaseClient
       .from('profiles')
@@ -988,14 +987,14 @@ async function saveOwnerInfo(e) {
         phone: newPhone
       })
       .eq('id', currentUser.id);
-    
+
     if (error) throw error;
-    
+
     // Mettre à jour en mémoire
     currentUser.name = newName;
     currentUser.phone = newPhone;
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    
+
     document.getElementById('edit-owner-info-modal').remove();
     showToast('✅ Infos mises à jour !');
     showStoreDashboard();
@@ -1003,110 +1002,7 @@ async function saveOwnerInfo(e) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
-// ==========================================
-// 📦 MODALE DES COMMANDES DU COMMERCE (AVEC REMARQUES)
-// ==========================================
-async function openStoreOrdersModal(storeId) {
-  console.log("🔍 [COMMANDES] Ouverture pour store_id :", storeId);
 
-  // 1. Créer la modale
-  let modal = document.getElementById('store-orders-modal');
-  if (modal) modal.remove();
-
-  modal = document.createElement('div');
-  modal.id = 'store-orders-modal';
-  modal.className = 'modal-bg show';
-  modal.style.zIndex = '9999';
-  modal.innerHTML = `
-    <div class="modal" style="max-width:700px; max-height:90vh; overflow-y:auto; background:white; border-radius:12px; padding:1.5rem;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:2px solid #f5a623; padding-bottom:1rem;">
-        <h2 style="margin:0; color:#0a1929;">📦 Commandes reçues</h2>
-        <button onclick="document.getElementById('store-orders-modal').remove()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:bold;">✖ Fermer</button>
-      </div>
-      <div id="orders-loading" style="text-align:center; padding:2rem; color:#6b7280;">⏳ Chargement des commandes...</div>
-      <div id="orders-list-container"></div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  // 2. Récupérer les commandes depuis Supabase
-  const { data: orders, error } = await supabaseClient
-    .from('orders')
-    .select('*')
-    .eq('store_id', String(storeId))
-    .order('created_at', { ascending: false });
-
-  const container = document.getElementById('orders-list-container');
-  document.getElementById('orders-loading').style.display = 'none';
-
-  if (error) {
-    container.innerHTML = `<div style="text-align:center; padding:2rem; background:#fee2e2; border-radius:8px; color:#991b1b;">❌ Erreur : ${error.message}</div>`;
-    return;
-  }
-
-  if (!orders || orders.length === 0) {
-    container.innerHTML = `
-      <div style="text-align:center; padding:2rem; background:#f9fafb; border-radius:8px;">
-        <div style="font-size:2rem; margin-bottom:0.5rem;">📭</div>
-        <p style="color:#6b7280; font-weight:bold;">Aucune commande trouvée pour ce commerce.</p>
-      </div>`;
-    return;
-  }
-
-  // 🆕 PETITE LIGNE AJOUTÉE : On sauvegarde la liste pour le bouton facture
-  window._tempOrdersList = orders;
-
-  // 3. Construire le HTML des commandes
-  let html = '<div style="display:grid; gap:1rem;">';
-
-  orders.forEach(order => {
-    let statusColor = '#f59e0b'; let statusText = 'En attente';
-    if (order.status === 'confirmed' || order.status === 'in_progress') { statusColor = '#3b82f6'; statusText = 'En cours'; }
-    else if (order.status === 'delivered' || order.status === 'completed') { statusColor = '#10b981'; statusText = 'Livrée'; }
-    else if (order.status === 'cancelled') { statusColor = '#ef4444'; statusText = 'Annulée'; }
-
-    // REMARQUES CLIENT (encadré jaune)
-    let remarquesHTML = '';
-    if (order.items && Array.isArray(order.items)) {
-      order.items.forEach(item => {
-        if (item.remarque && item.remarque.trim() !== '') {
-          remarquesHTML += `
-            <div style="background:#fef3c7; padding:0.6rem 0.8rem; border-radius:6px; margin-top:0.5rem; border-left:4px solid #f59e0b; font-size:0.9rem;">
-              <strong>💬 ${item.name || 'Produit'} :</strong> <span style="color:#92400e;">${item.remarque}</span>
-            </div>
-          `;
-        }
-      });
-    }
-
-    // 🆕 BLOC AVEC LE BOUTON FACTURE
-    html += `
-      <div style="background:white; padding:1rem; border-radius:8px; border:1px solid #e5e7eb; border-left: 5px solid ${statusColor}; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-          <strong style="font-size:1.1rem; color:#0a1929;">Commande #${order.order_number || order.id}</strong>
-          <span style="background:${statusColor}; color:white; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;">${statusText}</span>
-        </div>
-        <div style="font-size:0.9rem; color:#4b5563; margin-bottom:0.5rem;">
-          👤 <strong>Client:</strong> ${order.client_name || 'Client'} <br>
-          📍 <strong>Adresse:</strong> ${order.client_address || order.address || 'Non spécifiée'}
-        </div>
-        ${remarquesHTML}
-        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e5e7eb; padding-top:0.75rem; margin-top:0.75rem; flex-wrap:wrap; gap:0.5rem;">
-          <span style="font-size:0.85rem; color:#6b7280;">🕒 ${new Date(order.created_at).toLocaleString('fr-CA')}</span>
-          <div style="display:flex; align-items:center; gap:1rem;">
-            <span style="font-size:1.2rem; font-weight:bold; color:#0a1929;">💰 ${parseFloat(order.total || 0).toFixed(2)} $</span>
-            <button onclick="openOrderInvoiceModal(window._tempOrdersList.find(o => String(o.id) === String('${order.id}')))" style="padding:6px 12px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold; display:flex; align-items:center; gap:4px;">
-              🖨️ Facture
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-
-  html += '</div>';
-  container.innerHTML = html;
-}
 // ==========================================
 // 🖨️ MODALE FACTURE IMPRIMABLE (PDF)
 // ==========================================
@@ -1129,10 +1025,10 @@ function openOrderInvoiceModal(order) {
   if (order.items && Array.isArray(order.items)) {
     order.items.forEach(item => {
       const lineTotal = (parseFloat(item.price) * parseInt(item.qty)).toFixed(2);
-      const remarqueLine = (item.remarque && item.remarque.trim() !== '') 
-        ? `<div style="font-size:0.8rem; color:#92400e; font-style:italic; margin-top:4px;">💬 Note: ${item.remarque}</div>` 
+      const remarqueLine = (item.remarque && item.remarque.trim() !== '')
+        ? `<div style="font-size:0.8rem; color:#92400e; font-style:italic; margin-top:4px;">💬 Note: ${item.remarque}</div>`
         : '';
-      
+
       itemsHTML += `
         <tr style="border-bottom:1px solid #e5e7eb;">
           <td style="padding:12px 8px; vertical-align:top;">
@@ -1260,9 +1156,9 @@ async function renderStoreOrders() {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    
+
     // Save globally so the existing invoice modal can find the order data
-    window._storeOrders = orders; 
+    window._storeOrders = orders;
 
     if (!orders || orders.length === 0) {
       container.innerHTML = `
@@ -1308,7 +1204,7 @@ function generateStoreOrderCard(order) {
   let statusClass = 'pending';
   let statusLabel = '⏳ À préparer';
   let statusColor = '#f59e0b';
-  
+
   if (['confirmed', 'in_progress'].includes(order.status)) {
     statusClass = 'active'; statusLabel = '🧑‍🍳 En cours'; statusColor = '#3b82f6';
   } else if (['delivered', 'completed'].includes(order.status)) {
@@ -1392,17 +1288,74 @@ async function updateStoreOrderStatus(orderId, newStatus) {
     const { data: orderData } = await supabaseClient.from('orders').select('status_history').eq('id', orderId).single();
     const history = orderData?.status_history || [];
     history.push({ status: newStatus, time: new Date().toISOString(), note: 'Mis à jour par le commerce' });
-    
+
     // Update the order status and history in Supabase
-    await supabaseClient.from('orders').update({ 
-      status: newStatus, 
-      status_history: history 
+    await supabaseClient.from('orders').update({
+      status: newStatus,
+      status_history: history
     }).eq('id', orderId);
-    
+
     showToast('✅ Commande mise à jour !');
     renderStoreOrders(); // Refresh the list to show the new status
   } catch (err) {
     console.error('Erreur mise à jour statut:', err);
     showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+
+// ==========================================
+// 📦 DERNIÈRES COMMANDES DANS LE DASHBOARD
+// ==========================================
+
+async function loadDashboardOrders(storeId, limit = 5) {
+  const container = document.getElementById("store-dashboard-orders-container");
+
+  if (!container) return;
+
+  container.innerHTML = `
+    <p style="color:#6b7280; margin:0;">
+      ⏳ Chargement des commandes...
+    </p>
+  `;
+
+  try {
+    let query = supabaseClient
+      .from("orders")
+      .select("*")
+      .eq("store_id", String(storeId))
+      .order("created_at", { ascending: false });
+
+    if (limit > 0) {
+      query = query.limit(limit);
+    }
+
+    const { data: dashboardOrders, error } = await query;
+
+    if (error) throw error;
+
+    if (!dashboardOrders || dashboardOrders.length === 0) {
+      container.innerHTML = `
+        <p style="margin:0; color:#6b7280;">
+          📭 Aucune commande pour le moment.
+        </p>
+      `;
+      return;
+    }
+
+    // Compatible avec le bouton facture existant
+    window._storeOrders = dashboardOrders;
+
+    container.innerHTML = dashboardOrders
+      .map(order => generateStoreOrderCard(order))
+      .join("");
+  } catch (err) {
+    console.error("❌ Erreur loadDashboardOrders:", err);
+
+    container.innerHTML = `
+      <p style="color:#ef4444; margin:0;">
+        ❌ Erreur lors du chargement des commandes : ${err.message}
+      </p>
+    `;
   }
 }
