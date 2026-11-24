@@ -185,9 +185,22 @@ function filterClientProducts(store_id, categoryId, btnElement, allProducts) {
 function addToCart(prodId) {
   const p = products.find(x => String(x.id) === String(prodId));
   if (!p) return;
+  
   const ex = cart.find(c => String(c.productId) === String(prodId));
-  if (ex) ex.qty++;
-  else cart.push({ productId: prodId, name: p.name, icon: p.icon, price: p.price, qty: 1 });
+  if (ex) {
+    ex.qty++;
+  } else {
+    // 🆕 On ajoute "remarque: ''" ici pour préparer l'espace de texte
+    cart.push({ 
+      productId: prodId, 
+      name: p.name, 
+      icon: p.icon, 
+      price: p.price, 
+      qty: 1,
+      remarque: '' 
+    });
+  }
+  
   updateCart();
   showToast('✅ ' + p.name + ' ajouté !');
   updateInlineCartCount();
@@ -232,28 +245,38 @@ function updateCart() {
     return;
   }
   
- // ✅ NOUVELLE VERSION : Avec bouton "Vider le panier"
-el.innerHTML = `
-  <div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
-    <button onclick="clearCart()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold; display:flex; align-items:center; gap:6px;">
-      🗑️ Vider le panier
-    </button>
-  </div>
-` + cart.map((c, i) => `
-  <div class="cart-item">
-    <div style="font-size:2rem">${c.icon}</div>
-    <div class="cart-item-info">
-      <h4>${c.name}</h4>
-      <p style="color:#666">${c.price.toFixed(2)} $</p>
+  el.innerHTML = `
+    <div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
+      <button onclick="clearCart()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold; display:flex; align-items:center; gap:6px;">
+        🗑️ Vider le panier
+      </button>
     </div>
-    <div class="qty-controls">
-      <button class="qty-btn" onclick="changeQty(${i},-1)">−</button>
-      <span><strong>${c.qty}</strong></span>
-      <button class="qty-btn" onclick="changeQty(${i},1)">+</button>
+  ` + cart.map((c, i) => `
+    <div class="cart-item" style="flex-direction:column; align-items:stretch;">
+      <div style="display:flex; align-items:center; gap:1rem; width:100%;">
+        <div style="font-size:2rem">${c.icon}</div>
+        <div class="cart-item-info" style="flex:1;">
+          <h4>${c.name}</h4>
+          <p style="color:#666">${c.price.toFixed(2)} $</p>
+        </div>
+        <div class="qty-controls">
+          <button class="qty-btn" onclick="changeQty(${i},-1)">−</button>
+          <span><strong>${c.qty}</strong></span>
+          <button class="qty-btn" onclick="changeQty(${i},1)">+</button>
+        </div>
+        <strong style="min-width:70px;text-align:right">${(c.price * c.qty).toFixed(2)} $</strong>
+      </div>
+      
+      <!-- 🆕 CHAMP DE REMARQUE -->
+      <div style="margin-top:0.75rem; width:100%;">
+        <textarea 
+          placeholder="💬 Remarque (ex: sans oignons, bien cuit...)"
+          style="width:100%; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px; font-size:0.85rem; resize:vertical; min-height:50px; font-family:inherit;"
+          onchange="updateRemarque(${i}, this.value)"
+        >${c.remarque || ''}</textarea>
+      </div>
     </div>
-    <strong style="min-width:70px;text-align:right">${(c.price * c.qty).toFixed(2)} $</strong>
-  </div>
-`).join('');
+  `).join('');
 
   const sub = cart.reduce((s, c) => s + c.price * c.qty, 0);
   const store = getCurrentStore();
@@ -292,6 +315,15 @@ el.innerHTML = `
   document.getElementById('taxes').textContent = tax.toFixed(2) + ' $';
   document.getElementById('total').textContent = tot.toFixed(2) + ' $';
 }
+// 🆕 Fonction pour sauvegarder la remarque d'un produit
+function updateRemarque(index, value) {
+  if (cart[index]) {
+    cart[index].remarque = value;
+    localStorage.setItem('cart', JSON.stringify(cart));
+    console.log("💬 Remarque sauvegardée pour", cart[index].name, ":", value);
+  }
+}
+
 
 // ==========================================
 // 🗑️ VIDER LE PANIER EN UN CLIC

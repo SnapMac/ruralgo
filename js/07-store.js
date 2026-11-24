@@ -77,6 +77,7 @@ function retourAuCommerce() {
   }
 }
 
+
 async function showStoreDashboard() {
   console.log("🚀 [DEBUG 1] showStoreDashboard démarré");
   console.log("🚀 [DEBUG 2] currentUser actuel =", currentUser);
@@ -138,7 +139,7 @@ async function showStoreDashboard() {
             👉 <strong>Solution :</strong> Va dans Supabase > Table <code>stores</code> et assure-toi que la colonne <code>owner_id</code> de ton commerce contient exactement cet ID.
           </p>
         </div>`;
-      return; // On arrête tout ici, c'est la cause du problème à 99%
+      return;
     }
 
     console.log("✅ [DEBUG 9] SUCCÈS ! Commerce trouvé :", store.name, "| ID du commerce:", store.id);
@@ -232,6 +233,12 @@ async function showStoreDashboard() {
         <div id="store-products-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem;">
           <!-- Les produits seront chargés ici -->
         </div>
+
+        <!-- 🆕 BOUTON POUR VOIR LES COMMANDES REÇUES (AVEC REMARQUES) -->
+        <button onclick="openStoreOrdersModal('${store.id}')" style="margin-top:1.5rem; padding:14px 24px; background:#0a1929; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold; font-size:1.05rem; width:100%; box-shadow:0 4px 12px rgba(10,25,41,0.2); transition:background 0.2s;" onmouseover="this.style.background='#1e3a5f'" onmouseout="this.style.background='#0a1929'">
+          📦 Voir mes commandes reçues
+        </button>
+
       </div>
     `;
 
@@ -245,6 +252,7 @@ async function showStoreDashboard() {
     container.innerHTML = `<div style="padding:2rem; color:red; text-align:center;">❌ Erreur : ${err.message}</div>`;
   }
 }
+
 
 // ==========================================
 // 📦 CHARGER LES PRODUITS DU COMMERCE
@@ -487,28 +495,16 @@ async function renderStoreDashboard() {
   if (!myStore) {
     const container = document.getElementById('store-info-content');
     if (container) {
-      container.innerHTML = '<div class="empty-state"><p>⚠️ Aucun commerce associé à votre compte. Veuillez contacter l\'administration.</p></div>';
+      container.innerHTML = '<div class="empty-state" style="padding:2rem; text-align:center; background:#fee2e2; border-radius:8px;"><p>⚠️ Aucun commerce associé à votre compte. Veuillez contacter l\'administration.</p></div>';
     }
     return;
   }
   
   try {
     // 🔥 1. RECHARGER LES DONNÉES DEPUIS LA BASE (pour des compteurs 100% à jour)
-    // On ne sélectionne que 'id' pour que la requête soit ultra-rapide
-    const { data: freshProducts } = await supabaseClient
-      .from('products')
-      .select('id')
-      .eq('store_id', myStore.id);
-    
-    const { data: freshCategories } = await supabaseClient
-      .from('categories')
-      .select('id')
-      .eq('store_id', myStore.id);
-    
-    const { data: freshOrders } = await supabaseClient
-      .from('orders')
-      .select('id')
-      .eq('store_id', myStore.id);
+    const { data: freshProducts } = await supabaseClient.from('products').select('id').eq('store_id', myStore.id);
+    const { data: freshCategories } = await supabaseClient.from('categories').select('id').eq('store_id', myStore.id);
+    const { data: freshOrders } = await supabaseClient.from('orders').select('id').eq('store_id', myStore.id);
     
     // 2. Calculer les totaux (0 si aucune donnée)
     const nbProducts = freshProducts ? freshProducts.length : 0;
@@ -522,9 +518,9 @@ async function renderStoreDashboard() {
     else if (forfait === 'croissance') limiteMax = 45;
     else if (forfait.includes('partenaire')) limiteMax = 95;
     
-    // 4. Mettre à jour les compteurs en haut de la page (avec vérification de sécurité)
+    // 4. Mettre à jour les compteurs en haut de la page
     const elProducts = document.getElementById('store-total-products');
-    if (elProducts) elProducts.textContent = `${nbProducts} / ${limiteMax}`; // Affiche "7 / 10"
+    if (elProducts) elProducts.textContent = `${nbProducts} / ${limiteMax}`;
     
     const elCategories = document.getElementById('store-total-categories');
     if (elCategories) elCategories.textContent = nbCategories;
@@ -532,33 +528,35 @@ async function renderStoreDashboard() {
     const elOrders = document.getElementById('store-total-orders');
     if (elOrders) elOrders.textContent = nbOrders;
     
-    // 5. Afficher les infos du commerce
+    // 5. Afficher les infos du commerce + LE BOUTON COMMANDES
     const container = document.getElementById('store-info-content');
     if (container) {
       container.innerHTML = `
-        <div class="profile-section">
-          <div class="profile-header">
-            <div class="profile-avatar" style="font-size:3rem">
+        <div class="profile-section" style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+          <div class="profile-header" style="display:flex; gap:1.5rem; align-items:flex-start;">
+            <div class="profile-avatar" style="font-size:3rem; flex-shrink:0;">
               ${myStore.logo ? `<img src="${myStore.logo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">` : (myStore.icon || '🏪')}
             </div>
-            <div class="profile-info">
-              <h2>${myStore.name}</h2>
-              <p>${myStore.type || 'Commerce'} • ${myStore.address || 'Adresse non spécifiée'}</p>
-              <p>📞 ${myStore.phone || 'Non spécifié'}</p>
-              <span class="badge badge-green" style="margin-top:0.5rem;display:inline-block">✅ Actif</span>
-              <span class="badge" style="margin-top:0.5rem;display:inline-block; background:#f5a623; color:#0a1929; margin-left:8px; font-weight:bold;">
-                ${forfait.toUpperCase()}
-              </span>
+            <div class="profile-info" style="flex:1;">
+              <h2 style="margin:0 0 0.5rem 0; color:#0a1929;">${myStore.name}</h2>
+              <p style="margin:0 0 0.25rem 0; color:#4b5563;">${myStore.type || 'Commerce'} • ${myStore.address || 'Adresse non spécifiée'}</p>
+              <p style="margin:0 0 0.75rem 0; color:#4b5563;">📞 ${myStore.phone || 'Non spécifié'}</p>
+              
+              <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+                <span class="badge badge-green" style="background:#10b981; color:white; padding:4px 12px; border-radius:12px; font-size:0.85rem; font-weight:bold;">✅ Actif</span>
+                <span class="badge" style="background:#f5a623; color:#0a1929; padding:4px 12px; border-radius:12px; font-size:0.85rem; font-weight:bold;">
+                  ${forfait.toUpperCase()}
+                </span>
+              </div>
+
+              <!-- 🆕 BOUTON POUR VOIR LES COMMANDES AVEC REMARQUES -->
+              <button onclick="openStoreOrdersModal('${myStore.id}')" style="padding:12px 24px; background:#0a1929; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:1rem; display:flex; align-items:center; gap:8px; width:100%; justify-content:center; transition:background 0.2s;" onmouseover="this.style.background='#1e3a5f'" onmouseout="this.style.background='#0a1929'">
+                📦 Voir mes commandes reçues
+              </button>
             </div>
           </div>
         </div>
       `;
-    }
-    
-    // 6. Mettre à jour le tableau global en mémoire pour cohérence
-    if (typeof products !== 'undefined' && Array.isArray(products)) {
-      // On garde les produits des autres commerces, mais on met à jour ceux de ce commerce
-      // (Optionnel, mais garde la mémoire synchronisée)
     }
 
   } catch (err) {
@@ -1005,21 +1003,98 @@ async function saveOwnerInfo(e) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
+// ==========================================
+// 📦 MODALE DES COMMANDES DU COMMERCE (AVEC REMARQUES)
+// ==========================================
+async function openStoreOrdersModal(storeId) {
+  console.log("🔍 [COMMANDES] Ouverture pour store_id :", storeId);
 
-// ==========================================
-// 👁️ AFFICHER LE BOUTON RETOUR SI L'UTILISATEUR EST UN COMMERCE
-// ==========================================
-function afficherBoutonRetourSiCommerce() {
-  const btnRetour = document.getElementById('btn-retour-commerce');
-  if (!btnRetour) return;
-  
-  if (currentUser && currentUser.role === 'store') {
-    btnRetour.style.display = 'block';
-    console.log("✅ [NAV] Bouton retour affiché pour le commerce");
-  } else {
-    btnRetour.style.display = 'none';
+  // 1. Créer la modale
+  let modal = document.getElementById('store-orders-modal');
+  if (modal) modal.remove();
+
+  modal = document.createElement('div');
+  modal.id = 'store-orders-modal';
+  modal.className = 'modal-bg show';
+  modal.style.zIndex = '9999';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:700px; max-height:90vh; overflow-y:auto; background:white; border-radius:12px; padding:1.5rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:2px solid #f5a623; padding-bottom:1rem;">
+        <h2 style="margin:0; color:#0a1929;">📦 Commandes reçues</h2>
+        <button onclick="document.getElementById('store-orders-modal').remove()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:bold;">✖ Fermer</button>
+      </div>
+      <div id="orders-loading" style="text-align:center; padding:2rem; color:#6b7280;">⏳ Chargement des commandes...</div>
+      <div id="orders-list-container"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // 2. Récupérer les commandes depuis Supabase
+  const { data: orders, error } = await supabaseClient
+    .from('orders')
+    .select('*')
+    .eq('store_id', String(storeId))
+    .order('created_at', { ascending: false });
+
+  const container = document.getElementById('orders-list-container');
+  document.getElementById('orders-loading').style.display = 'none';
+
+  if (error) {
+    container.innerHTML = `<div style="text-align:center; padding:2rem; background:#fee2e2; border-radius:8px; color:#991b1b;">❌ Erreur : ${error.message}</div>`;
+    return;
   }
-}
 
-// Appeler cette fonction au chargement de la page
-setTimeout(afficherBoutonRetourSiCommerce, 1000);
+  if (!orders || orders.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:2rem; background:#f9fafb; border-radius:8px;">
+        <div style="font-size:2rem; margin-bottom:0.5rem;">📭</div>
+        <p style="color:#6b7280; font-weight:bold;">Aucune commande trouvée pour ce commerce.</p>
+      </div>`;
+    return;
+  }
+
+  // 3. Construire le HTML des commandes
+  let html = '<div style="display:grid; gap:1rem;">';
+
+  orders.forEach(order => {
+    let statusColor = '#f59e0b'; let statusText = 'En attente';
+    if (order.status === 'confirmed' || order.status === 'in_progress') { statusColor = '#3b82f6'; statusText = 'En cours'; }
+    else if (order.status === 'delivered' || order.status === 'completed') { statusColor = '#10b981'; statusText = 'Livrée'; }
+    else if (order.status === 'cancelled') { statusColor = '#ef4444'; statusText = 'Annulée'; }
+
+    // 🆕 REMARQUES CLIENT (encadré jaune)
+    let remarquesHTML = '';
+    if (order.items && Array.isArray(order.items)) {
+      order.items.forEach(item => {
+        if (item.remarque && item.remarque.trim() !== '') {
+          remarquesHTML += `
+            <div style="background:#fef3c7; padding:0.6rem 0.8rem; border-radius:6px; margin-top:0.5rem; border-left:4px solid #f59e0b; font-size:0.9rem;">
+              <strong>💬 ${item.name || 'Produit'} :</strong> <span style="color:#92400e;">${item.remarque}</span>
+            </div>
+          `;
+        }
+      });
+    }
+
+    html += `
+      <div style="background:white; padding:1rem; border-radius:8px; border:1px solid #e5e7eb; border-left: 5px solid ${statusColor}; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <strong style="font-size:1.1rem; color:#0a1929;">Commande #${order.order_number || order.id}</strong>
+          <span style="background:${statusColor}; color:white; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;">${statusText}</span>
+        </div>
+        <div style="font-size:0.9rem; color:#4b5563; margin-bottom:0.5rem;">
+          👤 <strong>Client:</strong> ${order.client_name || 'Client'} <br>
+          📍 <strong>Adresse:</strong> ${order.client_address || order.address || 'Non spécifiée'}
+        </div>
+        ${remarquesHTML}
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e5e7eb; padding-top:0.75rem; margin-top:0.75rem;">
+          <span style="font-size:0.85rem; color:#6b7280;">🕒 ${new Date(order.created_at).toLocaleString('fr-CA')}</span>
+          <span style="font-size:1.2rem; font-weight:bold; color:#0a1929;">💰 ${parseFloat(order.total || 0).toFixed(2)} $</span>
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+}
