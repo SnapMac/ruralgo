@@ -6,7 +6,7 @@
 // ==========================================
 
 console.log("🔄 [01-config.js] Début du chargement...");
-
+window.currentUser = null; 
 // ==========================================
 // 🧹 NETTOYAGE PRÉVENTIF DU LOCALSTORAGE
 // ==========================================

@@ -1,0 +1,94 @@
+<!-- BANDEAU INFO -->
+<div style="background:linear-gradient(135deg,#816353,#60656680);color:#121212;text-align:center;padding:0.8rem 1rem;font-size:0.95rem;font-weight:bold;box-shadow:0 2px 10px rgba(0,0,0,0.15);position:relative;z-index:101">
+  🚧 <strong>Site en phase de développement</strong> — Bienvenue sur RuralGo !
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="nav">
+    <div class="logo" onclick="goHome()">
+      <div class="logo-icon">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 8 38 L 8 28 L 22 28 L 26 22 L 40 22 L 44 28 L 56 28 L 56 38 Z" fill="#121212" stroke="#000" stroke-width="1.5"/>
+          <path d="M 24 28 L 27 24 L 38 24 L 38 28 Z" fill="#87ceeb" stroke="#000" stroke-width="1"/>
+          <line x1="40" y1="22" x2="40" y2="38" stroke="#000" stroke-width="1.5"/>
+          <circle cx="18" cy="40" r="5" fill="#2a2a2a"/><circle cx="18" cy="40" r="2" fill="#888"/>
+          <circle cx="48" cy="40" r="5" fill="#2a2a2a"/><circle cx="48" cy="40" r="2" fill="#888"/>
+          <rect x="54" y="30" width="3" height="3" fill="#f5a623" rx="0.5"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <div class="logo-name">Rural<span>Go</span></div>
+        <div class="logo-tagline">Livraison en milieu rural</div>
+      </div>
+    </div>
+
+    <nav id="nav-client" style="display:none">
+      <ul>
+        <li><a onclick="showClientStores()">Commerces</a></li>
+        <li><a onclick="showClientOrders()">Mes commandes</a></li>
+        <li><a onclick="scrollToCart()">🛒 (<span id="cart-count">0</span>)</a></li>
+      </ul>
+    </nav>
+
+    <nav id="nav-driver" style="display:none">
+      <ul>
+        <li><a onclick="showDriverDashboard()">Tableau de bord</a></li>
+        <li><a onclick="showDriverHistory()">Historique</a></li>
+      </ul>
+    </nav>
+
+    <nav id="nav-store" style="display:none">
+      <ul>
+        <li><a onclick="goToMyStore()">Mon Commerce</a></li>
+        <li><a onclick="showStoreCategories()">Catégories</a></li>
+        <li><a onclick="showStoreProducts()">Produits</a></li>
+        <li><a onclick="showStoreOrders()">Commandes</a></li>
+      </ul>
+    </nav>
+
+    <nav id="nav-admin" style="display:none">
+      <ul>
+        <li><a onclick="adminTab('dashboard', document.querySelector('.admin-side li'))">Dashboard</a></li>
+      </ul>
+    </nav>
+
+    <div id="header-wallet" style="display: none; margin-left: 2rem; margin-right: auto;">
+      <div id="wallet-display" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(16,185,129,0.3); cursor: pointer;" onclick="showWalletBalance()">
+        <span style="font-size: 1.2rem;">💰</span>
+        <span id="wallet-balance">0.00</span> $
+        <button onclick="openDepositModal()" style="background:#10b981; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.85rem; margin-left:8px; font-weight:bold;">💳</button>
+      </div>
+    </div>
+
+    <div id="notif-bell-container" style="display:none; position:relative;">
+      <div class="notif-bell" onclick="toggleNotifPanel()">🔔<span class="notif-badge" id="notif-badge" style="display:none">0</span></div>
+      <div class="notif-panel" id="notif-panel">
+        <div class="notif-panel-header">
+          <span>🔔 Notifications</span>
+          <span style="cursor:pointer; font-size:0.85rem" onclick="markAllRead()">Tout marquer lu</span>
+        </div>
+        <div id="notif-list"></div>
+      </div>
+    </div>
+
+    <div id="auth-section" class="auth-buttons">
+      <button class="auth-btn" onclick="openChooseTypeModal()">📝 S'inscrire</button>
+      <button class="auth-btn secondary" onclick="openLoginModal()">🔑 Connexion</button>
+    </div>
+
+    <div id="user-section" style="display:none; align-items: center; gap: 1rem;">
+      <button onclick="openEditProfileModal()" style="background: transparent; color: #121212; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 500; font-size: 0.85rem;">✏️ Modifier</button>
+      <div class="user-info" style="cursor:pointer; display: flex; align-items: center; gap: 10px;" onclick="showProfile()">
+        <div class="user-avatar" id="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #f5a623 0%, #d48a1b 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem;">👤</div>
+        <div class="user-details" style="text-align: left;">
+          <div class="user-name" id="user-name" style="font-weight: 600; color: #121212; font-size: 0.95rem;">User</div>
+          <div class="user-role" id="user-role" style="font-size: 0.8rem; color: #6b7280;">Client</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()" style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.85rem;">Déconnexion</button>
+    </div>
+  </div>
+</header>
+
+<div id="compteur" style="text-align:center;padding:0.8rem;background:#86837e;color:white;font-size:1.1rem;font-weight:bold;"></div>

@@ -1,0 +1,309 @@
+<!-- MODALE DE CHOIX DE COMPTE -->
+<div class="modal-bg" id="choose-type-modal">
+  <div class="modal">
+    <h2>👋 Créer un compte</h2>
+    <div style="background: #fff7ed; border-left: 4px solid #f59e0b; padding: 10px; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.9rem; color: #9a3412; text-align:center;">
+      ⚠️ La plateforme est actuellement en phase de test privé. Ouverture prévue : début 2027
+    </div>
+    <div class="account-types">
+      <div class="account-type" onclick="showToast('🔒 L\'inscription n\'est pas encore disponible')" style="opacity: 0.6; cursor: not-allowed; position: relative; background: #f9fafb;">
+        <div style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;">🔒 Fermé</div>
+        <div class="account-type-icon" style="filter: grayscale(100%);">🛒</div>
+        <div class="account-type-name">Client</div>
+        <div class="account-type-desc">Commander des produits</div>
+        <div style="margin-top: 8px; color: #ef4444; font-size: 0.75rem; font-weight: bold;">L'inscription n'est pas encore disponible</div>
+      </div>
+      <div class="account-type" onclick="showToast('🔒 L\'inscription n\'est pas encore disponible')" style="opacity: 0.6; cursor: not-allowed; position: relative; background: #f9fafb;">
+        <div style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;">🔒 Fermé</div>
+        <div class="account-type-icon" style="filter: grayscale(100%);">🚗</div>
+        <div class="account-type-name">Livreur</div>
+        <div class="account-type-desc">Effectuer des livraisons</div>
+        <div style="margin-top: 8px; color: #ef4444; font-size: 0.75rem; font-weight: bold;">L'inscription n'est pas encore disponible</div>
+      </div>
+      <div class="account-type" onclick="showToast('🔒 L\'inscription n\'est pas encore disponible')" style="opacity: 0.6; cursor: not-allowed; position: relative; background: #f9fafb;">
+        <div style="position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;">🔒 Fermé</div>
+        <div class="account-type-icon" style="filter: grayscale(100%);">🏪</div>
+        <div class="account-type-name">Commerce</div>
+        <div class="account-type-desc">Vendre mes produits</div>
+        <div style="margin-top: 8px; color: #ef4444; font-size: 0.75rem; font-weight: bold;">L'inscription n'est pas encore disponible</div>
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn-sm btn-gray" onclick="closeModal('choose-type-modal')">Fermer</button>
+      <button class="btn-sm btn-gray" disabled style="opacity: 0.5; cursor: not-allowed;">Continuer →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="register-client-modal"><div class="modal">
+  <h2>📝 Inscription Client</h2>
+  <form onsubmit="registerClient(event)">
+    <div class="form-group"><label>👤 Nom complet *</label><input type="text" id="rc-name" required placeholder="Jean Tremblay"></div>
+    <div class="form-group"><label>📧 Courriel *</label><input type="email" id="rc-email" required placeholder="jean@exemple.com"></div>
+    <div class="form-group"><label>🔒 Mot de passe *</label><input type="password" id="rc-pass" required minlength="6" placeholder="••••••••"></div>
+    <div class="form-group"><label>🔒 Confirmer *</label><input type="password" id="rc-pass-confirm" required minlength="6" placeholder="••••••••"></div>
+    <div class="form-group"><label>📱 Téléphone *</label><input type="tel" id="rc-phone" required placeholder="(819) 123-4567"></div>
+    <div class="form-group"><label>📍 Province *</label><input type="text" id="rc-province" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;cursor:not-allowed;font-weight:bold;"></div>
+    <div class="form-group"><label>🏠 Adresse *</label>
+      <div class="autocomplete-wrapper">
+        <input type="text" id="rc-address" class="autocomplete-input" required placeholder="Ex: 123 rue Principale, Maniwaki" autocomplete="off" oninput="searchAddress(this.value, 'rc-address-suggestions', 'rc-address')">
+        <div id="rc-address-suggestions" class="autocomplete-suggestions"></div>
+      </div>
+      <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('rc-address')">📍 Utiliser ma position GPS</button>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('register-client-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">✅ Créer mon compte</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal-bg" id="register-store-modal"><div class="modal">
+  <h2>🏪 Inscription Commerce</h2>
+  <form onsubmit="registerStore(event)">
+    <div class="form-group"><label>🏪 Nom du commerce *</label><input type="text" id="rs-name" required></div>
+    <div class="form-group"><label>📂 Type *</label>
+      <select id="rs-type" required>
+        <option value="">-- Choisir --</option>
+        <option>🛒 Épicerie</option><option>💊 Pharmacie</option><option>🏪 Dépanneur</option><option>🍽️ Restaurant</option><option>🏬 Autres</option>
+      </select>
+    </div>
+    <div class="form-group"><label>👤 Responsable *</label><input type="text" id="rs-owner" required></div>
+    <div class="form-group"><label>📧 Courriel *</label><input type="email" id="rs-email" required></div>
+    <div class="form-group"><label>🔒 Mot de passe *</label><input type="password" id="rs-pass" required minlength="6"></div>
+    <div class="form-group"><label>🔒 Confirmer *</label><input type="password" id="rs-pass-confirm" required minlength="6"></div>
+    <div class="form-group"><label>📱 Téléphone *</label><input type="tel" id="rs-phone" required></div>
+    <div class="form-group"><label>📍 Province *</label><input type="text" id="rs-province" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;font-weight:bold;"></div>
+    <div class="form-group"><label>🏠 Adresse *</label>
+      <div class="autocomplete-wrapper">
+        <input type="text" id="rs-address" class="autocomplete-input" oninput="searchAddress(this.value, 'rs-address-suggestions', 'rs-address')" required autocomplete="off">
+        <div id="rs-address-suggestions" class="autocomplete-suggestions"></div>
+      </div>
+      <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('rs-address')">📍 GPS</button>
+    </div>
+    <div class="form-group"><label>🎟️ Forfait *</label>
+      <select id="rs-forfait" required>
+        <option value="">-- Choisir --</option>
+        <option value="essai">🌱 Essai - 0$/mois</option>
+        <option value="base">🏪 Base - 7,99$/mois</option>
+        <option value="croissance">🚀 Croissance - 29,99$/mois</option>
+        <option value="partenaire">👑 Partenaire Plus - 89,99$/mois</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('register-store-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">📨 Soumettre</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal-bg" id="register-driver-modal"><div class="modal">
+  <h2>🚗 Inscription Livreur</h2>
+  <form onsubmit="registerDriver(event)">
+    <div class="form-group"><label>👤 Nom *</label><input type="text" id="rd-name" required></div>
+    <div class="form-group"><label>📧 Courriel *</label><input type="email" id="rd-email" required></div>
+    <div class="form-group"><label>🔒 Mot de passe *</label><input type="password" id="rd-pass" required minlength="6"></div>
+    <div class="form-group"><label>🔒 Confirmer *</label><input type="password" id="rd-pass-confirm" required minlength="6"></div>
+    <div class="form-group"><label>📱 Téléphone *</label><input type="tel" id="rd-phone" required></div>
+    <div class="form-group"><label>📍 Province *</label><input type="text" id="rd-province" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;font-weight:bold;"></div>
+    <div class="form-group"><label>🚙 Véhicule *</label>
+      <select id="rd-vehicle" required>
+        <option value="">-- Choisir --</option>
+        <option value="Voiture">🚗 Voiture</option>
+        <option value="Camionnette">🚗 Camionnette</option>
+        <option value="Pick-up">🛻 Pick-up</option>
+        <option value="VTT/Quad">🏍️ VTT/Quad</option>
+        <option value="Motoneige">🛷 Motoneige</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('register-driver-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">📨 Soumettre</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal-bg" id="login-modal"><div class="modal">
+  <h2>🔑 Connexion</h2>
+  <form onsubmit="loginUser(event)">
+    <div class="form-group"><label>Courriel</label><input type="email" id="login-email" required></div>
+    <div class="form-group"><label>Mot de passe</label><input type="password" id="login-pass" required></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('login-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">🔓 Se connecter</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal-bg" id="store-modal"><div class="modal">
+  <h2 id="store-modal-title">➕ Ajouter un Commerce</h2>
+  <form onsubmit="saveStore(event)">
+    <input type="hidden" id="store-id">
+    <div class="form-group"><label>Nom *</label><input type="text" id="store-name" required></div>
+    <div class="form-group"><label>Type *</label>
+      <select id="store-type" required>
+        <option value="">-- Choisir --</option>
+        <option>🛒 Épicerie</option><option>💊 Pharmacie</option><option>🏪 Dépanneur</option><option>🍽️ Restaurant</option><option>🏬 Autres</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Adresse *</label>
+      <div class="autocomplete-wrapper">
+        <input type="text" id="store-addr" class="autocomplete-input" required autocomplete="off">
+        <div id="store-addr-suggestions" class="autocomplete-suggestions"></div>
+      </div>
+      <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('store-addr')">📍 GPS</button>
+    </div>
+    <div class="form-group"><label>Téléphone</label><input type="tel" id="store-phone"></div>
+    <div class="form-group"><label>Icône *</label><div class="icon-picker" id="store-icon-picker"></div><input type="hidden" id="store-icon"></div>
+    <div class="form-group"><label>Statut</label><select id="store-status"><option value="active">✅ Actif</option><option value="inactive">❌ Inactif</option></select></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('store-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal-bg" id="category-modal"><div class="modal">
+  <h2 id="cat-modal-title">➕ Catégorie</h2>
+  <form onsubmit="saveCategory(event)">
+    <input type="hidden" id="cat-id">
+    <div class="form-group"><label>Nom *</label><input type="text" id="cat-name" required></div>
+    <div class="form-group"><label>Icône *</label><div class="icon-picker" id="cat-icon-picker"></div><input type="hidden" id="cat-icon"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('category-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal-bg" id="product-modal"><div class="modal">
+  <h2 id="prod-modal-title">➕ Produit</h2>
+  <form onsubmit="saveProduct(event)">
+    <input type="hidden" id="prod-id">
+    <div class="form-group"><label>Commerce *</label><select id="prod-store" required></select></div>
+    <div class="form-group"><label>Catégorie *</label><select id="prod-category" required></select></div>
+    <div class="form-group"><label>Nom *</label><input type="text" id="prod-name" required></div>
+    <div class="form-group"><label>Description</label><input type="text" id="prod-desc"></div>
+    <div class="form-group"><label>Prix ($) *</label><input type="number" id="prod-price" required step="0.01" min="0"></div>
+    <div class="form-group"><label>Icône *</label><div class="icon-picker" id="prod-icon-picker"></div><input type="hidden" id="prod-icon"></div>
+    <div class="form-group"><label>Disponible</label><select id="prod-available"><option value="true">✅ Oui</option><option value="false">❌ Non</option></select></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-sm btn-gray" onclick="closeModal('product-modal')">Annuler</button>
+      <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal-bg" id="edit-profile-modal">
+  <div class="modal">
+    <h2>✏️ Modifier mon profil</h2>
+    <form onsubmit="saveProfile(event)">
+      <div class="form-group"><label>Nom complet</label><input type="text" id="ep-name" required></div>
+      <div class="form-group"><label>Téléphone</label><input type="tel" id="ep-phone" required></div>
+      <div class="form-group"><label>📍 Province</label><input type="text" value="Québec" readonly style="padding:0.6rem;border:1px solid #ddd;border-radius:6px;width:100%;background-color:#f0f0f0;color:#666;font-weight:bold;"></div>
+      <div class="form-group"><label>Adresse</label>
+        <div class="autocomplete-wrapper">
+          <input type="text" id="ep-address" class="autocomplete-input" oninput="searchAddress(this.value, 'ep-address-suggestions', 'ep-address')" autocomplete="off">
+          <div id="ep-address-suggestions" class="autocomplete-suggestions"></div>
+        </div>
+        <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('ep-address')">📍 GPS</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-sm btn-gray" onclick="closeModal('edit-profile-modal')">Annuler</button>
+        <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-bg" id="admin-edit-client-modal">
+  <div class="modal" style="max-width: 500px;">
+    <h2>✏️ Modifier le Client</h2>
+    <form onsubmit="saveAdminClient(event)">
+      <input type="hidden" id="admin-client-id">
+      <div class="form-group">
+        <label>Nom complet</label>
+        <input type="text" id="admin-client-name" required>
+      </div>
+      <div class="form-group">
+        <label>Courriel</label>
+        <input type="email" id="admin-client-email" required>
+      </div>
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input type="tel" id="admin-client-phone" required>
+      </div>
+      <div class="form-group" style="position: relative;">
+        <label>Adresse (Tapez au moins 4 caractères, ex: Maniwaki)</label>
+        <input type="text" id="admin-client-address" class="autocomplete-input" oninput="searchAddress(this.value, 'admin-client-address-sugg', 'admin-client-address')" placeholder="Ex: 100 rue Principale, Maniwaki" autocomplete="off">
+        <div id="admin-client-address-sugg" class="autocomplete-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 99999; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: none; max-height: 200px; overflow-y: auto;"></div>
+      </div>
+      <div class="modal-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn-sm btn-gray" onclick="closeModal('admin-edit-client-modal')">Annuler</button>
+        <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-bg" id="admin-edit-store-modal">
+  <div class="modal" style="max-width: 500px;">
+    <h2>✏️ Modifier le Commerce</h2>
+    <form onsubmit="saveAdminStore(event)">
+      <input type="hidden" id="admin-store-id">
+      <div class="form-group">
+        <label>Nom du commerce</label>
+        <input type="text" id="admin-store-name" required>
+      </div>
+      <div class="form-group">
+        <label>Type de commerce</label>
+        <select id="admin-store-type" class="form-control" required>
+          <option value="general">Général</option>
+          <option value="restaurant">Restaurant</option>
+          <option value="epicerie">Épicerie</option>
+          <option value="pharmacie">Pharmacie</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input type="tel" id="admin-store-phone" required>
+      </div>
+      <div class="form-group" style="position: relative;">
+        <label>Adresse du commerce (Tapez au moins 4 caractères)</label>
+        <input type="text" id="admin-store-address" class="autocomplete-input" oninput="searchAddress(this.value, 'admin-store-address-sugg', 'admin-store-address')" placeholder="Ex: 450 rue Principale, Maniwaki" autocomplete="off">
+        <div id="admin-store-address-sugg" class="autocomplete-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 99999; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: none; max-height: 200px; overflow-y: auto;"></div>
+      </div>
+      <div class="modal-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn-sm btn-gray" onclick="closeModal('admin-edit-store-modal')">Annuler</button>
+        <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-bg" id="admin-edit-driver-modal">
+  <div class="modal" style="max-width: 500px;">
+    <h2>✏️ Modifier le Livreur</h2>
+    <form onsubmit="saveAdminDriver(event)">
+      <input type="hidden" id="admin-driver-id">
+      <div class="form-group">
+        <label>Nom complet</label>
+        <input type="text" id="admin-driver-name" required>
+      </div>
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input type="tel" id="admin-driver-phone" required>
+      </div>
+      <div class="form-group" style="position: relative;">
+        <label>Adresse (Tapez au moins 4 caractères)</label>
+        <input type="text" id="admin-driver-address" class="autocomplete-input" oninput="searchAddress(this.value, 'admin-driver-address-sugg', 'admin-driver-address')" placeholder="Ex: 10 rue des Érables, Maniwaki" autocomplete="off">
+        <div id="admin-driver-address-sugg" class="autocomplete-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 99999; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: none; max-height: 200px; overflow-y: auto;"></div>
+      </div>
+      <div class="modal-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn-sm btn-gray" onclick="closeModal('admin-driver-modal')">Annuler</button>
+        <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
