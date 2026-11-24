@@ -1053,6 +1053,9 @@ async function openStoreOrdersModal(storeId) {
     return;
   }
 
+  // 🆕 PETITE LIGNE AJOUTÉE : On sauvegarde la liste pour le bouton facture
+  window._tempOrdersList = orders;
+
   // 3. Construire le HTML des commandes
   let html = '<div style="display:grid; gap:1rem;">';
 
@@ -1062,7 +1065,7 @@ async function openStoreOrdersModal(storeId) {
     else if (order.status === 'delivered' || order.status === 'completed') { statusColor = '#10b981'; statusText = 'Livrée'; }
     else if (order.status === 'cancelled') { statusColor = '#ef4444'; statusText = 'Annulée'; }
 
-    // 🆕 REMARQUES CLIENT (encadré jaune)
+    // REMARQUES CLIENT (encadré jaune)
     let remarquesHTML = '';
     if (order.items && Array.isArray(order.items)) {
       order.items.forEach(item => {
@@ -1076,6 +1079,7 @@ async function openStoreOrdersModal(storeId) {
       });
     }
 
+    // 🆕 BLOC AVEC LE BOUTON FACTURE
     html += `
       <div style="background:white; padding:1rem; border-radius:8px; border:1px solid #e5e7eb; border-left: 5px solid ${statusColor}; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
@@ -1087,9 +1091,14 @@ async function openStoreOrdersModal(storeId) {
           📍 <strong>Adresse:</strong> ${order.client_address || order.address || 'Non spécifiée'}
         </div>
         ${remarquesHTML}
-        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e5e7eb; padding-top:0.75rem; margin-top:0.75rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e5e7eb; padding-top:0.75rem; margin-top:0.75rem; flex-wrap:wrap; gap:0.5rem;">
           <span style="font-size:0.85rem; color:#6b7280;">🕒 ${new Date(order.created_at).toLocaleString('fr-CA')}</span>
-          <span style="font-size:1.2rem; font-weight:bold; color:#0a1929;">💰 ${parseFloat(order.total || 0).toFixed(2)} $</span>
+          <div style="display:flex; align-items:center; gap:1rem;">
+            <span style="font-size:1.2rem; font-weight:bold; color:#0a1929;">💰 ${parseFloat(order.total || 0).toFixed(2)} $</span>
+            <button onclick="openOrderInvoiceModal(window._tempOrdersList.find(o => String(o.id) === String('${order.id}')))" style="padding:6px 12px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold; display:flex; align-items:center; gap:4px;">
+              🖨️ Facture
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -1097,4 +1106,130 @@ async function openStoreOrdersModal(storeId) {
 
   html += '</div>';
   container.innerHTML = html;
+}
+// ==========================================
+// 🖨️ MODALE FACTURE IMPRIMABLE (PDF)
+// ==========================================
+function openOrderInvoiceModal(order) {
+  if (!order) {
+    alert("Erreur : Impossible de trouver les détails de cette commande.");
+    return;
+  }
+
+  let modal = document.getElementById('invoice-modal');
+  if (modal) modal.remove();
+
+  const subtotal = parseFloat(order.subtotal || 0);
+  const delivery = parseFloat(order.delivery_fee || 0);
+  const tax = parseFloat(order.tax || 0);
+  const total = parseFloat(order.total || 0);
+  const dateStr = new Date(order.created_at).toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  let itemsHTML = '';
+  if (order.items && Array.isArray(order.items)) {
+    order.items.forEach(item => {
+      const lineTotal = (parseFloat(item.price) * parseInt(item.qty)).toFixed(2);
+      const remarqueLine = (item.remarque && item.remarque.trim() !== '') 
+        ? `<div style="font-size:0.8rem; color:#92400e; font-style:italic; margin-top:4px;">💬 Note: ${item.remarque}</div>` 
+        : '';
+      
+      itemsHTML += `
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <td style="padding:12px 8px; vertical-align:top;">
+            <strong>${item.name || 'Produit'}</strong>
+            ${remarqueLine}
+          </td>
+          <td style="padding:12px 8px; text-align:center;">${item.qty}</td>
+          <td style="padding:12px 8px; text-align:right;">${parseFloat(item.price).toFixed(2)} $</td>
+          <td style="padding:12px 8px; text-align:right; font-weight:bold;">${lineTotal} $</td>
+        </tr>
+      `;
+    });
+  }
+
+  modal = document.createElement('div');
+  modal.id = 'invoice-modal';
+  modal.className = 'modal-bg show';
+  modal.style.zIndex = '9999';
+  modal.innerHTML = `
+    <style>
+      @media print {
+        body * { visibility: hidden; }
+        #invoice-print-area, #invoice-print-area * { visibility: visible; }
+        #invoice-print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; background: white; }
+        .no-print { display: none !important; }
+      }
+    </style>
+
+    <div id="invoice-print-area" style="max-width:800px; margin:2rem auto; background:white; padding:2rem; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); font-family: Arial, sans-serif; color:#1f2937;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #0a1929; padding-bottom:1rem; margin-bottom:1.5rem;">
+        <div>
+          <h1 style="margin:0; color:#0a1929; font-size:1.8rem;">🌲 RuralGo</h1>
+          <p style="margin:4px 0 0 0; color:#6b7280; font-size:0.9rem;">Livraison en milieu rural</p>
+        </div>
+        <div style="text-align:right;">
+          <h2 style="margin:0; color:#f5a623; font-size:1.5rem;">FACTURE</h2>
+          <p style="margin:4px 0 0 0; font-weight:bold;"># ${order.order_number || order.id}</p>
+          <p style="margin:4px 0 0 0; color:#6b7280; font-size:0.9rem;">${dateStr}</p>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem; margin-bottom:2rem;">
+        <div style="background:#f9fafb; padding:1rem; border-radius:8px;">
+          <h3 style="margin:0 0 0.5rem 0; color:#0a1929; font-size:1rem;">🏪 Commerce</h3>
+          <p style="margin:0; font-weight:bold;">${order.store_name || 'Commerce'}</p>
+        </div>
+        <div style="background:#f0fdf4; padding:1rem; border-radius:8px;">
+          <h3 style="margin:0 0 0.5rem 0; color:#0a1929; font-size:1rem;">👤 Client</h3>
+          <p style="margin:0; font-weight:bold;">${order.client_name || 'Client'}</p>
+          <p style="margin:4px 0 0 0; font-size:0.9rem; color:#4b5563;">📞 ${order.client_phone || 'Non spécifié'}</p>
+          <p style="margin:4px 0 0 0; font-size:0.9rem; color:#4b5563;">📍 ${order.client_address || order.address || 'Non spécifiée'}</p>
+        </div>
+      </div>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:2rem;">
+        <thead>
+          <tr style="background:#0a1929; color:white;">
+            <th style="padding:12px 8px; text-align:left; border-radius:6px 0 0 0;">Produit</th>
+            <th style="padding:12px 8px; text-align:center;">Qté</th>
+            <th style="padding:12px 8px; text-align:right;">Prix unit.</th>
+            <th style="padding:12px 8px; text-align:right; border-radius:0 6px 0 0;">Total</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHTML}</tbody>
+      </table>
+
+      <div style="display:flex; justify-content:flex-end; margin-bottom:2rem;">
+        <div style="width:250px;">
+          <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #e5e7eb;">
+            <span>Sous-total</span><span>${subtotal.toFixed(2)} $</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #e5e7eb;">
+            <span>Livraison</span><span>${delivery.toFixed(2)} $</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #e5e7eb;">
+            <span>Taxes</span><span>${tax.toFixed(2)} $</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:12px 0; font-size:1.3rem; font-weight:bold; color:#0a1929;">
+            <span>TOTAL</span><span>${total.toFixed(2)} $</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center; color:#6b7280; font-size:0.85rem; border-top:1px solid #e5e7eb; padding-top:1rem;">
+        <p style="margin:0;">Merci de votre confiance ! Pour toute question, contactez le commerce directement.</p>
+        <p style="margin:8px 0 0 0;">Généré par <strong>RuralGo Québec</strong></p>
+      </div>
+    </div>
+
+    <div class="no-print" style="position:fixed; bottom:2rem; right:2rem; display:flex; gap:1rem; z-index:10000;">
+      <button onclick="document.getElementById('invoice-modal').remove()" style="padding:12px 24px; background:#ef4444; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+        ✖ Fermer
+      </button>
+      <button onclick="window.print()" style="padding:12px 24px; background:#10b981; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.2); display:flex; align-items:center; gap:8px;">
+        🖨️ Imprimer / PDF
+      </button>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
