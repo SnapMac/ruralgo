@@ -1232,4 +1232,177 @@ function openOrderInvoiceModal(order) {
     </div>
   `;
   document.body.appendChild(modal);
+}// ==========================================
+// 📦 COMMANDES DU COMMERCE (INTÉGRÉES)
+// ==========================================
+
+function showStoreOrders() {
+  switchView('view-store');
+  document.getElementById('store-dashboard-section').style.display = 'none';
+  document.getElementById('store-categories-section').style.display = 'none';
+  document.getElementById('store-products-section').style.display = 'none';
+  document.getElementById('store-orders-section').style.display = 'block';
+  renderStoreOrders();
+}
+
+async function renderStoreOrders() {
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  const container = document.getElementById('store-orders-container');
+  if (!myStore || !container) return;
+
+  container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">⏳ Chargement des commandes...</p>';
+
+  try {
+    const { data: orders, error } = await supabaseClient
+      .from('orders')
+      .select('*')
+      .eq('store_id', String(myStore.id))
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    // Save globally so the existing invoice modal can find the order data
+    window._storeOrders = orders; 
+
+    if (!orders || orders.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div style="font-size:3rem; margin-bottom:1rem;">📭</div>
+          <h3>Aucune commande reçue</h3>
+          <p>Vos nouvelles commandes apparaîtront ici.</p>
+        </div>`;
+      return;
+    }
+
+    const stats = {
+      all: orders.length,
+      pending: orders.filter(o => o.status === 'pending').length,
+      active: orders.filter(o => ['confirmed', 'in_progress'].includes(o.status)).length,
+      completed: orders.filter(o => ['delivered', 'completed'].includes(o.status)).length,
+    };
+
+    let html = `
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+        <button class="btn-sm btn-gray" onclick="filterStoreOrders('all')">Toutes (${stats.all})</button>
+        <button class="btn-sm btn-orange" onclick="filterStoreOrders('pending')">⏳ À préparer (${stats.pending})</button>
+        <button class="btn-sm btn-blue" onclick="filterStoreOrders('active')">🧑‍🍳 En cours (${stats.active})</button>
+        <button class="btn-sm btn-green" onclick="filterStoreOrders('completed')">✅ Terminées (${stats.completed})</button>
+      </div>
+      <div id="store-orders-list" style="display:grid; gap:1rem;">
+    `;
+
+    orders.forEach(order => {
+      html += generateStoreOrderCard(order);
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+
+  } catch (err) {
+    console.error('❌ Erreur renderStoreOrders:', err);
+    container.innerHTML = `<div style="text-align:center; padding:2rem; color:red;">❌ Erreur : ${err.message}</div>`;
+  }
+}
+
+function generateStoreOrderCard(order) {
+  let statusClass = 'pending';
+  let statusLabel = '⏳ À préparer';
+  let statusColor = '#f59e0b';
+  
+  if (['confirmed', 'in_progress'].includes(order.status)) {
+    statusClass = 'active'; statusLabel = '🧑‍🍳 En cours'; statusColor = '#3b82f6';
+  } else if (['delivered', 'completed'].includes(order.status)) {
+    statusClass = 'completed'; statusLabel = '✅ Terminée'; statusColor = '#10b981';
+  } else if (order.status === 'cancelled') {
+    statusClass = 'cancelled'; statusLabel = '❌ Annulée'; statusColor = '#ef4444';
+  }
+
+  // Display client remarks if any
+  let remarquesHTML = '';
+  if (order.items && Array.isArray(order.items)) {
+    order.items.forEach(item => {
+      if (item.remarque && item.remarque.trim() !== '') {
+        remarquesHTML += `
+          <div style="background:#fef3c7; padding:0.6rem 0.8rem; border-radius:6px; margin-top:0.5rem; border-left:4px solid #f59e0b; font-size:0.9rem;">
+            <strong>💬 ${item.name || 'Produit'} :</strong> <span style="color:#92400e;">${item.remarque}</span>
+          </div>
+        `;
+      }
+    });
+  }
+
+  // Action buttons based on status
+  let actionsHTML = '';
+  if (statusClass === 'pending') {
+    actionsHTML = `<button class="btn-sm btn-blue" onclick="updateStoreOrderStatus('${order.id}', 'confirmed')">✅ Confirmer & Préparer</button>`;
+  } else if (statusClass === 'active') {
+    actionsHTML = `<button class="btn-sm btn-green" onclick="updateStoreOrderStatus('${order.id}', 'delivered')">📦 Prête / Livrée</button>`;
+  }
+
+  return `
+    <div class="order-card" data-status="${statusClass}" style="background:white; padding:1.25rem; border-radius:10px; border:1px solid #e5e7eb; border-left: 5px solid ${statusColor}; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem;">
+        <div>
+          <strong style="font-size:1.1rem; color:#0a1929;">Commande #${order.order_number || order.id}</strong>
+          <span style="display:block; font-size:0.8rem; color:#6b7280; margin-top:2px;">${new Date(order.created_at).toLocaleString('fr-CA')}</span>
+        </div>
+        <span style="background:${statusColor}; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem; font-weight:bold;">${statusLabel}</span>
+      </div>
+      
+      <div style="font-size:0.9rem; color:#4b5563; margin-bottom:0.75rem; padding:0.75rem; background:#f9fafb; border-radius:6px;">
+        <strong style="color:#0a1929;">👤 Client:</strong> ${order.client_name || 'Client'} <br>
+        <strong style="color:#0a1929;">📍 Adresse:</strong> ${order.client_address || 'Non spécifiée'} <br>
+        <strong style="color:#0a1929;">📞 Téléphone:</strong> ${order.client_phone || 'Non spécifié'}
+      </div>
+
+      <div style="margin-bottom:0.75rem;">
+        <strong style="font-size:0.9rem; color:#0a1929;">🛒 Articles (${(order.items || []).length}):</strong>
+        <ul style="margin:0.5rem 0 0 1.2rem; padding:0; font-size:0.85rem; color:#4b5563;">
+          ${(order.items || []).map(item => `<li>${item.qty} × ${item.name} <span style="color:#10b981; font-weight:bold;">(${(item.price * item.qty).toFixed(2)} $)</span></li>`).join('')}
+        </ul>
+      </div>
+
+      ${remarquesHTML}
+
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e5e7eb; padding-top:0.75rem; margin-top:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+        <span style="font-size:1.1rem; font-weight:bold; color:#0a1929;">💰 Total: ${parseFloat(order.total || 0).toFixed(2)} $</span>
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <button class="btn-sm btn-gray" onclick="openOrderInvoiceModal(window._storeOrders.find(o => String(o.id) === String('${order.id}')))">🖨️ Facture</button>
+          ${actionsHTML}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function filterStoreOrders(status) {
+  const cards = document.querySelectorAll('#store-orders-list .order-card');
+  cards.forEach(card => {
+    if (status === 'all') {
+      card.style.display = 'block';
+    } else {
+      card.style.display = card.dataset.status === status ? 'block' : 'none';
+    }
+  });
+}
+
+async function updateStoreOrderStatus(orderId, newStatus) {
+  try {
+    // Fetch current history to append the new status change
+    const { data: orderData } = await supabaseClient.from('orders').select('status_history').eq('id', orderId).single();
+    const history = orderData?.status_history || [];
+    history.push({ status: newStatus, time: new Date().toISOString(), note: 'Mis à jour par le commerce' });
+    
+    // Update the order status and history in Supabase
+    await supabaseClient.from('orders').update({ 
+      status: newStatus, 
+      status_history: history 
+    }).eq('id', orderId);
+    
+    showToast('✅ Commande mise à jour !');
+    renderStoreOrders(); // Refresh the list to show the new status
+  } catch (err) {
+    console.error('Erreur mise à jour statut:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
 }
