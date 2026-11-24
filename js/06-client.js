@@ -459,6 +459,7 @@ function showClientOrderDetail(orderId) {
   
   const st = STATUS_LABELS[order.status] || STATUS_LABELS.pending;
   let html = `<button class="back-btn" onclick="showClientOrders()">← Retour</button>`;
+  
   html += `<div class="store-detail-header">
     <div class="store-detail-icon">📦</div>
     <div class="store-detail-info">
@@ -466,6 +467,10 @@ function showClientOrderDetail(orderId) {
       <p>${new Date(order.createdAt).toLocaleString('fr-CA')}</p>
       <p><span class="status-badge ${st.class}">${st.label}</span></p>
     </div>
+    <!-- 🆕 BOUTON FACTURE -->
+    <button onclick="showClientInvoice(${order.id})" style="margin-left:auto; padding:10px 20px; background:#2563eb; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:0.95rem; display:flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(37,99,235,0.3);">
+      🖨️ Voir la facture
+    </button>
   </div>`;
   
   html += `<div class="profile-section">
@@ -481,9 +486,12 @@ function showClientOrderDetail(orderId) {
   html += `<div class="profile-section">
     <h3 style="color:#0a1929;margin-bottom:1rem">🛒 Articles</h3>`;
   order.items.forEach(item => {
+    const remarqueLine = (item.remarque && item.remarque.trim() !== '') 
+      ? `<div style="font-size:0.8rem; color:#92400e; font-style:italic; margin-top:4px;">💬 Note: ${item.remarque}</div>` 
+      : '';
     html += `<div style="display:flex;align-items:center;gap:1rem;padding:0.8rem;border-bottom:1px solid #eee">
       <div style="font-size:2rem">${item.icon}</div>
-      <div style="flex:1"><strong>${item.name}</strong><br><span style="color:#666;font-size:0.85rem">Qté: ${item.qty} × ${item.price.toFixed(2)}$</span></div>
+      <div style="flex:1"><strong>${item.name}</strong><br><span style="color:#666;font-size:0.85rem">Qté: ${item.qty} × ${item.price.toFixed(2)}$</span>${remarqueLine}</div>
       <strong style="color:#0a1929">${(item.qty * item.price).toFixed(2)} $</strong>
     </div>`;
   });
@@ -494,6 +502,45 @@ function showClientOrderDetail(orderId) {
   }
   
   document.getElementById('client-order-detail-content').innerHTML = html;
+}
+
+// ==========================================
+// 🖨️ FONCTION PONT : Facture pour le CLIENT (mappe camelCase → snake_case)
+// ==========================================
+function showClientInvoice(orderId) {
+  const order = orders.find(o => o.id === orderId);
+  if (!order) {
+    alert("Commande introuvable");
+    return;
+  }
+  
+  // On transforme l'objet au format attendu par openOrderInvoiceModal
+  const orderForInvoice = {
+    id: order.id,
+    order_number: order.orderNumber || order.id,
+    created_at: order.createdAt,
+    store_name: order.storeName || 'Commerce',
+    client_name: currentUser?.name || order.client_name || 'Client',
+    client_phone: currentUser?.phone || order.client_phone || '',
+    client_address: currentUser?.address || order.client_address || 'Adresse non spécifiée',
+    subtotal: order.subtotal,
+    delivery_fee: order.deliveryFee,
+    tax: order.tax,
+    total: order.total,
+    items: order.items.map(item => ({
+      name: item.name,
+      price: item.price,
+      qty: item.qty,
+      remarque: item.remarque || ''
+    }))
+  };
+  
+  // On appelle la fonction facture existante
+  if (typeof openOrderInvoiceModal === 'function') {
+    openOrderInvoiceModal(orderForInvoice);
+  } else {
+    alert("La fonction de facture n'est pas chargée. Recharge la page.");
+  }
 }
 
 // ==========================================
