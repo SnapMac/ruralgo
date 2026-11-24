@@ -71,7 +71,7 @@
 <a onclick="goToMyStore()">Mon Commerce</a>
   <li><a onclick="showStoreCategories()">Catégories</a></li>
 <li><a onclick="showStoreProducts()">Produits</a></li>
-    <li><a onclick="showStoreOrders()">📦 Commandes</a></li>
+    <li><a onclick="showStoreOrders()">🛒 Commandes</a></li>
 </ul>
 </nav>
 <nav id="nav-admin" style="display:none">
@@ -347,7 +347,7 @@ RuralGo offre un service de cueillette et livraison de produits essentiels des c
 </section>
 <section id="client-orders-section" style="background:#f5f1e8;display:none">
 <div class="container">
-<h2 class="title">📦 Mes Commandes</h2>
+<h2 class="title">🛒 Mes Commandes</h2>
 <div id="client-orders-list"></div>
 </div>
 </section>
@@ -466,7 +466,7 @@ RuralGo offre un service de cueillette et livraison de produits essentiels des c
 <section id="store-orders-section" style="background:#f5f1e8;display:none">
   <div class="container">
     <div class="admin-header">
-      <h3>📦 Mes Commandes</h3>
+      <h3>🛒 Mes Commandes</h3>
     </div>
     <div id="store-orders-container"></div>
   </div>
@@ -483,7 +483,7 @@ RuralGo offre un service de cueillette et livraison de produits essentiels des c
 <div class="admin-layout">
 <div class="admin-side"><ul>
 <li class="active" onclick="adminTab('dashboard',this)">📊 Tableau de bord</li>
-<li onclick="adminTab('orders',this)">📦 Commandes</li>
+<li onclick="adminTab('orders',this)">🛒 Commandes</li>
 <li onclick="adminTab('stores',this)">🏪 Commerces</li>
 <li onclick="adminTab('pending-stores',this)">📨 Demandes commerces</li>
 <li onclick="adminTab('categories',this)">📂 Catégories</li>
@@ -503,11 +503,11 @@ RuralGo offre un service de cueillette et livraison de produits essentiels des c
 <div class="stat"><div class="stat-val" id="stat-revenue">0 $</div><div class="stat-lbl">Revenus totaux</div></div>
 <div class="stat"><div class="stat-val" id="stat-pending">0</div><div class="stat-lbl">En attente</div></div>
 </div>
-<h3 style="color:#121212;margin:2rem 0 1rem">📦 Dernières commandes</h3>
+<h3 style="color:#121212;margin:2rem 0 1rem">🛒 Dernières commandes</h3>
 <div id="admin-recent-orders"></div>
 </div>
 <div id="admin-orders" style="display:none">
-<div class="admin-header"><h3>📦 Toutes les commandes</h3></div>
+<div class="admin-header"><h3>🛒 Toutes les commandes</h3></div>
 <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap">
 <button class="btn-sm btn-green" onclick="filterAdminOrders('all')">Toutes</button>
 <button class="btn-sm btn-orange" onclick="filterAdminOrders('pending')">En attente</button>
