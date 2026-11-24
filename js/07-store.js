@@ -9,55 +9,141 @@ console.log("🔄 [07-store.js] Chargement du dashboard commerce...");
 // ==========================================
 // 🏪 AFFICHAGE DU DASHBOARD COMMERCE
 // ==========================================
+
+// ==========================================
+// 🧭 NAVIGATION : Aller sur la page "Mon Commerce"
+// ==========================================
+function goToMyStore() {
+  console.log("🧭 [NAV] goToMyStore() appelé");
+  
+  // 1. Cacher TOUTES les autres vues possibles
+  const allViews = [
+    'view-client',
+    'view-cart', 
+    'view-store',
+    'stores-section',
+    'cart-section'
+  ];
+  
+  allViews.forEach(viewId => {
+    const el = document.getElementById(viewId);
+    if (el) el.style.display = 'none';
+  });
+  
+  // 2. Afficher UNIQUEMENT la vue "Mon Commerce"
+  const myStoreView = document.getElementById('view-store');
+  if (myStoreView) {
+    myStoreView.style.display = 'block';
+    console.log("✅ [NAV] view-store affiché");
+  }
+  
+  // 3. Charger le tableau de bord
+  if (typeof showStoreDashboard === 'function') {
+    showStoreDashboard();
+  }
+}
+
+// ==========================================
+// 🔙 NAVIGATION : Retourner au tableau de bord Commerce
+// ==========================================
+function retourAuCommerce() {
+  console.log("🔙 [NAV] retourAuCommerce() appelé");
+  
+  // 1. Cacher toutes les vues possibles (surtout la Vue Client)
+  const allViews = [
+    'view-client',
+    'view-cart',
+    'view-store',
+    'stores-section',
+    'cart-section',
+    'one-store-view'  // Vue détaillée d'un commerce
+  ];
+  
+  allViews.forEach(viewId => {
+    const el = document.getElementById(viewId);
+    if (el) el.style.display = 'none';
+  });
+  
+  // 2. Afficher UNIQUEMENT la vue "Mon Commerce"
+  const myStoreView = document.getElementById('view-store');
+  if (myStoreView) {
+    myStoreView.style.display = 'block';
+    console.log("✅ [NAV] Retour au tableau de bord");
+  }
+  
+  // 3. Recharger le tableau de bord avec les données à jour
+  if (typeof showStoreDashboard === 'function') {
+    showStoreDashboard();
+  }
+}
+
 async function showStoreDashboard() {
+  console.log("🚀 [DEBUG 1] showStoreDashboard démarré");
+  console.log("🚀 [DEBUG 2] currentUser actuel =", currentUser);
+
   // 1. Cacher les autres sections
   const storesSection = document.getElementById('stores-section');
   if (storesSection) storesSection.style.display = 'none';
   const cartSection = document.getElementById('cart-section');
   if (cartSection) cartSection.style.display = 'none';
   
-    // 🧹 NETTOYAGE : Cacher les anciens compteurs statiques qui restent à 0
+  // 🧹 NETTOYAGE : Cacher les anciens compteurs statiques
   const oldCounters = ['store-total-products', 'store-total-categories', 'store-total-orders'];
   oldCounters.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
-      el.style.display = 'none'; // Cache le chiffre
-      // Cache aussi la "carte blanche" qui contient le compteur (le parent)
-      if (el.parentElement) {
-        el.parentElement.style.display = 'none'; 
-      }
+      el.style.display = 'none';
+      if (el.parentElement) el.parentElement.style.display = 'none'; 
     }
   });
-  console.log("🔍 [DASHBOARD] showStoreDashboard démarré");
 
+  // 2. Vérification du rôle (CRUCIAL)
   if (!currentUser || currentUser.role !== 'store') {
-    console.log("⚠️ [DASHBOARD] Pas un commerce");
+    console.warn("⚠️ [DEBUG 3] ARRÊT : L'utilisateur n'est pas un commerce. Rôle actuel :", currentUser ? currentUser.role : 'Non connecté');
+    alert("⚠️ Tu dois être connecté avec un compte 'Commerce' pour voir cette page.");
     return;
   }
 
   const container = document.getElementById('store-info-content');
   if (!container) {
-    console.error("❌ [DASHBOARD] Conteneur 'store-info-content' introuvable");
+    console.error("❌ [DEBUG 4] Conteneur 'store-info-content' introuvable dans le HTML");
     return;
   }
 
   try {
-    // 2. Récupérer les données du commerce
+    console.log("🔍 [DEBUG 5] Recherche dans Supabase du commerce où owner_id =", currentUser.id);
+
+    // 3. Récupérer les données du commerce
     const { data: store, error: storeError } = await supabaseClient
       .from('stores')
       .select('*')
       .eq('owner_id', currentUser.id)
       .maybeSingle();
 
-    if (storeError || !store) {
-      container.innerHTML = `<div style="padding:2rem; text-align:center; background:#fee2e2; border-radius:8px;"><h3>⏳ Commerce introuvable</h3></div>`;
-      return;
+    console.log("📦 [DEBUG 6] Résultat de la recherche Supabase :", store);
+    if (storeError) console.error("❌ [DEBUG 7] Erreur Supabase :", storeError);
+
+    // 4. Si aucun commerce n'est trouvé, on affiche un message d'erreur clair
+    if (!store) {
+      console.warn("⚠️ [DEBUG 8] AUCUN commerce trouvé pour cet owner_id !");
+      container.innerHTML = `
+        <div style="padding:2rem; text-align:center; background:#fee2e2; border-radius:8px; border: 2px solid #ef4444;">
+          <h3 style="color:#991b1b;">⚠️ Commerce introuvable</h3>
+          <p style="color:#7f1d1d;">Aucun commerce n'est lié à ton compte utilisateur dans la base de données.</p>
+          <hr style="margin: 1rem 0; border-color: #fca5a5;">
+          <p style="font-size:0.9rem; color:#991b1b;">
+            <strong>Ton ID utilisateur actuel :</strong> <code style="background:white; padding:2px 6px; border-radius:4px;">${currentUser.id}</code>
+          </p>
+          <p style="font-size:0.9rem; color:#991b1d; margin-top:1rem;">
+            👉 <strong>Solution :</strong> Va dans Supabase > Table <code>stores</code> et assure-toi que la colonne <code>owner_id</code> de ton commerce contient exactement cet ID.
+          </p>
+        </div>`;
+      return; // On arrête tout ici, c'est la cause du problème à 99%
     }
 
-    console.log("✅ [DASHBOARD] Commerce trouvé:", store.name, "| ID:", store.id);
+    console.log("✅ [DEBUG 9] SUCCÈS ! Commerce trouvé :", store.name, "| ID du commerce:", store.id);
 
-    // 3. COMPTER LES ÉLÉMENTS EN BASE DE DONNÉES (Méthode infaillible)
-    // On force la conversion en String pour éviter les erreurs de type (123 vs "123")
+    // 5. COMPTER LES ÉLÉMENTS EN BASE DE DONNÉES
     const storeIdStr = String(store.id);
     
     const { data: dbProducts } = await supabaseClient.from('products').select('id').eq('store_id', storeIdStr);
@@ -69,16 +155,16 @@ async function showStoreDashboard() {
     const { data: dbOrders } = await supabaseClient.from('orders').select('id').eq('store_id', storeIdStr);
     const nbOrders = dbOrders ? dbOrders.length : 0;
 
-    console.log(`📊 [DASHBOARD] Compteurs bruts depuis la DB -> Produits: ${nbProducts}, Catégories: ${nbCategories}, Commandes: ${nbOrders}`);
+    console.log(`📊 [DEBUG 10] Compteurs -> Produits: ${nbProducts}, Catégories: ${nbCategories}, Commandes: ${nbOrders}`);
 
-    // 4. Calculer la limite du forfait
+    // 6. Calculer la limite du forfait
     const forfait = (store.forfait || 'essai').toString().toLowerCase().trim();
     let limiteMax = 10;
     if (forfait === 'base') limiteMax = 20;
     else if (forfait === 'croissance') limiteMax = 45;
     else if (forfait.includes('partenaire')) limiteMax = 95;
 
-    // 5. CONSTRUIRE LE HTML AVEC LES VRAIS CHIFFRES INJECTÉS DIRECTEMENT
+    // 7. CONSTRUIRE LE HTML
     container.innerHTML = `
       <div style="background:white; padding:1.5rem; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
         
@@ -93,7 +179,7 @@ async function showStoreDashboard() {
           </button>
         </div>
         
-        <!-- 🔥 COMPTEURS EN HAUT (Injectés directement dans le HTML, impossible qu'ils soient à 0 si la DB a des données) -->
+        <!-- COMPTEURS -->
         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:1.5rem;">
           <div style="background:#f0fdf4; padding:1rem; border-radius:8px; text-align:center; border:1px solid #bbf7d0;">
             <div style="font-size:1.8rem; font-weight:bold; color:#16a34a;">${nbProducts} / ${limiteMax}</div>
@@ -149,7 +235,7 @@ async function showStoreDashboard() {
       </div>
     `;
 
-    // 6. Charger la liste des produits en dessous
+    // 8. Charger la liste des produits
     if (typeof loadStoreProducts === 'function') {
       loadStoreProducts(store.id);
     }
@@ -919,3 +1005,21 @@ async function saveOwnerInfo(e) {
     showToast('❌ Erreur : ' + err.message);
   }
 }
+
+// ==========================================
+// 👁️ AFFICHER LE BOUTON RETOUR SI L'UTILISATEUR EST UN COMMERCE
+// ==========================================
+function afficherBoutonRetourSiCommerce() {
+  const btnRetour = document.getElementById('btn-retour-commerce');
+  if (!btnRetour) return;
+  
+  if (currentUser && currentUser.role === 'store') {
+    btnRetour.style.display = 'block';
+    console.log("✅ [NAV] Bouton retour affiché pour le commerce");
+  } else {
+    btnRetour.style.display = 'none';
+  }
+}
+
+// Appeler cette fonction au chargement de la page
+setTimeout(afficherBoutonRetourSiCommerce, 1000);
