@@ -763,3 +763,44 @@ async function handlePlanSelection(planId, price) {
 // ✅ FIN DU CHARGEMENT
 // ==========================================
 console.log("✅ [04-auth.js] Fonctions d'authentification chargées !");
+
+
+
+// ==========================================
+// 👤 AFFICHER LE PROFIL (REDIRECTION VERS L'ACCUEIL DU RÔLE)
+// ==========================================
+window.showProfile = function() {
+  // 1. Vérifier que l'utilisateur est connecté
+  if (!window.currentUser || !window.currentUser.id) {
+    showToast("🔑 Veuillez vous connecter pour accéder à votre espace.");
+    openLoginModal();
+    return;
+  }
+
+  // 2. Rediriger vers la page d'accueil spécifique au rôle
+  if (typeof window.goToMyProfileHome === 'function') {
+    window.goToMyProfileHome();
+  } else {
+    // 🔥 Fallback de sécurité si la fonction n'est pas encore chargée
+    console.warn("⚠️ [showProfile] Fallback : redirection manuelle vers la vue du rôle.");
+    document.querySelectorAll('.view').forEach(v => { v.style.display = 'none'; });
+    
+    const role = window.currentUser.role;
+    if (role === 'client') {
+      const v = document.getElementById('view-client');
+      if (v) v.style.display = 'block';
+      if (typeof window.showClientStores === 'function') window.showClientStores();
+    } else if (role === 'store') {
+      const v = document.getElementById('view-store');
+      if (v) v.style.display = 'block';
+      if (typeof window.goToMyStore === 'function') window.goToMyStore();
+    } else if (role === 'driver') {
+      const v = document.getElementById('view-driver');
+      if (v) v.style.display = 'block';
+      if (typeof window.showDriverDashboard === 'function') window.showDriverDashboard();
+    } else if (role === 'admin') {
+      const v = document.getElementById('view-admin');
+      if (v) v.style.display = 'block';
+    }
+  }
+};
