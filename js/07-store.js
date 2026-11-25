@@ -585,7 +585,7 @@ function showStoreCategories() {
 
 async function renderStoreCategories() {
   console.log("🔍 [DEBUG] renderStoreCategories démarré");
-  const container = document.getElementById('store-categories-container');
+     const container = document.getElementById('inventory-categories-container');
   if (!container || !currentUser || !currentUser.id) return;
 
   container.innerHTML = '<p style="text-align:center;padding:2rem;">⏳ Chargement...</p>';
@@ -806,7 +806,7 @@ function showStoreProducts() {
 
 async function renderStoreProducts() {
   console.log("🔍 [DEBUG] renderStoreProducts démarré");
-  const container = document.getElementById('store-products-container');
+     const container = document.getElementById('inventory-products-container');
   if (!container || !currentUser || !currentUser.id) return;
 
   container.innerHTML = '<p style="text-align:center;padding:2rem;">⏳ Chargement de l\'inventaire...</p>';
@@ -1532,5 +1532,63 @@ async function loadDashboardOrders(storeId, limit = 5) {
         ❌ Erreur lors du chargement des commandes : ${err.message}
       </p>
     `;
+  }
+}
+
+// ==========================================
+// 📦 INVENTAIRE TABBED INTERFACE
+// ==========================================
+
+function showStoreInventory() {
+  if (!currentUser || !currentUser.id) {
+    showToast("🔑 Veuillez vous connecter.");
+    openLoginModal();
+    return;
+  }
+  
+  switchView('view-store');
+  document.getElementById('store-dashboard-section').style.display = 'none';
+  document.getElementById('store-inventory-section').style.display = 'block';
+  document.getElementById('store-orders-section').style.display = 'none';
+
+  // Default to the Products tab
+  switchInventoryTab('products');
+  
+  // Highlight the active nav item (Inventaire is index 1)
+  if (typeof highlightActiveNav === 'function') {
+    highlightActiveNav('nav-store', 1);
+  }
+}
+
+function switchInventoryTab(tabName) {
+  const prodContent = document.getElementById('inventory-products-content');
+  const catContent = document.getElementById('inventory-categories-content');
+  const prodBtn = document.getElementById('tab-btn-products');
+  const catBtn = document.getElementById('tab-btn-categories');
+
+  if (tabName === 'products') {
+    // Show Products, Hide Categories
+    prodContent.style.display = 'block';
+    catContent.style.display = 'none';
+    
+    // Style Active Tab
+    prodBtn.style.borderBottom = '2px solid #f5a623';
+    prodBtn.style.color = '#f5a623';
+    catBtn.style.borderBottom = '2px solid transparent';
+    catBtn.style.color = '#374151';
+    
+    renderStoreProducts();
+  } else {
+    // Show Categories, Hide Products
+    prodContent.style.display = 'none';
+    catContent.style.display = 'block';
+    
+    // Style Active Tab
+    catBtn.style.borderBottom = '2px solid #f5a623';
+    catBtn.style.color = '#f5a623';
+    prodBtn.style.borderBottom = '2px solid transparent';
+    prodBtn.style.color = '#374151';
+    
+    renderStoreCategories();
   }
 }

@@ -1664,3 +1664,151 @@ button[onclick="openEditProfileModal()"]:active {
   box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4) !important;
   transition: all 0.1s ease !important;
 }
+
+/* ==========================================
+   🎨 ANIMATED HEADER NAVIGATION BORDERS
+   ========================================== */
+
+nav ul li a {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 4px; /* Creates space for the border */
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+/* The hidden border */
+nav ul li a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; /* Starts at 0 width */
+  height: 2px;
+  background-color: #f5a623; /* RuralGo accent color */
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth easing */
+}
+
+/* Hover effect (optional, makes it feel interactive) */
+nav ul li a:hover {
+  color: #f5a623;
+}
+
+nav ul li a:hover::after {
+  width: 50%; /* Slight grow on hover */
+}
+
+/* Active state: Full width border */
+nav ul li a.nav-active::after {
+  width: 100%;
+}
+
+nav ul li a.nav-active {
+  color: #f5a623;
+  font-weight: 600;
+}
+
+/* ==========================================
+   🎨 HEADER NAVIGATION HARMONIZATION & READABILITY
+   ========================================== */
+
+/* Base layout for all navigation menus */
+header nav ul {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0.5rem;
+}
+
+header nav ul li {
+  margin: 0;
+}
+
+/* ==========================================
+   IDLE STATE (Default)
+   ========================================== */
+header nav ul li a {
+  position: relative;
+  display: inline-block;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #cbd5e1; /* Light slate for high readability without being harsh */
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+/* ==========================================
+   HOVER STATE
+   ========================================== */
+header nav ul li a:hover {
+  color: #ffffff; /* Pure white for maximum contrast */
+  background-color: rgba(255, 255, 255, 0.08); /* Subtle highlight */
+}
+
+/* Animated bottom border indicator */
+header nav ul li a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background-color: #f5a623; /* RuralGo accent color */
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+header nav ul li a:hover::after {
+  width: 40%; /* Slight indicator on hover */
+}
+
+/* ==========================================
+   ACTIVE STATE
+   ========================================== */
+header nav ul li a.nav-active {
+  color: #f5a623; /* Distinct brand orange for clear active indication */
+  font-weight: 600;
+}
+
+header nav ul li a.nav-active::after {
+  width: 80%; /* Full width animation for active state */
+}
+
+/* ==========================================
+   🔧 FORCER L'AFFICHAGE DU MENU UTILISATEUR
+   ========================================== */
+
+#user-dropdown-menu {
+  display: none !important;
+}
+
+#user-dropdown-menu[style*="display: block"] {
+  display: block !important;
+}
+
+#user-dropdown-menu button {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  min-height: 36px !important;
+}
+
+#user-dropdown-menu div {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#dropdown-wallet {
+  display: none !important;
+}
+
+#dropdown-wallet[style*="display: block"] {
+  display: block !important;
+}
