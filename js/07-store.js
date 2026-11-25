@@ -99,9 +99,12 @@ async function showStoreDashboard() {
   });
 
   // 2. Vérification du rôle (CRUCIAL)
-  if (!currentUser || currentUser.role !== 'store') {
-    console.warn("⚠️ [DEBUG 3] ARRÊT : L'utilisateur n'est pas un commerce. Rôle actuel :", currentUser ? currentUser.role : 'Non connecté');
-    alert("⚠️ Tu dois être connecté avec un compte 'Commerce' pour voir cette page.");
+  if (!currentUser) {
+    console.warn("⚠️ [DEBUG 3] currentUser indisponible pour l'instant, on attend la restauration.");
+    return;
+  }
+  if (currentUser.role !== 'store') {
+    showToast("⚠️ Cette page est réservée aux comptes Commerce.");
     return;
   }
 
@@ -567,35 +570,82 @@ async function renderStoreDashboard() {
 // 📂 CATÉGORIES DU COMMERCE
 // ==========================================
 function showStoreCategories() {
+  if (!window.currentUser || !window.currentUser.id) {
+    showToast("🔑 Veuillez vous connecter.");
+    openLoginModal();
+    return;
+  }
   switchView('view-store');
   document.getElementById('store-dashboard-section').style.display = 'none';
   document.getElementById('store-categories-section').style.display = 'block';
   document.getElementById('store-products-section').style.display = 'none';
+  document.getElementById('store-orders-section').style.display = 'none';
   renderStoreCategories();
 }
 
-function renderStoreCategories() {
-  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
-  if (!myStore) return;
+async function renderStoreCategories() {
+  console.log("🔍 [DEBUG] renderStoreCategories démarré");
+     const container = document.getElementById('inventory-categories-container');
+  if (!container || !currentUser || !currentUser.id) return;
 
-  const myCats = categories.filter(c => String(c.store_id) === String(myStore.id) || !c.store_id);
-  const c = document.getElementById('store-categories-container');
+  container.innerHTML = '<p style="text-align:center;padding:2rem;">⏳ Chargement...</p>';
 
-  if (!myCats.length) {
-    c.innerHTML = '<div class="empty-state"><p>Aucune catégorie. Ajoutez-en une !</p></div>';
+  // 1. Trouver le commerce (Local ou fallback Supabase)
+  let myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  
+  if (!myStore) {
+    console.log("⚠️ Commerce non trouvé localement, requête Supabase...");
+    const { data: dbStore, error } = await supabaseClient
+      .from('stores')
+      .select('*')
+      .eq('owner_id', currentUser.id)
+      .maybeSingle();
+      
+    if (dbStore) {
+      myStore = dbStore;
+      const idx = stores.findIndex(s => String(s.id) === String(myStore.id));
+      if (idx !== -1) stores[idx] = myStore; else stores.push(myStore);
+    }
+  }
+
+  if (!myStore) {
+    console.warn("⚠️ Aucun commerce trouvé pour owner_id =", currentUser.id);
+    container.innerHTML = '<div class="empty-state"><p>⚠️ Aucun commerce associé à votre compte.</p></div>';
     return;
   }
 
-  c.innerHTML = `<div class="cat-grid">${myCats.map(cat => {
-    const count = products.filter(p => String(p.store_id) === String(myStore.id) && String(p.category_id) === String(cat.id)).length;
-    const isGlobal = !cat.store_id;
-    return `<div class="cat-card">
-      <div class="cat-card-icon">${cat.icon}</div>
+  console.log("✅ Commerce trouvé :", myStore.name, "ID:", myStore.id);
+
+  // 2. Charger les catégories depuis Supabase (SANS le .order('created_at'))
+  const { data: dbCategories, error } = await supabaseClient
+    .from('categories')
+    .select('*')
+    .eq('store_id', myStore.id); // <-- Clause .order retirée ici
+
+  if (error) {
+    console.error("❌ Erreur catégories:", error);
+    container.innerHTML = `<p style="color:red;">Erreur: ${error.message}</p>`;
+    return;
+  }
+
+  if (!dbCategories || dbCategories.length === 0) {
+    container.innerHTML = '<div class="empty-state"><p>Aucune catégorie. Ajoutez-en une !</p></div>';
+    return;
+  }
+
+  // Mise à jour du tableau local pour la cohérence
+  const localCats = categories.filter(c => String(c.store_id) !== String(myStore.id));
+  categories = [...localCats, ...dbCategories];
+
+  container.innerHTML = `<div class="cat-grid">${dbCategories.map(cat => `
+    <div class="cat-card">
+      <div class="cat-card-icon">${cat.icon || '📂'}</div>
       <div class="cat-card-name">${cat.name}</div>
-      <p style="color:#666;font-size:0.85rem;margin-bottom:0.5rem">${count} produit(s)</p>
-      ${!isGlobal ? `<div class="cat-card-actions"><button class="action-btn btn-red" onclick="confirmDelete('category',${cat.id})">🗑️</button></div>` : '<span style="font-size:0.8rem;color:#999">Catégorie globale</span>'}
-    </div>`;
-  }).join('')}</div>`;
+      <div class="cat-card-actions">
+        <button class="action-btn btn-red" onclick="deleteStoreCategory(${cat.id})">🗑️</button>
+      </div>
+    </div>
+  `).join('')}</div>`;
 }
 
 function openStoreCategoryModal() {
@@ -603,102 +653,233 @@ function openStoreCategoryModal() {
   document.getElementById('cat-id').value = '';
   document.getElementById('cat-name').value = '';
   selectedCatIcon = '';
+  
+  // 🔥 NOUVEAU : Forcer le formulaire à utiliser la fonction du commerce
+  const form = document.querySelector('#category-modal form');
+  if (form) {
+    form.onsubmit = saveStoreCategory;
+  }
+
   buildIconPicker('cat-icon-picker', 'cat-icon');
   openModal('category-modal');
+}
+
+// ==========================================
+// 💾 SAUVEGARDER UNE CATÉGORIE (COMMERCE)
+// ==========================================
+async function saveStoreCategory(event) {
+  if (event) event.preventDefault();
+
+  if (!window.currentUser || !window.currentUser.id) {
+    showToast('🔑 Veuillez vous connecter.');
+    return;
+  }
+
+  const name = document.getElementById('cat-name').value.trim();
+  const icon = selectedCatIcon || document.getElementById('cat-icon').value || '📂';
+
+  if (!name) {
+    showToast('❌ Le nom de la catégorie est obligatoire.');
+    return;
+  }
+
+  // Trouver le commerce actuel
+  let myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  
+  if (!myStore) {
+    showToast('❌ Commerce introuvable.');
+    return;
+  }
+
+  showToast('⏳ Ajout de la catégorie...');
+
+  try {
+    // 1. Insérer dans Supabase
+    const { data: newCat, error } = await supabaseClient
+      .from('categories')
+      .insert({
+        store_id: myStore.id,
+        name: name,
+        icon: icon
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // 2. Mettre à jour le tableau local pour éviter un rechargement complet
+    if (typeof categories !== 'undefined' && Array.isArray(categories)) {
+      categories.push(newCat);
+    }
+
+    // 3. Fermer la modale et rafraîchir l'interface
+    closeModal('category-modal');
+    showToast('✅ Catégorie ajoutée avec succès !');
+    
+    // 🔥 C'est cette ligne qui fait apparaître la catégorie immédiatement
+    renderStoreCategories(); 
+
+  } catch (error) {
+    console.error('❌ Erreur ajout catégorie:', error);
+    showToast('❌ Erreur : ' + error.message);
+  }
+}
+
+// ==========================================
+// 🗑️ SUPPRIMER UNE CATÉGORIE (COMMERCE)
+// ==========================================
+async function deleteStoreCategory(id) {
+  if (!confirm("Voulez-vous vraiment supprimer cette catégorie ?")) return;
+
+  try {
+    const { error } = await supabaseClient.from('categories').delete().eq('id', id);
+    if (error) throw error;
+
+    // Mettre à jour le tableau local pour la cohérence
+    if (typeof categories !== 'undefined') {
+      categories = categories.filter(c => c.id !== id);
+    }
+
+    showToast('✅ Catégorie supprimée !');
+    renderStoreCategories(); // 🔥 Rafraîchir la liste immédiatement
+
+  } catch (error) {
+    console.error('❌ Erreur suppression catégorie:', error);
+    showToast('❌ Erreur : ' + error.message);
+  }
+}
+
+// ==========================================
+// 🗑️ SUPPRIMER UN PRODUIT (COMMERCE)
+// ==========================================
+async function deleteStoreProduct(id) {
+  if (!confirm("Voulez-vous vraiment supprimer ce produit ?")) return;
+
+  try {
+    const { error } = await supabaseClient.from('products').delete().eq('id', id);
+    if (error) throw error;
+
+    // Mettre à jour le tableau local pour la cohérence
+    if (typeof products !== 'undefined') {
+      products = products.filter(p => p.id !== id);
+    }
+
+    showToast('✅ Produit supprimé !');
+    renderStoreProducts(); // 🔥 Rafraîchir la liste immédiatement
+
+  } catch (error) {
+    console.error('❌ Erreur suppression produit:', error);
+    showToast('❌ Erreur : ' + error.message);
+  }
 }
 
 // ==========================================
 // 🛍️ PRODUITS DU COMMERCE
 // ==========================================
 function showStoreProducts() {
+  if (!window.currentUser || !window.currentUser.id) {
+    showToast("🔑 Veuillez vous connecter.");
+    openLoginModal();
+    return;
+  }
   switchView('view-store');
   document.getElementById('store-dashboard-section').style.display = 'none';
   document.getElementById('store-categories-section').style.display = 'none';
   document.getElementById('store-products-section').style.display = 'block';
+  document.getElementById('store-orders-section').style.display = 'none';
+  renderStoreProducts();
+}
+
+function showStoreProducts() {
+  if (!window.currentUser || !window.currentUser.id) {
+    showToast("🔑 Veuillez vous connecter.");
+    openLoginModal();
+    return;
+  }
+  switchView('view-store');
+  document.getElementById('store-dashboard-section').style.display = 'none';
+  document.getElementById('store-categories-section').style.display = 'none';
+  document.getElementById('store-products-section').style.display = 'block';
+  document.getElementById('store-orders-section').style.display = 'none';
   renderStoreProducts();
 }
 
 async function renderStoreProducts() {
-  console.log("🚀 [DEBUG] renderStoreProducts démarré");
+  console.log("🔍 [DEBUG] renderStoreProducts démarré");
+     const container = document.getElementById('inventory-products-container');
+  if (!container || !currentUser || !currentUser.id) return;
 
-  if (typeof currentUser === 'undefined' || !currentUser || !currentUser.id) {
-    console.warn("⚠️ currentUser non défini ou non connecté.");
-    return;
-  }
+  container.innerHTML = '<p style="text-align:center;padding:2rem;">⏳ Chargement de l\'inventaire...</p>';
 
-  if (typeof stores === 'undefined' || !Array.isArray(stores)) {
-    console.warn("⚠️ Le tableau 'stores' n'est pas encore chargé.");
-    return;
-  }
+  // 1. Trouver le commerce (Local ou fallback Supabase)
+  let myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
 
-  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   if (!myStore) {
-    console.warn("⚠️ Aucun magasin trouvé pour owner_id =", currentUser.id);
-    return;
-  }
-
-  const container = document.getElementById('store-products-container');
-  if (!container) {
-    console.error("❌ Le conteneur HTML 'store-products-container' est introuvable !");
-    return;
-  }
-
-  container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">⏳ Chargement de votre inventaire...</p>';
-
-  try {
-    const { data: dbProducts, error } = await supabaseClient
-      .from('products')
+    console.log("⚠️ Commerce non trouvé localement, requête Supabase...");
+    const { data: dbStore, error } = await supabaseClient
+      .from('stores')
       .select('*')
-      .eq('store_id', myStore.id)
-      .order('created_at', { ascending: false });
+      .eq('owner_id', currentUser.id)
+      .maybeSingle();
 
-    if (error) {
-      console.error("❌ Erreur Supabase :", error);
-      container.innerHTML = `<p style="color:red; text-align:center;">Erreur DB: ${error.message}</p>`;
-      return;
+    if (dbStore) {
+      myStore = dbStore;
+      const idx = stores.findIndex(s => String(s.id) === String(myStore.id));
+      if (idx !== -1) stores[idx] = myStore; else stores.push(myStore);
     }
-
-    if (typeof products !== 'undefined' && Array.isArray(products)) {
-      products = products.filter(p => String(p.store_id) !== String(myStore.id));
-      if (dbProducts) products = [...products, ...dbProducts];
-    }
-
-    if (!dbProducts || dbProducts.length === 0) {
-      container.innerHTML = '<div class="empty-state"><p>Aucun produit dans votre inventaire.</p></div>';
-      return;
-    }
-
-    container.innerHTML = `
-      <table class="admin-table">
-        <thead>
-          <tr><th>Icon</th><th>Nom</th><th>Catégorie</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr>
-        </thead>
-        <tbody>
-          ${dbProducts.map(p => {
-      const cat = categories.find(x => String(x.id) === String(p.category_id));
-      const price = parseFloat(p.price).toFixed(2);
-      return `
-              <tr>
-                <td style="font-size:1.5rem;text-align:center">${p.icon || '📦'}</td>
-                <td><strong>${p.name}</strong></td>
-                <td>${cat ? cat.icon + ' ' + cat.name : '-'}</td>
-                <td><strong>${price} $</strong></td>
-                <td><span class="badge ${p.available ? 'badge-green' : 'badge-red'}">${p.available ? '✅' : '❌'}</span></td>
-                <td>
-                  <div class="action-btns">
-                    <button class="action-btn btn-blue" onclick="editStoreProduct(${p.id})">✏️</button>
-                    <button class="action-btn btn-red" onclick="confirmDelete('product',${p.id})">🗑️</button>
-                  </div>
-                </td>
-              </tr>`;
-    }).join('')}
-        </tbody>
-      </table>
-    `;
-  } catch (err) {
-    console.error('❌ Erreur critique:', err);
-    container.innerHTML = `<p style="color:red; text-align:center;">Erreur: ${err.message}</p>`;
   }
+
+  if (!myStore) {
+    container.innerHTML = '<div class="empty-state"><p>⚠️ Aucun commerce associé à votre compte.</p></div>';
+    return;
+  }
+
+  console.log("✅ Commerce trouvé :", myStore.name, "ID:", myStore.id);
+
+  // 2. Charger les produits depuis Supabase
+  const { data: dbProducts, error } = await supabaseClient
+    .from('products')
+    .select('*')
+    .eq('store_id', myStore.id);
+
+  if (error) {
+    console.error("❌ Erreur produits:", error);
+    container.innerHTML = `<p style="color:red;">Erreur: ${error.message}</p>`;
+    return;
+  }
+
+  if (!dbProducts || dbProducts.length === 0) {
+    container.innerHTML = '<div class="empty-state"><p>Aucun produit dans votre inventaire.</p></div>';
+    return;
+  }
+
+  // Mise à jour du tableau local
+  const localProds = products.filter(p => String(p.store_id) !== String(myStore.id));
+  products = [...localProds, ...dbProducts];
+
+  container.innerHTML = `
+    <table class="admin-table">
+      <thead>
+        <tr><th>Icon</th><th>Nom</th><th>Prix</th><th>Dispo</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        ${dbProducts.map(p => `
+          <tr>
+            <td style="font-size:1.5rem;text-align:center">${p.icon || '📦'}</td>
+            <td><strong>${p.name}</strong><br><small style="color:#666">${p.description || ''}</small></td>
+            <td><strong>${parseFloat(p.price).toFixed(2)} $</strong></td>
+            <td><span class="badge ${p.available ? 'badge-green' : 'badge-red'}">${p.available ? '✅' : '❌'}</span></td>
+           <td>
+              <div class="action-btns">
+                <button class="action-btn btn-blue" onclick="editStoreProduct(${p.id})">✏️</button>
+                <button class="action-btn btn-red" onclick="deleteStoreProduct(${p.id})">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 function openStoreProductModal() {
@@ -774,7 +955,7 @@ function goToMyStore() {
 // 🏷️ GESTION DU NOM DU COMMERCE
 // ==========================================
 function initStoreNameDisplay() {
-  if (!currentUser || !currentUser.id) {
+  if (!window.currentUser || !window.currentUser.id) {
     console.log("ℹ️ initStoreNameDisplay: Pas d'utilisateur connecté");
     return;
   }
@@ -1133,17 +1314,37 @@ function openOrderInvoiceModal(order) {
 // ==========================================
 
 function showStoreOrders() {
+  if (!window.currentUser || !window.currentUser.id) {
+    showToast("🔑 Veuillez vous connecter pour accéder à cette page.");
+    openLoginModal();
+    return;
+  }
+
   switchView('view-store');
-  document.getElementById('store-dashboard-section').style.display = 'none';
-  document.getElementById('store-categories-section').style.display = 'none';
-  document.getElementById('store-products-section').style.display = 'none';
-  document.getElementById('store-orders-section').style.display = 'block';
+  
+  // 🔥 Vérification sécurisée de l'existence des éléments avant de modifier .style
+  const dashboard = document.getElementById('store-dashboard-section');
+  const inventory = document.getElementById('store-inventory-section');
+  const orders = document.getElementById('store-orders-section');
+
+  if (dashboard) dashboard.style.display = 'none';
+  if (inventory) inventory.style.display = 'none';
+  if (orders) orders.style.display = 'block';
+
   renderStoreOrders();
+  
+  // Mettre en surbrillance l'onglet actif (Index 2 = Commandes)
+  if (typeof highlightActiveNav === 'function') {
+    highlightActiveNav('nav-store', 2);
+  }
 }
 
 async function renderStoreOrders() {
+  if (!window.currentUser || !window.currentUser.id) return; // Sécurité supplémentaire
+
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   const container = document.getElementById('store-orders-container');
+
   if (!myStore || !container) return;
 
   container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">⏳ Chargement des commandes...</p>';
@@ -1157,7 +1358,6 @@ async function renderStoreOrders() {
 
     if (error) throw error;
 
-    // Save globally so the existing invoice modal can find the order data
     window._storeOrders = orders;
 
     if (!orders || orders.length === 0) {
@@ -1170,27 +1370,14 @@ async function renderStoreOrders() {
       return;
     }
 
-    const stats = {
-      all: orders.length,
-      pending: orders.filter(o => o.status === 'pending').length,
-      active: orders.filter(o => ['confirmed', 'in_progress'].includes(o.status)).length,
-      completed: orders.filter(o => ['delivered', 'completed'].includes(o.status)).length,
-    };
-
-    let html = `
-      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1.5rem;">
-        <button class="btn-sm btn-gray" onclick="filterStoreOrders('all')">Toutes (${stats.all})</button>
-        <button class="btn-sm btn-orange" onclick="filterStoreOrders('pending')">⏳ À préparer (${stats.pending})</button>
-        <button class="btn-sm btn-blue" onclick="filterStoreOrders('active')">🧑‍🍳 En cours (${stats.active})</button>
-        <button class="btn-sm btn-green" onclick="filterStoreOrders('completed')">✅ Terminées (${stats.completed})</button>
-      </div>
-      <div id="store-orders-list" style="display:grid; gap:1rem;">
-    `;
-
+    // ... (le reste de votre fonction renderStoreOrders reste inchangé) ...
+    // Assurez-vous d'utiliser la fonction generateStoreOrderCard que nous avons créée précédemment.
+    let html = '<div style="display:grid; gap:1rem;">';
     orders.forEach(order => {
-      html += generateStoreOrderCard(order);
+      if (typeof window.generateStoreOrderCard === 'function') {
+        html += window.generateStoreOrderCard(order);
+      }
     });
-
     html += '</div>';
     container.innerHTML = html;
 
@@ -1199,7 +1386,6 @@ async function renderStoreOrders() {
     container.innerHTML = `<div style="text-align:center; padding:2rem; color:red;">❌ Erreur : ${err.message}</div>`;
   }
 }
-
 function generateStoreOrderCard(order) {
   let statusClass = 'pending';
   let statusLabel = '⏳ À préparer';
@@ -1357,5 +1543,63 @@ async function loadDashboardOrders(storeId, limit = 5) {
         ❌ Erreur lors du chargement des commandes : ${err.message}
       </p>
     `;
+  }
+}
+
+// ==========================================
+// 📦 INVENTAIRE TABBED INTERFACE
+// ==========================================
+
+function showStoreInventory() {
+  if (!window.currentUser || !window.currentUser.id) {
+    showToast("🔑 Veuillez vous connecter.");
+    openLoginModal();
+    return;
+  }
+  
+  switchView('view-store');
+  document.getElementById('store-dashboard-section').style.display = 'none';
+  document.getElementById('store-inventory-section').style.display = 'block';
+  document.getElementById('store-orders-section').style.display = 'none';
+
+  // Default to the Products tab
+  switchInventoryTab('products');
+  
+  // Highlight the active nav item (Inventaire is index 1)
+  if (typeof highlightActiveNav === 'function') {
+    highlightActiveNav('nav-store', 1);
+  }
+}
+
+function switchInventoryTab(tabName) {
+  const prodContent = document.getElementById('inventory-products-content');
+  const catContent = document.getElementById('inventory-categories-content');
+  const prodBtn = document.getElementById('tab-btn-products');
+  const catBtn = document.getElementById('tab-btn-categories');
+
+  if (tabName === 'products') {
+    // Show Products, Hide Categories
+    prodContent.style.display = 'block';
+    catContent.style.display = 'none';
+    
+    // Style Active Tab
+    prodBtn.style.borderBottom = '2px solid #f5a623';
+    prodBtn.style.color = '#f5a623';
+    catBtn.style.borderBottom = '2px solid transparent';
+    catBtn.style.color = '#374151';
+    
+    renderStoreProducts();
+  } else {
+    // Show Categories, Hide Products
+    prodContent.style.display = 'none';
+    catContent.style.display = 'block';
+    
+    // Style Active Tab
+    catBtn.style.borderBottom = '2px solid #f5a623';
+    catBtn.style.color = '#f5a623';
+    prodBtn.style.borderBottom = '2px solid transparent';
+    prodBtn.style.color = '#374151';
+    
+    renderStoreCategories();
   }
 }

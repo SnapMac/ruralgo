@@ -1,0 +1,79 @@
+<!-- VUE ADMIN -->
+<div id="view-admin" class="view">
+  <section class="hero">
+    <h1>⚙️ Administration RuralGo</h1>
+    <p>Gestion complète de la plateforme</p>
+  </section>
+  <section style="background:#f5f1e8">
+    <div class="container">
+      <div class="admin-layout">
+        <div class="admin-side"><ul>
+          <li class="active" onclick="adminTab('dashboard',this)">📊 Tableau de bord</li>
+          <li onclick="adminTab('orders',this)">📦 Commandes</li>
+          <li onclick="adminTab('stores',this)">🏪 Commerces</li>
+          <li onclick="adminTab('pending-stores',this)">📨 Demandes commerces</li>
+          <li onclick="adminTab('categories',this)">📂 Catégories</li>
+          <li onclick="adminTab('products',this)">🛍️ Produits</li>
+          <li onclick="adminTab('drivers',this)">🚗 Livreurs</li>
+          <li onclick="adminTab('profiles',this)">👥 Clients</li>
+          <li onclick="adminTab('settings',this)">⚙️ Paramètres</li>
+        </ul></div>
+        <div class="admin-main">
+          <div id="admin-dashboard">
+            <h3 style="color:#121212;margin-bottom:1rem">📊 Vue d'ensemble</h3>
+            <div class="admin-stats">
+              <div class="stat"><div class="stat-val" id="stat-profiles">0</div><div class="stat-lbl">Clients</div></div>
+              <div class="stat"><div class="stat-val" id="stat-drivers">0</div><div class="stat-lbl">Livreurs</div></div>
+              <div class="stat"><div class="stat-val" id="stat-stores">0</div><div class="stat-lbl">Commerces</div></div>
+              <div class="stat"><div class="stat-val" id="stat-orders">0</div><div class="stat-lbl">Commandes</div></div>
+              <div class="stat"><div class="stat-val" id="stat-revenue">0 $</div><div class="stat-lbl">Revenus totaux</div></div>
+              <div class="stat"><div class="stat-val" id="stat-pending">0</div><div class="stat-lbl">En attente</div></div>
+            </div>
+            <h3 style="color:#121212;margin:2rem 0 1rem">📦 Dernières commandes</h3>
+            <div id="admin-recent-orders"></div>
+          </div>
+          <div id="admin-orders" style="display:none">
+            <div class="admin-header"><h3>📦 Toutes les commandes</h3></div>
+            <div style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+              <button class="btn-sm btn-green" onclick="filterAdminOrders('all')">Toutes</button>
+              <button class="btn-sm btn-orange" onclick="filterAdminOrders('pending')">En attente</button>
+              <button class="btn-sm btn-blue" onclick="filterAdminOrders('in-progress')">En cours</button>
+              <button class="btn-sm btn-green" onclick="filterAdminOrders('delivered')">Livrées</button>
+              <button class="btn-sm btn-red" onclick="filterAdminOrders('cancelled')">Annulées</button>
+            </div>
+            <div id="admin-orders-list"></div>
+          </div>
+          <div id="admin-pending-stores" style="display:none">
+            <h3 style="color:#121212;margin-bottom:1rem">📨 Demandes de commerces en attente</h3>
+            <div class="info-box">💡 Ces commerces ont soumis une demande pour vendre sur RuralGo.</div>
+            <div id="pending-stores-container"></div>
+          </div>
+          <div id="admin-stores" style="display:none">
+            <div class="admin-header"><h3>🏪 Commerces</h3><button class="btn-add" onclick="openStoreModal()">➕ Ajouter</button></div>
+            <div id="stores-table-container"></div>
+          </div>
+          <div id="admin-categories" style="display:none">
+            <div class="admin-header"><h3>📂 Catégories</h3><button class="btn-add" onclick="openCategoryModal()">➕ Ajouter</button></div>
+            <div id="categories-container"></div>
+          </div>
+          <div id="admin-products" style="display:none">
+            <div class="admin-header"><h3>🛍️ Produits</h3><button class="btn-add" onclick="openProductModal()">➕ Ajouter</button></div>
+            <div id="products-table-container"></div>
+          </div>
+          <div id="admin-drivers" style="display:none">
+            <h3 style="color:#121212;margin-bottom:1rem">🚗 Livreurs</h3>
+            <div id="drivers-table-container"></div>
+          </div>
+          <div id="admin-profiles" style="display:none">
+            <h3 style="color:#121212;margin-bottom:1rem">👥 Clients</h3>
+            <div id="profiles-table-container"></div>
+          </div>
+          <div id="admin-settings" style="display:none">
+            <h3 style="color:#121212;margin-bottom:1rem">⚙️ Paramètres de la plateforme</h3>
+            <div id="admin-settings-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

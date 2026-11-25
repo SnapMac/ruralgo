@@ -336,87 +336,81 @@ async function registerDriver(e) {
 async function loginUser(event) {
   event.preventDefault();
   
-  // 🔍 On cherche les champs avec le BON ID (login-pass, pas login-password)
-  const emailField = document.getElementById('login-email');
-  const passwordField = document.getElementById('login-pass');
-
-  // ✅ Vérification de sécurité
-  if (!emailField || !passwordField) {
-    console.error("❌ Champs de connexion introuvables !");
-    showToast('❌ Erreur technique : formulaire de connexion introuvable.');
-    return;
-  }
-
-  const email = emailField.value.trim();
-  const password = passwordField.value;
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-pass').value;
 
   if (!email || !password) {
-    showToast('❌ Veuillez remplir tous les champs.');
+    showToast('❌ Veuillez remplir tous les champs');
     return;
   }
 
   try {
-    showToast('🔄 Connexion en cours...');
-    
-    // 1. Authentification Supabase
+    console.log("🔑 [LOGIN] Début de la connexion pour :", email);
+
+    // 1. Connexion Supabase
     const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
       email: email,
       password: password
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      console.error("❌ [LOGIN] Erreur Auth Supabase :", authError);
+      showToast('❌ Email ou mot de passe incorrect');
+      return;
+    }
 
-    // 2. Récupérer le profil FRAIS depuis la base de données
-    const { data: freshProfile, error: profileError } = await supabaseClient
+    console.log("✅ [LOGIN] Auth réussie. ID utilisateur :", authData.user.id);
+
+    // 2. Récupération du profil
+    const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('*')
       .eq('id', authData.user.id)
       .single();
 
-    if (profileError) throw profileError;
-
-    // 3. Construire currentUser avec les données à jour
-    currentUser = {
-      id: authData.user.id,
-      email: authData.user.email,
-      role: freshProfile.role,
-      name: freshProfile.name,
-      status: freshProfile.status,
-      phone: freshProfile.phone,
-      address: freshProfile.address,
-      lat: freshProfile.lat,
-      lng: freshProfile.lng,
-      selected_plan_id: freshProfile.selected_plan_id
-    };
-
-    // 4. Si c'est un commerce, récupérer ses infos
-    if (freshProfile.role === 'store') {
-      const { data: storeData } = await supabaseClient
-        .from('stores')
-        .select('name, address, phone, lat, lng')
-        .eq('owner_id', authData.user.id)
-        .maybeSingle();
-      
-      if (storeData) {
-        currentUser.storeName = storeData.name;
-        currentUser.storeAddress = storeData.address;
-        currentUser.storePhone = storeData.phone;
-        currentUser.storeLat = storeData.lat;
-        currentUser.storeLng = storeData.lng;
-      }
+    if (profileError || !profile) {
+      console.error("❌ [LOGIN] Erreur profil :", profileError);
+      showToast('❌ Profil introuvable dans la base de données');
+      return;
     }
 
-    // 5. Sauvegarder
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    console.log("✅ [LOGIN] Profil récupéré :", profile);
 
-    // 6. Afficher l'interface
+    // 3. Construction de l'objet utilisateur
+    const userToSave = {
+      id: profile.id,
+      email: profile.email,
+      name: profile.name || 'Utilisateur',
+      phone: profile.phone || '',
+      address: profile.address || '',
+      lat: profile.lat || null,
+      lng: profile.lng || null,
+      role: profile.role || 'client',
+      wallet_balance: parseFloat(profile.wallet_balance || 0),
+      created_at: profile.created_at
+    };
+
+    // 4. SAUVEGARDE EXPLICITE DANS LOCALSTORAGE
+    const userString = JSON.stringify(userToSave);
+    localStorage.setItem('currentUser', userString);
+    window.currentUser = userToSave;
+
+    console.log("💾 [LOGIN] DONNÉES SAUVEGARDÉES DANS LOCALSTORAGE :");
+    console.log(localStorage.getItem('currentUser'));
+
+    // 5. Fermeture et message
     closeModal('login-modal');
-    showToast('✅ Connexion réussie !');
-    showUserInterface();
+    showToast('✅ Connexion réussie ! Redirection...');
 
-  } catch (err) {
-    console.error('Erreur connexion:', err);
-    showToast('❌ Erreur : ' + (err.message || 'Identifiants incorrects'));
+    // 6. Rechargement forcé après un court délai
+    setTimeout(() => {
+      console.log("🔄 [LOGIN] Rechargement de la page...");
+      window.location.reload();
+    }, 800);
+
+  } catch (error) {
+    console.error("❌ [LOGIN] Erreur fatale :", error);
+    showToast('❌ Une erreur inattendue est survenue');
   }
 }
 
@@ -435,6 +429,7 @@ async function logout() {
   }
   
   currentUser = null;
+  window.currentUser = null;
   localStorage.removeItem('currentUser');
   
   if (window.notifIntervalId) {
@@ -442,7 +437,7 @@ async function logout() {
     window.notifIntervalId = null;
   }
   
-  window.location.replace('index.html');
+  window.location.replace('/');
 }
 
 // ==========================================

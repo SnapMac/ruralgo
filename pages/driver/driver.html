@@ -1,0 +1,38 @@
+<!-- VUE LIVREUR -->
+<div id="view-driver" class="view">
+  <section class="hero">
+    <h1>Bonjour <span id="driver-firstname">Livreur</span> 👋</h1>
+    <p>Tableau de bord livreur</p>
+  </section>
+  
+  <section id="driver-dashboard-section" style="background:#f5f1e8">
+    <div class="container">
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="d-deliveries">0</div><div class="stat-lbl">Livraisons aujourd'hui</div></div>
+        <div class="stat"><div class="stat-val" id="d-earnings">0.00 $</div><div class="stat-lbl">Revenus du jour</div></div>
+        <div class="stat"><div class="stat-val" id="d-total">0</div><div class="stat-lbl">Total livraisons</div></div>
+        <div class="stat"><div class="stat-val" style="color:#121212">● EN LIGNE</div><div class="stat-lbl">Statut</div></div>
+      </div>
+      <h3 style="color:#121212;margin:2rem 0 1rem">📋 Commandes disponibles</h3>
+      <div id="driver-available-orders"></div>
+      <h3 style="color:#121212;margin:2rem 0 1rem">🚗 Mes livraisons en cours</h3>
+      <div id="driver-active-orders"></div>
+    </div>
+  </section>
+  
+  <section id="driver-order-detail-section" style="background:#f5f1e8;display:none">
+    <div class="container" id="driver-order-detail-content"></div>
+  </section>
+  
+  <section id="driver-history-section" style="background:#f5f1e8;display:none">
+    <div class="container">
+      <h2 class="title">📜 Historique des livraisons</h2>
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="d-history-total">0</div><div class="stat-lbl">Total livraisons</div></div>
+        <div class="stat"><div class="stat-val" id="d-history-earnings">0.00 $</div><div class="stat-lbl">Revenus totaux</div></div>
+        <div class="stat"><div class="stat-val">4.9 ⭐</div><div class="stat-lbl">Note moyenne</div></div>
+      </div>
+      <div id="driver-history-list"></div>
+    </div>
+  </section>
+</div>

@@ -1664,3 +1664,282 @@ button[onclick="openEditProfileModal()"]:active {
   box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4) !important;
   transition: all 0.1s ease !important;
 }
+
+/* ==========================================
+   🎨 ANIMATED HEADER NAVIGATION BORDERS
+   ========================================== */
+
+nav ul li a {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 4px; /* Creates space for the border */
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+/* The hidden border */
+nav ul li a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; /* Starts at 0 width */
+  height: 2px;
+  background-color: #f5a623; /* RuralGo accent color */
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth easing */
+}
+
+/* Hover effect (optional, makes it feel interactive) */
+nav ul li a:hover {
+  color: #f5a623;
+}
+
+nav ul li a:hover::after {
+  width: 50%; /* Slight grow on hover */
+}
+
+/* Active state: Full width border */
+nav ul li a.nav-active::after {
+  width: 100%;
+}
+
+nav ul li a.nav-active {
+  color: #f5a623;
+  font-weight: 600;
+}
+
+/* ==========================================
+   🎨 HEADER NAVIGATION HARMONIZATION & READABILITY
+   ========================================== */
+
+/* Base layout for all navigation menus */
+header nav ul {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0.5rem;
+}
+
+header nav ul li {
+  margin: 0;
+}
+
+/* ==========================================
+   IDLE STATE (Default)
+   ========================================== */
+header nav ul li a {
+  position: relative;
+  display: inline-block;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #cbd5e1; /* Light slate for high readability without being harsh */
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+/* ==========================================
+   HOVER STATE
+   ========================================== */
+header nav ul li a:hover {
+  color: #ffffff; /* Pure white for maximum contrast */
+  background-color: rgba(255, 255, 255, 0.08); /* Subtle highlight */
+}
+
+/* Animated bottom border indicator */
+header nav ul li a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background-color: #f5a623; /* RuralGo accent color */
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+header nav ul li a:hover::after {
+  width: 40%; /* Slight indicator on hover */
+}
+
+/* ==========================================
+   ACTIVE STATE
+   ========================================== */
+header nav ul li a.nav-active {
+  color: #f5a623; /* Distinct brand orange for clear active indication */
+  font-weight: 600;
+}
+
+header nav ul li a.nav-active::after {
+  width: 80%; /* Full width animation for active state */
+}
+
+/* ==========================================
+   🔧 FORCER L'AFFICHAGE DU MENU UTILISATEUR
+   ========================================== */
+
+#user-dropdown-menu {
+  display: none !important;
+}
+
+#user-dropdown-menu[style*="display: block"] {
+  display: block !important;
+}
+
+#user-dropdown-menu button {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  min-height: 36px !important;
+}
+
+#user-dropdown-menu div {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#dropdown-wallet {
+  display: none !important;
+}
+
+#dropdown-wallet[style*="display: block"] {
+  display: block !important;
+}
+
+
+/* ==========================================
+   🎨 HEADER LAYOUT: 3-COLUMN CENTERED NAV
+   ========================================== */
+
+header {
+  background-color: #1f2937; /* Dark background */
+  padding: 0.8rem 2rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.nav-container {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Column 1: Logo (Left aligned) */
+.logo {
+  grid-column: 1;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.logo-icon svg { width: 36px; height: 36px; }
+.logo-name { color: #ffffff; font-size: 1.2rem; font-weight: 800; letter-spacing: -0.5px; }
+.logo-name span { color: #f5a623; }
+.logo-tagline { color: #9ca3af; font-size: 0.7rem; font-weight: 500; margin-top: -2px; }
+
+/* Column 2: Menus (Perfectly Centered) */
+.nav-menus {
+  grid-column: 2;
+  justify-self: center;
+  display: flex;
+  justify-content: center;
+}
+
+/* Column 3: Actions (Right aligned) */
+.header-actions {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* ==========================================
+   🔔 UNIFIED NOTIFICATION DESIGN
+   ========================================== */
+
+#notif-panel {
+  /* Resetting inline styles for cleaner CSS management */
+  font-family: inherit;
+}
+
+.notif-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.notif-item:hover {
+  background-color: #f9fafb;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item.unread {
+  background-color: rgba(245, 166, 35, 0.04);
+}
+
+.notif-item.unread:hover {
+  background-color: rgba(245, 166, 35, 0.08);
+}
+
+.notif-icon-wrap {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.notif-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-title {
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.notif-message {
+  font-size: 0.8rem;
+  color: #6b7280;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.notif-date {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-top: 6px;
+}
+
+.notif-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f5a623;
+  flex-shrink: 0;
+  margin-top: 8px;
+}

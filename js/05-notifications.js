@@ -1,10 +1,21 @@
 // ==========================================
-// 🔔 FICHIER 05 : SYSTÈME DE NOTIFICATIONS
+// 🔔 FICHIER 05 : SYSTÈME DE NOTIFICATIONS (OPTIMISÉ)
 // ==========================================
 // Rôle : Cloche, panneau, badge, création de notifications
+// Optimisations : Cache HTML, formatage d'heure statique, rendu conditionnel
 // ==========================================
 
 console.log("🔄 [05-notifications.js] Chargement du système de notifications...");
+
+// ==========================================
+// 💾 CACHE DES NOTIFICATIONS (ÉVITE LES CLIGNOTEMENTS)
+// ==========================================
+let notifCache = {
+  html: '',
+  lastUpdate: 0,
+  unreadCount: 0,
+  isOpen: false
+};
 
 // ==========================================
 // 🔔 CRÉATION D'UNE NOTIFICATION POUR UN UTILISATEUR
@@ -19,6 +30,7 @@ async function createNotificationForUser(userId, title, message) {
       is_read: false
     });
     console.log("✅ Notification créée pour :", userId);
+    notifCache.lastUpdate = 0; // Invalider le cache pour forcer une mise à jour
   } catch (err) {
     console.error("❌ Erreur création notification:", err);
   }
@@ -28,13 +40,8 @@ async function createNotificationForUser(userId, title, message) {
 // 🔔 AFFICHER UNE NOTIFICATION (GÉNÉRIQUE)
 // ==========================================
 async function showNotification(title, message, type = 'info', targetUserId = null) {
-  // 1. Si personne n'est connecté, on ne fait rien
   if (!currentUser || !currentUser.id) return;
-
-  // 2. Si on essaie d'envoyer à "admin", "client" ou "store" (au lieu d'un vrai ID), on annule
-  if (targetUserId === 'admin' || targetUserId === 'client' || targetUserId === 'store') {
-    return; 
-  }
+  if (targetUserId === 'admin' || targetUserId === 'client' || targetUserId === 'store') return;
 
   let userId = targetUserId || currentUser.id;
 
@@ -46,13 +53,10 @@ async function showNotification(title, message, type = 'info', targetUserId = nu
       type: type,
       is_read: false
     });
-    
-    // Si ça plante, on l'ignore silencieusement pour ne pas bloquer le site
-    if (error) {
-      console.log("⚠️ Notification ignorée (sans gravité)");
-    }
+    if (error) console.log("⚠️ Notification ignorée (sans gravité)");
+    else notifCache.lastUpdate = 0; // Invalider le cache
   } catch (err) {
-    // On bloque l'erreur pour qu'elle n'apparaisse plus en rouge
+    // Ignoré silencieusement pour ne pas bloquer le site
   }
 }
 
@@ -63,75 +67,147 @@ async function toggleNotifPanel() {
   const panel = document.getElementById('notif-panel');
   if (!panel) return;
   
-  if (panel.style.display === 'none' || !panel.style.display) {
-    panel.style.display = 'flex';
-    await loadNotifPanel();
+  const isVisible = panel.style.display === 'block' || panel.style.display === 'flex';
+  
+  if (!isVisible) {
+    notifCache.isOpen = true;
+    panel.style.display = 'block';
+    
+    // Utiliser le cache si moins de 10 secondes, sinon recharger depuis la BDD
+    const now = Date.now();
+    if (!notifCache.html || (now - notifCache.lastUpdate) > 10000) {
+      await refreshNotificationsAuto(true); // true = forcer le rendu DOM
+    } else {
+      document.getElementById('notif-list').innerHTML = notifCache.html;
+    }
   } else {
+    notifCache.isOpen = false;
     panel.style.display = 'none';
   }
 }
 
 // ==========================================
-// 🔔 CHARGER LES NOTIFICATIONS DANS LE PANNEAU
+// 🔔 FORMATAGE DE L'HEURE POUR MANIWAKI (STATIQUE)
 // ==========================================
-async function loadNotifPanel() {
+function formatHeureManiwaki(dateString) {
+  if (!dateString) return "À l'instant";
+  const isoString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return "Date invalide";
+  
+  const options = {
+    timeZone: 'America/Montreal',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  };
+  return date.toLocaleString('fr-CA', options).replace(',', ' à');
+}
+
+// ==========================================
+// 🔔 RAFRAÎCHISSEMENT DES NOTIFICATIONS (AVEC CACHE)
+// ==========================================
+async function refreshNotificationsAuto(forceRender = false) {
   if (!currentUser || !currentUser.id) return;
   
   try {
-    const { data, error } = await supabaseClient
+    // 1. Compter TOUTES les notifications non lues (pour le badge)
+    const { data: unreadData, error: unreadError } = await supabaseClient
+      .from('notifications')
+      .select('id')
+      .eq('user_id', currentUser.id)
+      .eq('is_read', false);
+    
+    if (unreadError) return;
+    
+    const newUnreadCount = unreadData ? unreadData.length : 0;
+    
+    // 2. Mettre à jour le badge uniquement si le nombre a changé
+    if (newUnreadCount !== notifCache.unreadCount || forceRender) {
+      notifCache.unreadCount = newUnreadCount;
+      const badge = document.getElementById('notif-badge');
+      if (badge) {
+        if (newUnreadCount > 0) {
+          badge.textContent = newUnreadCount > 99 ? '99+' : newUnreadCount;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    }
+
+    // 3. Charger les 20 dernières pour l'affichage
+    const { data: notifs, error } = await supabaseClient
       .from('notifications')
       .select('*')
       .eq('user_id', currentUser.id)
       .order('created_at', { ascending: false })
       .limit(20);
     
-    if (error) throw error;
-    
-    const list = document.getElementById('notif-list');
-    if (!list) return;
-    
-    if (!data || data.length === 0) {
-      list.innerHTML = '<div style="padding:2rem;text-align:center;color:#9ca3af;">🔔 Aucune notification</div>';
-      return;
-    }
-    
-    list.innerHTML = data.map(notif => {
-      const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', order: '📦', delivery: '🚚' };
-      const icon = icons[notif.type] || 'ℹ️';
-      const date = new Date(notif.created_at).toLocaleString('fr-CA', { 
-        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
-      });
-      const unreadClass = notif.is_read ? 'read' : 'unread';
+    if (error || !notifs) return;
+
+    // 4. Générer le HTML (seulement si le panneau est ouvert ou si on force le rendu)
+    if (notifCache.isOpen || forceRender) {
+      let html = '';
+      if (notifs.length === 0) {
+        html = '<div style="padding:2rem;text-align:center;color:#9ca3af;font-size:0.85rem;">🔔 Aucune notification</div>';
+      } else {
+        html = notifs.map(n => {
+          const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', order: '📦', delivery: '🚚' };
+          const icon = icons[n.type] || '🔔';
+          const heureCorrecte = formatHeureManiwaki(n.created_at); // Heure statique, pas de clignotement
+          const bgColor = n.is_read ? 'transparent' : 'rgba(245, 166, 35, 0.05)';
+          const fontWeight = n.is_read ? '400' : '600';
+          
+          return `
+            <div style="padding: 12px 16px; border-bottom: 1px solid rgba(229, 231, 235, 0.3); display: flex; gap: 12px; align-items: flex-start; background: ${bgColor}; cursor: pointer; transition: background 0.2s;"
+                 onclick="markNotifRead(${n.id})"
+                 onmouseover="this.style.background='rgba(243, 244, 246, 0.5)'"
+                 onmouseout="this.style.background='${bgColor}'">
+              <div style="font-size: 1.2rem; flex-shrink: 0;">${icon}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: ${fontWeight}; color: #1f2937; font-size: 0.85rem; line-height: 1.4; word-break: break-word;">
+                  ${n.title || 'Notification'}
+                </div>
+                <div style="font-size: 0.8rem; color: #6b7280; margin-top: 4px; line-height: 1.4;">
+                  ${n.message || ''}
+                </div>
+                <div style="font-size: 0.7rem; color: #9ca3af; margin-top: 6px;">
+                  🕐 ${heureCorrecte}
+                </div>
+              </div>
+              ${!n.is_read ? '<div style="width: 8px; height: 8px; border-radius: 50%; background: #f5a623; flex-shrink: 0; margin-top: 6px;"></div>' : ''}
+            </div>
+          `;
+        }).join('');
+      }
       
-      return `
-        <div class="notif-item ${unreadClass}" onclick="markAsRead(${notif.id})">
-          <div class="notif-title">${icon} ${notif.title}</div>
-          <div class="notif-message">${notif.message}</div>
-          <div class="notif-date">${date}</div>
-        </div>
-      `;
-    }).join('');
-    // ✅ NOUVEAU : Ne plus écraser le badge avec seulement 20 notifs
-// Le badge est déjà mis à jour correctement par refreshNotificationsAuto()
-// updateNotifBadge(data);  ← On commente cette ligne
+      notifCache.html = html;
+      notifCache.lastUpdate = Date.now();
+      document.getElementById('notif-list').innerHTML = html;
+    }
+
   } catch (err) {
-    console.error('Erreur loadNotifPanel:', err);
+    console.error("❌ Erreur refresh notifications:", err);
   }
 }
 
 // ==========================================
 // 🔔 MARQUER UNE NOTIFICATION COMME LUE
 // ==========================================
-async function markAsRead(notifId) {
+async function markNotifRead(notifId) {
   try {
     await supabaseClient
       .from('notifications')
       .update({ is_read: true })
       .eq('id', notifId);
     
-    await loadNotifPanel();
+    notifCache.lastUpdate = 0; // Invalider le cache
+    await refreshNotificationsAuto(true);
   } catch (err) {
-    console.error('Erreur markAsRead:', err);
+    console.error("❌ Erreur markNotifRead:", err);
   }
 }
 
@@ -148,7 +224,8 @@ async function markAllRead() {
       .eq('user_id', currentUser.id)
       .eq('is_read', false);
     
-    await loadNotifPanel();
+    notifCache.lastUpdate = 0; // Invalider le cache
+    await refreshNotificationsAuto(true);
     showToast('✅ Toutes les notifications marquées comme lues');
   } catch (err) {
     console.error('Erreur markAllRead:', err);
@@ -162,184 +239,25 @@ async function initNotifications() {
   if (currentUser && currentUser.id) {
     const bellContainer = document.getElementById('notif-bell-container');
     if (bellContainer) bellContainer.style.display = 'block';
-    await updateNotifBadge();
-  }
-}
-
-// ==========================================
-// 🔔 METTRE À JOUR LE BADGE DE NOTIFICATIONS
-// ==========================================
-async function updateNotifBadge(notifications) {
-  const badge = document.getElementById('notif-badge');
-  if (!badge) return;
-  
-  let unreadCount = 0;
-  
-  if (notifications && Array.isArray(notifications)) {
-    unreadCount = notifications.filter(n => !n.is_read).length;
-  } else if (currentUser && currentUser.id) {
-    try {
-      const { data, error } = await supabaseClient
-        .from('notifications')
-        .select('id')
-        .eq('user_id', currentUser.id)
-        .eq('is_read', false);
-      
-      if (!error && data) {
-        unreadCount = data.length;
-      }
-    } catch (err) {
-      console.error('Erreur mise à jour badge:', err);
-    }
-  }
-  
-  if (unreadCount > 0) {
-    badge.textContent = unreadCount > 99 ? '9+' : unreadCount;
-    badge.style.display = 'flex';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
-// ==========================================
-// 🔔 FORMATAGE DE L'HEURE POUR MANIWAKI
-// ==========================================
-function formatHeureManiwaki(dateString) {
-  if (!dateString) return "À l'instant";
-  
-  const isoString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
-  const date = new Date(isoString);
-  
-  if (isNaN(date.getTime())) {
-    return "Date invalide";
-  }
-  
-  const options = {
-    timeZone: 'America/Montreal',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  };
-  
-  return date.toLocaleString('fr-CA', options).replace(',', ' à');
-}
-
-// ==========================================
-// 🔔 RAFRAÎCHISSEMENT AUTOMATIQUE DES NOTIFICATIONS
-// ==========================================
-// ==========================================
-// 🔔 RAFRAÎCHISSEMENT AUTOMATIQUE DES NOTIFICATIONS (VERSION CORRIGÉE)
-// ==========================================
-async function refreshNotificationsAuto() {
-  if (!currentUser || !currentUser.id) {
-    return;
-  }
-  
-  try {
-    // ✅ ÉTAPE 1 : Compter TOUTES les notifications non lues (SANS LIMITE)
-    // C'est ÇA qui fait que le badge monte jusqu'à 99+
-    const { data: unreadData, error: unreadError } = await supabaseClient
-      .from('notifications')
-      .select('id')
-      .eq('user_id', currentUser.id)
-      .eq('is_read', false);
-    
-    if (unreadError) {
-      console.error("❌ Erreur comptage notifications:", unreadError);
-      return;
-    }
-    
-    const unreadCount = unreadData ? unreadData.length : 0;
-    
-    // ✅ ÉTAPE 2 : Mettre à jour le badge avec le VRAI nombre
-    const badge = document.getElementById('notif-badge');
-    if (badge) {
-      if (unreadCount > 0) {
-        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-        badge.style.display = 'inline-block';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-    
-    // ✅ ÉTAPE 3 : Charger seulement les 20 DERNIÈRES pour l'affichage
-    // (pour ne pas surcharger le panneau, mais le badge compte TOUT)
-    const { data: notifs, error } = await supabaseClient
-      .from('notifications')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    
-    if (error) {
-      console.error("❌ Erreur chargement notifications:", error);
-      return;
-    }
-    
-    if (!notifs) return;
-    
-    // ✅ ÉTAPE 4 : Afficher les notifications dans le panneau
-    const notifList = document.getElementById('notif-list');
-    if (notifList && notifs.length > 0) {
-      notifList.innerHTML = notifs.map(n => {
-        const heureCorrecte = formatHeureManiwaki(n.created_at);
-        const bgColor = n.is_read ? '#f9fafb' : '#fff9f0';
-        const fontWeight = n.is_read ? 'normal' : 'bold';
-        
-        return `
-          <div class="notif-item" style="padding: 1rem; border-bottom: 1px solid #e5e7eb; background: ${bgColor}; cursor: pointer; transition: background 0.2s;"
-               onclick="markNotifRead(${n.id})"
-               onmouseover="this.style.background='#f3f4f6'"
-               onmouseout="this.style.background='${bgColor}'">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-              <div style="font-weight: ${fontWeight}; color: #0a1929; flex: 1;">${n.title || 'Notification'}</div>
-              ${!n.is_read ? '<div style="width: 8px; height: 8px; border-radius: 50%; background: #f5a623; margin-left: 8px;"></div>' : ''}
-            </div>
-            <div style="font-size: 0.9rem; color: #6b7280; line-height: 1.4;">${n.message || ''}</div>
-            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.5rem;">🕐 ${heureCorrecte}</div>
-          </div>
-        `;
-      }).join('');
-    } else if (notifList) {
-      notifList.innerHTML = '<p style="padding: 2rem; text-align: center; color: #6b7280;">Aucune notification</p>';
-    }
-  } catch (err) {
-    console.error("❌ Erreur refresh notifications:", err);
-  }
-}
-// ==========================================
-// 🔔 MARQUER UNE NOTIFICATION COMME LUE (VERSION ALTERNATIVE)
-// ==========================================
-async function markNotifRead(notifId) {
-  try {
-    await supabaseClient
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', notifId);
-    
-    await refreshNotificationsAuto();
-  } catch (err) {
-    console.error("❌ Erreur markNotifRead:", err);
+    await refreshNotificationsAuto(true);
   }
 }
 
 // ==========================================
 // 🔔 DÉMARRER LE POLLING DES NOTIFICATIONS
 // ==========================================
+// Intervalle de 5 secondes (plus efficace pour Supabase que 1.5s)
 if (typeof currentUser !== 'undefined' && currentUser && currentUser.id) {
-  refreshNotificationsAuto();
-  console.log("🔔 [NOTIFICATIONS] Système activé");
+  refreshNotificationsAuto(true);
+  console.log("🔔 [NOTIFICATIONS] Système activé (Polling 5s)");
 }
 
-// Polling toutes les 1.5 secondes
 window.notifIntervalId = setInterval(() => {
   if (currentUser && currentUser.id) {
-    refreshNotificationsAuto();
+    // On ne force pas le rendu DOM à chaque polling, seulement le badge et le cache
+    refreshNotificationsAuto(false);
   }
-}, 1500);
+}, 5000);
 
 // ==========================================
 // 🔔 FERMER LE PANNEAU SI ON CLIQUE AILLEURS
@@ -349,10 +267,8 @@ document.addEventListener('click', function(e) {
   const bell = document.querySelector('.notif-bell');
   if (panel && bell && !panel.contains(e.target) && !bell.contains(e.target)) {
     panel.style.display = 'none';
+    notifCache.isOpen = false;
   }
 });
 
-// ==========================================
-// ✅ FIN DU CHARGEMENT
-// ==========================================
-console.log("✅ [05-notifications.js] Système de notifications chargé !");
+console.log("✅ [05-notifications.js] Système de notifications optimisé chargé !");
