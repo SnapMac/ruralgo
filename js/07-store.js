@@ -570,7 +570,7 @@ async function renderStoreDashboard() {
 // 📂 CATÉGORIES DU COMMERCE
 // ==========================================
 function showStoreCategories() {
-  if (!currentUser || !currentUser.id) {
+  if (!window.currentUser || !window.currentUser.id) {
     showToast("🔑 Veuillez vous connecter.");
     openLoginModal();
     return;
@@ -670,7 +670,7 @@ function openStoreCategoryModal() {
 async function saveStoreCategory(event) {
   if (event) event.preventDefault();
 
-  if (!currentUser || !currentUser.id) {
+  if (!window.currentUser || !window.currentUser.id) {
     showToast('🔑 Veuillez vous connecter.');
     return;
   }
@@ -777,7 +777,7 @@ async function deleteStoreProduct(id) {
 // 🛍️ PRODUITS DU COMMERCE
 // ==========================================
 function showStoreProducts() {
-  if (!currentUser || !currentUser.id) {
+  if (!window.currentUser || !window.currentUser.id) {
     showToast("🔑 Veuillez vous connecter.");
     openLoginModal();
     return;
@@ -791,7 +791,7 @@ function showStoreProducts() {
 }
 
 function showStoreProducts() {
-  if (!currentUser || !currentUser.id) {
+  if (!window.currentUser || !window.currentUser.id) {
     showToast("🔑 Veuillez vous connecter.");
     openLoginModal();
     return;
@@ -955,7 +955,7 @@ function goToMyStore() {
 // 🏷️ GESTION DU NOM DU COMMERCE
 // ==========================================
 function initStoreNameDisplay() {
-  if (!currentUser || !currentUser.id) {
+  if (!window.currentUser || !window.currentUser.id) {
     console.log("ℹ️ initStoreNameDisplay: Pas d'utilisateur connecté");
     return;
   }
@@ -1314,22 +1314,33 @@ function openOrderInvoiceModal(order) {
 // ==========================================
 
 function showStoreOrders() {
-  if (!currentUser || !currentUser.id) {
+  if (!window.currentUser || !window.currentUser.id) {
     showToast("🔑 Veuillez vous connecter pour accéder à cette page.");
     openLoginModal();
     return;
   }
 
   switchView('view-store');
-  document.getElementById('store-dashboard-section').style.display = 'none';
-  document.getElementById('store-categories-section').style.display = 'none';
-  document.getElementById('store-products-section').style.display = 'none';
-  document.getElementById('store-orders-section').style.display = 'block';
+  
+  // 🔥 Vérification sécurisée de l'existence des éléments avant de modifier .style
+  const dashboard = document.getElementById('store-dashboard-section');
+  const inventory = document.getElementById('store-inventory-section');
+  const orders = document.getElementById('store-orders-section');
+
+  if (dashboard) dashboard.style.display = 'none';
+  if (inventory) inventory.style.display = 'none';
+  if (orders) orders.style.display = 'block';
+
   renderStoreOrders();
+  
+  // Mettre en surbrillance l'onglet actif (Index 2 = Commandes)
+  if (typeof highlightActiveNav === 'function') {
+    highlightActiveNav('nav-store', 2);
+  }
 }
 
 async function renderStoreOrders() {
-  if (!currentUser || !currentUser.id) return; // Sécurité supplémentaire
+  if (!window.currentUser || !window.currentUser.id) return; // Sécurité supplémentaire
 
   const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
   const container = document.getElementById('store-orders-container');
@@ -1540,7 +1551,7 @@ async function loadDashboardOrders(storeId, limit = 5) {
 // ==========================================
 
 function showStoreInventory() {
-  if (!currentUser || !currentUser.id) {
+  if (!window.currentUser || !window.currentUser.id) {
     showToast("🔑 Veuillez vous connecter.");
     openLoginModal();
     return;

@@ -658,7 +658,7 @@ function showClientOrderDetail(orderId) {
 async function placeOrder() {
   console.log("💳 [COMMANDE] Début du processus...");
 
-  if (!currentUser || !currentUser.id) {
+  if (!window.currentUser || !window.currentUser.id) {
     showToast('🔑 Veuillez vous connecter');
     openLoginModal();
     return;
@@ -850,7 +850,7 @@ function renderProfiles() {
 }
 
 function openEditProfileModal() {
-  if (!currentUser || !currentUser.id) {
+  if (!window.currentUser || !window.currentUser.id) {
     showToast('🔑 Veuillez vous connecter');
     return;
   }
@@ -905,7 +905,7 @@ function openEditProfileModal() {
 // ==========================================
 async function saveProfile(e) {
   if (e) e.preventDefault();
-  if (!currentUser || !currentUser.id) { showToast('❌ Vous devez être connecté.'); return; }
+  if (!window.currentUser || !window.currentUser.id) { showToast('❌ Vous devez être connecté.'); return; }
 
   const nameField = document.getElementById('ep-name');
   const phoneField = document.getElementById('ep-phone');

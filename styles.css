@@ -1812,3 +1812,134 @@ header nav ul li a.nav-active::after {
 #dropdown-wallet[style*="display: block"] {
   display: block !important;
 }
+
+
+/* ==========================================
+   🎨 HEADER LAYOUT: 3-COLUMN CENTERED NAV
+   ========================================== */
+
+header {
+  background-color: #1f2937; /* Dark background */
+  padding: 0.8rem 2rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.nav-container {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Column 1: Logo (Left aligned) */
+.logo {
+  grid-column: 1;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.logo-icon svg { width: 36px; height: 36px; }
+.logo-name { color: #ffffff; font-size: 1.2rem; font-weight: 800; letter-spacing: -0.5px; }
+.logo-name span { color: #f5a623; }
+.logo-tagline { color: #9ca3af; font-size: 0.7rem; font-weight: 500; margin-top: -2px; }
+
+/* Column 2: Menus (Perfectly Centered) */
+.nav-menus {
+  grid-column: 2;
+  justify-self: center;
+  display: flex;
+  justify-content: center;
+}
+
+/* Column 3: Actions (Right aligned) */
+.header-actions {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* ==========================================
+   🔔 UNIFIED NOTIFICATION DESIGN
+   ========================================== */
+
+#notif-panel {
+  /* Resetting inline styles for cleaner CSS management */
+  font-family: inherit;
+}
+
+.notif-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.notif-item:hover {
+  background-color: #f9fafb;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item.unread {
+  background-color: rgba(245, 166, 35, 0.04);
+}
+
+.notif-item.unread:hover {
+  background-color: rgba(245, 166, 35, 0.08);
+}
+
+.notif-icon-wrap {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.notif-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-title {
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.notif-message {
+  font-size: 0.8rem;
+  color: #6b7280;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.notif-date {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-top: 6px;
+}
+
+.notif-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f5a623;
+  flex-shrink: 0;
+  margin-top: 8px;
+}
