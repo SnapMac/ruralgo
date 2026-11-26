@@ -66,13 +66,13 @@ async function showNotification(title, message, type = 'info', targetUserId = nu
 async function toggleNotifPanel() {
   const panel = document.getElementById('notif-panel');
   if (!panel) return;
-  
+
   const isVisible = panel.style.display === 'block' || panel.style.display === 'flex';
-  
+
   if (!isVisible) {
     notifCache.isOpen = true;
     panel.style.display = 'block';
-    
+
     // Utiliser le cache si moins de 10 secondes, sinon recharger depuis la BDD
     const now = Date.now();
     if (!notifCache.html || (now - notifCache.lastUpdate) > 10000) {
@@ -94,7 +94,7 @@ function formatHeureManiwaki(dateString) {
   const isoString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
   const date = new Date(isoString);
   if (isNaN(date.getTime())) return "Date invalide";
-  
+
   const options = {
     timeZone: 'America/Montreal',
     day: 'numeric',
@@ -109,86 +109,119 @@ function formatHeureManiwaki(dateString) {
 // ==========================================
 // 🔔 RAFRAÎCHISSEMENT DES NOTIFICATIONS (AVEC CACHE)
 // ==========================================
+// ==========================================
+// 🔔 RAFRAÎCHISSEMENT DES NOTIFICATIONS (VERSION COMPLÈTE & CORRIGÉE)
+// ==========================================
 async function refreshNotificationsAuto(forceRender = false) {
-  if (!currentUser || !currentUser.id) return;
-  
+  if (!window.currentUser || !window.currentUser.id) return;
+
   try {
-    // 1. Compter TOUTES les notifications non lues (pour le badge)
+    // 1. Compter les notifications non lues
     const { data: unreadData, error: unreadError } = await supabaseClient
       .from('notifications')
       .select('id')
-      .eq('user_id', currentUser.id)
+      .eq('user_id', window.currentUser.id)
       .eq('is_read', false);
-    
+
     if (unreadError) return;
-    
+
     const newUnreadCount = unreadData ? unreadData.length : 0;
-    
-    // 2. Mettre à jour le badge uniquement si le nombre a changé
-    if (newUnreadCount !== notifCache.unreadCount || forceRender) {
-      notifCache.unreadCount = newUnreadCount;
-      const badge = document.getElementById('notif-badge');
-      if (badge) {
-        if (newUnreadCount > 0) {
-          badge.textContent = newUnreadCount > 99 ? '99+' : newUnreadCount;
-          badge.style.display = 'inline-block';
-        } else {
-          badge.style.display = 'none';
-        }
+    const badge = document.getElementById('notif-badge');
+
+    if (badge) {
+      if (newUnreadCount > 0) {
+        badge.textContent = newUnreadCount > 99 ? '99+' : newUnreadCount;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
       }
     }
 
-    // 3. Charger les 20 dernières pour l'affichage
-    const { data: notifs, error } = await supabaseClient
-      .from('notifications')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    
-    if (error || !notifs) return;
+    // 2. Charger les notifications si nécessaire
+    if (forceRender) {
+      const { data: notifs, error } = await supabaseClient
+        .from('notifications')
+        .select('*')
+        .eq('user_id', window.currentUser.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
 
-    // 4. Générer le HTML (seulement si le panneau est ouvert ou si on force le rendu)
-    if (notifCache.isOpen || forceRender) {
+      if (error || !notifs) return;
+
+      // 3. Générer le HTML
       let html = '';
+
       if (notifs.length === 0) {
-        html = '<div style="padding:2rem;text-align:center;color:#9ca3af;font-size:0.85rem;">🔔 Aucune notification</div>';
+        html = `
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 1rem; color: #9ca3af; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;">🔔</div>
+            <div style="font-size: 0.9rem; font-weight: 500; color: #374151;">Aucune notification</div>
+            <div style="font-size: 0.8rem; margin-top: 0.25rem;">Vous êtes à jour !</div>
+          </div>
+        `;
       } else {
+        // Icônes SVG par type
+        const icons = {
+          info: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+          success: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+          warning: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+          error: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+          order: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
+          delivery: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`
+        };
+
         html = notifs.map(n => {
-          const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', order: '📦', delivery: '🚚' };
-          const icon = icons[n.type] || '🔔';
-          const heureCorrecte = formatHeureManiwaki(n.created_at); // Heure statique, pas de clignotement
-          const bgColor = n.is_read ? 'transparent' : 'rgba(245, 166, 35, 0.05)';
-          const fontWeight = n.is_read ? '400' : '600';
-          
+          const icon = icons[n.type] || icons.info;
+          const date = new Date(n.created_at);
+          const heureCorrecte = date.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' }) + ' ' + date.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+
+          // Texte par défaut si aucun titre n'existe
+          const titleText = n.title || (n.type === 'order' ? 'Nouvelle commande' : n.type === 'delivery' ? 'Mise à jour livraison' : 'Notification');
+          const isUnread = !n.is_read;
+
           return `
-            <div style="padding: 12px 16px; border-bottom: 1px solid rgba(229, 231, 235, 0.3); display: flex; gap: 12px; align-items: flex-start; background: ${bgColor}; cursor: pointer; transition: background 0.2s;"
+            <div class="notif-item" 
+                 style="padding: 12px 16px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: background 0.2s ease; background: ${isUnread ? '#fffbeb' : '#ffffff'};"
                  onclick="markNotifRead(${n.id})"
-                 onmouseover="this.style.background='rgba(243, 244, 246, 0.5)'"
-                 onmouseout="this.style.background='${bgColor}'">
-              <div style="font-size: 1.2rem; flex-shrink: 0;">${icon}</div>
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-weight: ${fontWeight}; color: #1f2937; font-size: 0.85rem; line-height: 1.4; word-break: break-word;">
-                  ${n.title || 'Notification'}
+                 onmouseover="this.style.background='#f9fafb'"
+                 onmouseout="this.style.background='${isUnread ? '#fffbeb' : '#ffffff'}'">
+              
+              <!-- Icône -->
+              <div style="flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; margin-top: 2px;">
+                ${icon}
+              </div>
+              
+              <!-- Contenu (Titre + Message + Date) -->
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                
+                <!-- TITRE -->
+                <div style="font-weight: ${isUnread ? '600' : '500'}; color: #111827; font-size: 0.85rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  ${titleText}
                 </div>
-                <div style="font-size: 0.8rem; color: #6b7280; margin-top: 4px; line-height: 1.4;">
-                  ${n.message || ''}
-                </div>
-                <div style="font-size: 0.7rem; color: #9ca3af; margin-top: 6px;">
-                  🕐 ${heureCorrecte}
+                
+                <!-- MESSAGE (Affiché uniquement s'il existe et qu'il est différent du titre) -->
+                ${n.message && n.message.toLowerCase() !== (n.title || '').toLowerCase() ? `
+                  <div style="font-size: 0.75rem; color: #6b7280; line-height: 1.4; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                    ${n.message}
+                  </div>
+                ` : ''}
+
+                <!-- DATE -->
+                <div style="font-size: 0.7rem; color: #9ca3af; margin-top: 4px;">
+                  ${heureCorrecte}
                 </div>
               </div>
-              ${!n.is_read ? '<div style="width: 8px; height: 8px; border-radius: 50%; background: #f5a623; flex-shrink: 0; margin-top: 6px;"></div>' : ''}
+
+              <!-- Point orange (Non lu) -->
+              ${isUnread ? '<div style="flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: #f5a623; margin-top: 6px;"></div>' : ''}
             </div>
           `;
         }).join('');
       }
-      
-      notifCache.html = html;
-      notifCache.lastUpdate = Date.now();
-      document.getElementById('notif-list').innerHTML = html;
-    }
 
+      const list = document.getElementById('notif-list');
+      if (list) list.innerHTML = html;
+    }
   } catch (err) {
     console.error("❌ Erreur refresh notifications:", err);
   }
@@ -203,7 +236,7 @@ async function markNotifRead(notifId) {
       .from('notifications')
       .update({ is_read: true })
       .eq('id', notifId);
-    
+
     notifCache.lastUpdate = 0; // Invalider le cache
     await refreshNotificationsAuto(true);
   } catch (err) {
@@ -216,14 +249,14 @@ async function markNotifRead(notifId) {
 // ==========================================
 async function markAllRead() {
   if (!currentUser || !currentUser.id) return;
-  
+
   try {
     await supabaseClient
       .from('notifications')
       .update({ is_read: true })
       .eq('user_id', currentUser.id)
       .eq('is_read', false);
-    
+
     notifCache.lastUpdate = 0; // Invalider le cache
     await refreshNotificationsAuto(true);
     showToast('✅ Toutes les notifications marquées comme lues');
@@ -262,7 +295,7 @@ window.notifIntervalId = setInterval(() => {
 // ==========================================
 // 🔔 FERMER LE PANNEAU SI ON CLIQUE AILLEURS
 // ==========================================
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
   const panel = document.getElementById('notif-panel');
   const bell = document.querySelector('.notif-bell');
   if (panel && bell && !panel.contains(e.target) && !bell.contains(e.target)) {
