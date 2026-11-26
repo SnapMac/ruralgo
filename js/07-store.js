@@ -1025,10 +1025,19 @@ console.log("✅ [07-store.js] Dashboard commerce chargé !");
 // ==========================================
 // ✏️ MODIFIER LES INFOS DU COMMERCE
 // ==========================================
+// ==========================================
+// ✏️ MODIFIER LES INFOS DU COMMERCE (AVEC HORAIRES)
+// ==========================================
 function openEditStoreInfoModal() {
   let modal = document.getElementById('edit-store-info-modal');
   if (modal) modal.remove();
-
+  
+  // Récupérer les infos actuelles du commerce
+  const myStore = stores.find(s => String(s.owner_id) === String(currentUser.id));
+  const currentOpenTime = myStore?.opening_time || '08:00';
+  const currentCloseTime = myStore?.closing_time || '18:00';
+  const currentOpenDays = myStore?.open_days || 'Lun,Mar,Mer,Je,Ven,Sam';
+  
   modal = document.createElement('div');
   modal.id = 'edit-store-info-modal';
   modal.className = 'modal-bg show';
@@ -1043,9 +1052,8 @@ function openEditStoreInfoModal() {
         <div class="form-group">
           <label>📍 Adresse du commerce *</label>
           <div class="autocomplete-wrapper">
-<input type="text" id="esi-address" class="autocomplete-input" oninput="searchAddress(this.value, 'esi-address-suggestions', 'esi-address')" required value="${currentUser.storeAddress || ''}" autocomplete="off">
-<div id="esi-address-suggestions" class="autocomplete-suggestions"></div>
-          <div id="esi-address-suggestions" class="autocomplete-suggestions"></div>
+            <input type="text" id="esi-address" class="autocomplete-input" oninput="searchAddress(this.value, 'esi-address-suggestions', 'esi-address')" required value="${currentUser.storeAddress || ''}" autocomplete="off">
+            <div id="esi-address-suggestions" class="autocomplete-suggestions"></div>
           </div>
           <button type="button" class="autocomplete-gps-btn" onclick="geolocateAddress('esi-address')">📍 Utiliser GPS</button>
         </div>
@@ -1053,6 +1061,27 @@ function openEditStoreInfoModal() {
           <label>📞 Téléphone</label>
           <input type="tel" id="esi-phone" value="${currentUser.storePhone || ''}">
         </div>
+        
+        <!-- 🆕 CHAMPS HORAIRES D'OUVERTURE -->
+        <div style="background:#f0f9ff; padding:1rem; border-radius:8px; margin:1rem 0; border-left:4px solid #3b82f6;">
+          <h3 style="margin:0 0 0.75rem 0; color:#0a1929; font-size:1rem;">🕒 Horaires d'ouverture</h3>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:0.75rem;">
+            <div>
+              <label style="font-size:0.85rem; color:#4b5563;">Heure d'ouverture</label>
+              <input type="time" id="esi-open-time" value="${currentOpenTime}" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; font-size:0.9rem;">
+            </div>
+            <div>
+              <label style="font-size:0.85rem; color:#4b5563;">Heure de fermeture</label>
+              <input type="time" id="esi-close-time" value="${currentCloseTime}" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; font-size:0.9rem;">
+            </div>
+          </div>
+          <div>
+            <label style="font-size:0.85rem; color:#4b5563;">Jours d'ouverture</label>
+            <input type="text" id="esi-open-days" placeholder="Lun,Mar,Mer,Je,Ven,Sam" value="${currentOpenDays}" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; font-size:0.9rem;">
+            <small style="color:#6b7280; font-size:0.75rem;">Séparez les jours par des virgules (ex: Lun,Mar,Mer,Je,Ven,Sam)</small>
+          </div>
+        </div>
+        
         <div class="modal-actions">
           <button type="button" class="btn-sm btn-gray" onclick="document.getElementById('edit-store-info-modal').remove()">Annuler</button>
           <button type="submit" class="btn-sm btn-green">💾 Enregistrer</button>
@@ -1061,22 +1090,30 @@ function openEditStoreInfoModal() {
     </div>
   `;
   document.body.appendChild(modal);
-  //setTimeout(() => initAutocomplete('esi-address', 'esi-address-suggestions'), 100);
 }
 
 // ==========================================
 // 💾 SAUVEGARDE DES INFOS DU COMMERCE (AVEC GÉOCODAGE AUTO)
 // ==========================================
+// ==========================================
+// 💾 SAUVEGARDE DES INFOS DU COMMERCE (AVEC HORAIRES)
+// ==========================================
 async function saveStoreInfo(e) {
   e.preventDefault();
+  
   const newName = document.getElementById('esi-name').value.trim();
   const newAddress = document.getElementById('esi-address').value.trim();
   const newPhone = document.getElementById('esi-phone').value.trim();
+  
+  // 🆕 Récupérer les nouveaux horaires
+  const newOpenTime = document.getElementById('esi-open-time').value;
+  const newCloseTime = document.getElementById('esi-close-time').value;
+  const newOpenDays = document.getElementById('esi-open-days').value.trim();
+  
   const addressInput = document.getElementById('esi-address');
-
   let newLat = addressInput?._lat || null;
   let newLng = addressInput?._lng || null;
-
+  
   // 🔥 SI PAS DE GPS, ON DEMANDE À MAPBOX
   if ((!newLat || !newLng) && newAddress && newAddress.length > 5) {
     showToast('🔍 Localisation précise du commerce...');
@@ -1088,32 +1125,56 @@ async function saveStoreInfo(e) {
       showToast('✅ Commerce localisé avec précision !');
     }
   }
-
-  const updateData = { name: newName, address: newAddress, phone: newPhone };
+  
+  const updateData = {
+    name: newName,
+    address: newAddress,
+    phone: newPhone,
+    // 🆕 Ajouter les horaires
+    opening_time: newOpenTime,
+    closing_time: newCloseTime,
+    open_days: newOpenDays
+  };
+  
   if (newLat && newLng && !isNaN(newLat) && !isNaN(newLng)) {
     updateData.lat = parseFloat(newLat);
     updateData.lng = parseFloat(newLng);
   }
-
+  
   try {
-    const { error } = await supabaseClient.from('stores').update(updateData).eq('owner_id', currentUser.id);
+    const { error } = await supabaseClient
+      .from('stores')
+      .update(updateData)
+      .eq('owner_id', currentUser.id);
+    
     if (error) throw error;
-
+    
+    // Mettre à jour en mémoire
     if (currentUser) {
       currentUser.storeName = newName;
       currentUser.storeAddress = newAddress;
+      currentUser.storePhone = newPhone;
+      currentUser.storeOpeningTime = newOpenTime;
+      currentUser.storeClosingTime = newCloseTime;
+      currentUser.storeOpenDays = newOpenDays;
       if (updateData.lat) currentUser.storeLat = parseFloat(updateData.lat);
       if (updateData.lng) currentUser.storeLng = parseFloat(updateData.lng);
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
     }
-
+    
+    // Mettre à jour le tableau local
     const storeIndex = stores.findIndex(s => String(s.owner_id) === String(currentUser.id));
-    if (storeIndex !== -1) stores[storeIndex] = { ...stores[storeIndex], ...updateData };
-
+    if (storeIndex !== -1) {
+      stores[storeIndex] = { ...stores[storeIndex], ...updateData };
+    }
+    
     const modal = document.getElementById('edit-store-info-modal');
     if (modal) modal.remove();
-
-    showToast('✅ Commerce mis à jour !');
+    
+    showToast('✅ Commerce mis à jour avec les nouveaux horaires !');
+    
     if (typeof showStoreDashboard === 'function') showStoreDashboard();
+    
   } catch (err) {
     console.error("❌ Erreur sauvegarde commerce:", err);
     showToast('❌ Erreur : ' + err.message);
