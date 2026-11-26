@@ -759,6 +759,86 @@ async function handlePlanSelection(planId, price) {
   }
 }
 
+
+
+
+// ==========================================
+// 👤 VOIR MON PROFIL (Vue détaillée)
+// ==========================================
+window.showProfile = function() {
+  if (!window.currentUser || !window.currentUser.id) {
+    showToast("🔑 Veuillez vous connecter.");
+    openLoginModal();
+    return;
+  }
+
+  const u = window.currentUser;
+  const body = document.getElementById('view-profile-body');
+  
+  if (body) {
+    // Génération de l'avatar avec les initiales
+    const initials = (u.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    
+    // Définition de la couleur du badge de rôle
+    const roleStyles = {
+      'client': { bg: '#dbeafe', text: '#1e40af', label: '👤 Client' },
+      'store':  { bg: '#fef3c7', text: '#92400e', label: '🏪 Commerce' },
+      'driver': { bg: '#d1fae5', text: '#065f46', label: '🚗 Livreur' },
+      'admin':  { bg: '#ede9fe', text: '#5b21b6', label: '⚙️ Admin' }
+    };
+    const style = roleStyles[u.role] || { bg: '#f3f4f6', text: '#6b7280', label: u.role };
+
+    body.innerHTML = `
+      <div style="text-align:center; margin-bottom:1.5rem;">
+        <div style="width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg, #f5a623 0%, #d48a1b 100%); display:flex; align-items:center; justify-content:center; color:white; font-size:1.8rem; font-weight:bold; margin:0 auto; box-shadow: 0 4px 6px -1px rgba(245, 166, 35, 0.3);">
+          ${initials}
+        </div>
+        <h4 style="margin:1rem 0 0.5rem 0; color:#111827; font-size:1.2rem;">${u.name || 'Utilisateur'}</h4>
+        <span style="background:${style.bg}; color:${style.text}; padding:4px 12px; border-radius:9999px; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">${style.label}</span>
+      </div>
+      
+      <div style="display:grid; gap:1rem; font-size:0.9rem; background:#f9fafb; padding:1rem; border-radius:8px;">
+        <div>
+          <strong style="color:#6b7280; display:block; font-size:0.7rem; text-transform:uppercase; margin-bottom:2px;">Courriel</strong>
+          <span style="color:#111827; font-weight:500;">${u.email || '-'}</span>
+        </div>
+        <div>
+          <strong style="color:#6b7280; display:block; font-size:0.7rem; text-transform:uppercase; margin-bottom:2px;">Téléphone</strong>
+          <span style="color:#111827; font-weight:500;">${u.phone || '-'}</span>
+        </div>
+        <div>
+          <strong style="color:#6b7280; display:block; font-size:0.7rem; text-transform:uppercase; margin-bottom:2px;">Adresse</strong>
+          <span style="color:#111827; font-weight:500;">${u.address || '-'}</span>
+        </div>
+        ${u.role === 'client' ? `
+        <div>
+          <strong style="color:#6b7280; display:block; font-size:0.7rem; text-transform:uppercase; margin-bottom:2px;">Solde du portefeuille</strong>
+          <span style="color:#16a34a; font-weight:bold; font-size:1.1rem;">${parseFloat(u.wallet_balance||0).toFixed(2)} $</span>
+        </div>` : ''}
+      </div>
+    `;
+  }
+  
+  openModal('view-profile-modal');
+};
+
+// ==========================================
+// ✏️ TRANSITION VERS LA MODALE D'ÉDITION
+// ==========================================
+window.openEditProfileFromView = function() {
+  closeModal('view-profile-modal');
+  // Petit délai pour laisser la modale de vue se fermer proprement
+  setTimeout(() => {
+    if (typeof openEditProfileModal === 'function') {
+      openEditProfileModal();
+    } else {
+      showToast("⚠️ La modale d'édition n'est pas disponible.");
+    }
+  }, 200);
+};
+
+
+
 // ==========================================
 // ✅ FIN DU CHARGEMENT
 // ==========================================

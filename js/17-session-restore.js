@@ -250,23 +250,37 @@ window.addEventListener('resize', () => { const m = document.getElementById('use
 // 7. Navigation Active
 window.goToMyProfileHome = function() {
   if (!window.currentUser || !window.currentUser.role) return;
+  
+  // Cacher toutes les vues
   document.querySelectorAll('.view').forEach(v => { v.style.display = 'none'; });
 
-  if (window.currentUser.role === 'client') {
-    document.getElementById('view-client').style.display = 'block';
+  const role = window.currentUser.role;
+  
+  if (role === 'client') {
+    const v = document.getElementById('view-client');
+    if (v) v.style.display = 'block';
     if (typeof window.showClientStores === 'function') window.showClientStores();
     highlightActiveNav('nav-client', 0);
-  } else if (window.currentUser.role === 'store') {
-    document.getElementById('view-store').style.display = 'block';
+  } 
+  else if (role === 'store') {
+    const v = document.getElementById('view-store');
+    if (v) v.style.display = 'block';
     if (typeof window.goToMyStore === 'function') window.goToMyStore();
     highlightActiveNav('nav-store', 0);
-  } else if (window.currentUser.role === 'driver') {
-    document.getElementById('view-driver').style.display = 'block';
+  } 
+  else if (role === 'driver') {
+    const v = document.getElementById('view-driver');
+    if (v) v.style.display = 'block';
     if (typeof window.showDriverDashboard === 'function') window.showDriverDashboard();
     highlightActiveNav('nav-driver', 0);
-  } else if (window.currentUser.role === 'admin') {
-    document.getElementById('view-admin').style.display = 'block';
-    if (typeof window.adminTab === 'function') window.adminTab('dashboard', document.querySelector('.admin-side li'));
+  } 
+  else if (role === 'admin') {
+    const v = document.getElementById('view-admin');
+    if (v) v.style.display = 'block';
+    if (typeof window.adminTab === 'function') {
+      const firstTab = document.querySelector('.admin-side li');
+      window.adminTab('dashboard', firstTab);
+    }
     highlightActiveNav('nav-admin', 0);
   }
 };
