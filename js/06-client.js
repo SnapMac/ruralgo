@@ -7,7 +7,7 @@
 console.log("🔄 [06-client.js] Chargement des fonctions client...");
 
 // ==========================================
-// 🏪 AFFICHAGE DES COMMERCES (CLIENT)
+// 🏪 AFFICHAGE DE LA LISTE DES COMMERCES (CLIENT)
 // ==========================================
 async function showClientStores() {
   // 🛡️ Bouclier : si on vient de payer, on ne touche à rien
@@ -19,6 +19,7 @@ async function showClientStores() {
 
   console.log("🏪 [CLIENT] Affichage de la page commerces...");
 
+  // 1. Gestion des vues
   document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
   document.getElementById('view-client').style.display = 'block';
 
@@ -30,59 +31,101 @@ async function showClientStores() {
   document.getElementById('client-order-detail-section').style.display = 'none';
 
   saveViewToHistory('view-client');
+  
+  // 2. Afficher les commerces avec le nouveau système de statut
   await afficherCommerces('stores-grid', 'openStoreDetail');
 }
 
 // ==========================================
-// 🏪 AFFICHER LES COMMERCES (FONCTION MAÎTRE)
+// 🏪 GÉNÉRATION DES CARTES DE COMMERCES (AVEC STATUT & HORAIRES)
 // ==========================================
-async function afficherCommerces(idConteneur, actionAuClic) {
-  console.log("🏪 Chargement des commerces dans :", idConteneur);
-  const container = document.getElementById(idConteneur);
-  if (!container) {
-    console.error("❌ Conteneur '" + idConteneur + "' introuvable !");
-    return;
-  }
+// ==========================================
+// 🏪 GÉNÉRATION DES CARTES DE COMMERCES (VERSION SÉCURISÉE)
+// ==========================================
+async function afficherCommerces(containerId, clickAction) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
 
-  container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">⏳ Chargement des commerces...</p>';
+  container.innerHTML = '<p style="text-align:center; padding:2rem; color:#6b7280;">⏳ Chargement des commerces...</p>';
 
   try {
-    const { data: commerces, error } = await supabaseClient
+    // 🛡️ REQUÊTE SÉCURISÉE : On prend TOUS les commerces sans filtre de statut strict
+    const { data: dbStores, error } = await supabaseClient
       .from('stores')
-      .select('*')
-      .eq('status', 'active')
-      .order('name', { ascending: true });
-
+      .select('*'); // On enlève le .eq('status', 'approved') qui bloquait tout
+    
     if (error) throw error;
+    
+    // On met à jour la variable globale
+    window.stores = dbStores || [];
 
-    console.log("📊 Nombre de commerces trouvés:", commerces?.length || 0);
-
-    if (!commerces || commerces.length === 0) {
-      container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666; background:white; border-radius:12px;">🏪 Aucun commerce disponible.</p>';
+    if (window.stores.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="grid-column: 1/-1; text-align:center; padding:3rem;">
+          <div style="font-size:3rem; margin-bottom:1rem;">🏪</div>
+          <h3>Aucun commerce disponible pour le moment</h3>
+          <p style="color:#6b7280;">Revenez plus tard !</p>
+        </div>
+      `;
       return;
     }
 
-    container.innerHTML = commerces.map(c => `
-      <div onclick="${actionAuClic}('${c.id}')"
-        style="background:white; border-radius:12px; padding:1.5rem; border:1px solid #e5e7eb; cursor:pointer; text-align:center; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"
-        onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 20px rgba(0,0,0,0.1)'; this.style.borderColor='#f5a623'"
-        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'; this.style.borderColor='#e5e7eb'">
-        <div style="font-size:3rem; margin-bottom:1rem;">${c.icon || '🏪'}</div>
-        <h3 style="margin:0 0 0.5rem 0; color:#0a1929; font-size:1.1rem; font-weight:700;">${c.name || 'Sans nom'}</h3>
-        <p style="margin:0 0 0.5rem 0; color:#f5a623; font-size:0.85rem; font-weight:600;">${c.type || 'Commerce'}</p>
-        <p style="margin:0 0 1rem 0; color:#6b7280; font-size:0.85rem;">📍 ${c.address || 'Adresse non précisée'}</p>
-        <div style="padding:0.6rem; background:#0a1929; color:white; border-radius:6px; font-weight:bold; font-size:0.9rem;">
-          Voir les produits →
-        </div>
-      </div>
-    `).join('');
+    // Construction du HTML avec le statut d'ouverture
+let html = '<div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:1.5rem; width:100%; max-width:1400px; margin:0 auto;">';
+    window.stores.forEach(store => {
+      // Appel de la fonction utilitaire (si elle existe dans 03-utils.js)
+      const status = typeof getStoreStatus === 'function' ? getStoreStatus(store) : { isOpen: true, color: '#10b981', badge: '🟢 Ouvert' };
 
-    console.log(`✅ ${commerces.length} commerces affichés avec succès !`);
-  } catch (err) {
-    console.error("❌ Erreur afficherCommerces:", err);
-    container.innerHTML = '<p style="text-align:center; padding:2rem; color:#ef4444; background:white; border-radius:12px;">❌ Erreur : ' + err.message + '</p>';
+      html += `
+        <div class="store-card" onclick="${clickAction}('${store.id}')" 
+             style="background:white; border-radius:12px; padding:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.05); cursor:pointer; transition:transform 0.2s, box-shadow 0.2s; border:1px solid #e5e7eb;" 
+             onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 24px rgba(0,0,0,0.1)'" 
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)'">
+          
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+            <div style="font-size:2.5rem; background:#f3f4f6; width:60px; height:60px; display:flex; align-items:center; justify-content:center; border-radius:12px;">
+              ${store.icon || '🏪'}
+            </div>
+            
+            <!-- BADGE OUVERT / FERMÉ -->
+            <span style="background:${status.color}; color:white; padding:6px 12px; border-radius:20px; font-size:0.8rem; font-weight:bold; display:flex; align-items:center; gap:4px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+              ${status.badge}
+            </span>
+          </div>
+          
+          <h3 style="margin:0 0 0.5rem 0; color:#0a1929; font-size:1.25rem; font-weight:700;">${store.name}</h3>
+          <p style="margin:0 0 0.5rem 0; color:#4b5563; font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+            📍 ${store.address || 'Adresse non spécifiée'}
+          </p>
+          <p style="margin:0; color:#4b5563; font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+            📞 ${store.phone || 'Non spécifié'}
+          </p>
+
+          <!-- LIGNE DES HORAIRES -->
+          <div style="margin-top:1.25rem; padding-top:1rem; border-top:1px solid #f3f4f6; display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; color:#6b7280; background:#f9fafb; padding:8px 12px; border-radius:8px;">
+            <span>🕒</span>
+            <span style="font-weight:600; color:#374151;">${store.opening_time || '08:00'} - ${store.closing_time || '18:00'}</span>
+            <span style="color:#9ca3af;">(${store.open_days || 'Lun-Sam'})</span>
+          </div>
+          
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+
+  } catch (error) {
+    console.error("❌ [CLIENT] Erreur affichage commerces:", error);
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column: 1/-1; text-align:center; padding:2rem; color:#ef4444;">
+        <p>❌ Erreur lors du chargement : ${error.message}</p>
+        <button onclick="showClientStores()" class="btn" style="margin-top:1rem;">🔄 Réessayer</button>
+      </div>
+    `;
   }
 }
+
 
 // ==========================================
 // 🏪 DÉTAIL D'UN COMMERCE

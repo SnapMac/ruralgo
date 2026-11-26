@@ -377,3 +377,34 @@ async function geocodeAddressMapbox(address) {
 // ✅ FIN DU CHARGEMENT
 // ==========================================
 console.log("✅ [03-utils.js] Utilitaires chargés avec succès !");
+// ==========================================
+// 🕒 GESTION DES HORAIRES D'OUVERTURE
+// ==========================================
+function getStoreStatus(store) {
+  if (!store || !store.open_days || !store.opening_time || !store.closing_time) {
+    return { isOpen: true, statusText: "Horaires non spécifiés", color: "#6b7280", badge: "⚪ Horaires inconnus" };
+  }
+  
+  const now = new Date();
+  const daysMap = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+  const currentDay = daysMap[now.getDay()];
+  
+  const openDaysArray = store.open_days.split(',').map(d => d.trim());
+  const isDayOpen = openDaysArray.includes(currentDay);
+  
+  if (!isDayOpen) {
+    return { isOpen: false, statusText: `Fermé (Ouvre: ${store.open_days})`, color: "#ef4444", badge: "🔴 Fermé" };
+  }
+  
+  const currentTime = now.getHours() * 60 + now.getMinutes();
+  const [openH, openM] = store.opening_time.split(':').map(Number);
+  const [closeH, closeM] = store.closing_time.split(':').map(Number);
+  const openMinutes = openH * 60 + openM;
+  const closeMinutes = closeH * 60 + closeM;
+  
+  if (currentTime >= openMinutes && currentTime <= closeMinutes) {
+    return { isOpen: true, statusText: `Ouvert (Ferme à ${store.closing_time})`, color: "#10b981", badge: "🟢 Ouvert" };
+  } else {
+    return { isOpen: false, statusText: `Fermé (Ouvre à ${store.opening_time})`, color: "#ef4444", badge: "🔴 Fermé" };
+  }
+}
