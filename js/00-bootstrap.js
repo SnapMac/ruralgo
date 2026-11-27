@@ -6,6 +6,7 @@
 // - charger les fichiers JS dans le bon ordre,
 // - afficher les erreurs de démarrage à l'écran,
 // - éviter que le loader reste bloqué sans message.
+// - détecter automatiquement l'environnement (local vs production)
 // ==========================================
 
 (function () {
@@ -52,8 +53,21 @@
     "pages/shared/modals.html"
   ];
 
+  // 🔥 DÉTECTION AUTOMATIQUE DE L'ENVIRONNEMENT
+  // Si on est en local (Live Server), on charge local-config.js
+  // Sinon, on charge 01-config.js (généré par Netlify en production)
+  const isLocalhost = 
+    window.location.hostname === 'localhost' || 
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '[::1]';
+
+  const configFile = isLocalhost ? "js/local-config.js" : "js/01-config.js";
+
+  console.log(`🌍 [RuralGo] Environnement détecté : ${isLocalhost ? 'LOCAL (Live Server)' : 'PRODUCTION (Netlify)'}`);
+  console.log(`📄 [RuralGo] Fichier de configuration chargé : ${configFile}`);
+
   const APP_SCRIPTS = [
-    "js/01-config.js",
+    configFile, // 🔥 Remplace dynamiquement 01-config.js par local-config.js en local
     "js/02-data.js",
     "js/03-utils.js",
     "js/04-auth.js",

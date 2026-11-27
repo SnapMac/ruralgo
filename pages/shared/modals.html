@@ -335,3 +335,29 @@
     </div>
   </div>
 </div>
+
+
+
+<!-- ========================================== -->
+<!-- 🔔 MODALE : TOUTES LES NOTIFICATIONS        -->
+<!-- ========================================== -->
+<div id="notif-all-modal" onclick="if(event.target===this) closeNotifAllModal()" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000000; align-items: center; justify-content: center;">
+  <div style="background: #ffffff; width: 90%; max-width: 520px; max-height: 80vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
+
+    <!-- En-tête -->
+    <div style="background: #0a1929; color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-weight: 700;">Toutes les notifications</span>
+      <button onclick="closeNotifAllModal()" style="background: none; border: none; color: #ffffff; font-size: 1.2rem; cursor: pointer; line-height: 1;">✕</button>
+    </div>
+
+    <!-- Barre d'actions globale -->
+    <div style="padding: 8px 14px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; display: flex; gap: 6px; flex-wrap: wrap;">
+      <button class="ntf-btn" onclick="markAllRead(); loadNotifAll()">Tout marquer lu</button>
+      <button class="ntf-btn" onclick="markAllUnread(); loadNotifAll()">Tout marquer non lu</button>
+      <button class="ntf-btn ntf-btn-danger" onclick="deleteAllNotifs(); loadNotifAll()">Tout supprimer</button>
+    </div>
+
+    <!-- Liste complète -->
+    <div id="notif-all-list" style="overflow-y: auto; flex: 1;"></div>
+  </div>
+</div>
