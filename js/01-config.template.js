@@ -6,6 +6,7 @@
 // ==========================================
 
 console.log("🔄 [01-config.js] Début du chargement...");
+window.APP_ENV = "{{APP_ENV}}";
 window.currentUser = null; 
 // ==========================================
 // 🧹 NETTOYAGE PRÉVENTIF DU LOCALSTORAGE
