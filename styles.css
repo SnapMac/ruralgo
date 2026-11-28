@@ -3353,6 +3353,23 @@ button[onclick="openEditProfileModal()"]:active {
   min-height: 36px;
 }
 
+/* Wallet stacked cleanly inside the user dropdown */
+#user-dropdown-menu .wallet-widget {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 100%;
+}
+
+#user-dropdown-menu .wallet-balance-btn,
+#user-dropdown-menu .wallet-deposit-btn {
+  width: 100%;
+  justify-content: center;
+}
+
 
 /* ==========================================
    15. RESPONSIVE (CONSOLIDÉ)
@@ -3658,4 +3675,35 @@ button[onclick="openEditProfileModal()"]:active {
     width: 100%;
     max-width: 300px;
   }
+}
+
+
+/* ==========================================
+   🖱️ HEADER CURSOR FIXES
+   ========================================== */
+
+/* Interactive elements get a pointer */
+.logo, 
+.nav-menus a, 
+.auth-btn, 
+.logout-btn, 
+.wallet-widget, 
+.wallet-btn, 
+.notif-bell, 
+.user-info,
+button {
+  cursor: pointer !important;
+}
+
+/* Text elements get a default cursor */
+.logo-tagline, 
+.user-name, 
+.user-role, 
+.wallet-balance {
+  cursor: default !important;
+}
+
+/* Inputs get a text cursor */
+input, textarea {
+  cursor: text !important;
 }

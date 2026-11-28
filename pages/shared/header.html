@@ -1,14 +1,17 @@
 <!-- BANDEAU INFO -->
-<div id="env-banner" style="background:linear-gradient(135deg,#816353,#606566);color:#121212;text-align:center;padding:0.8rem 1rem;font-size:0.95rem;font-weight:bold;box-shadow:0 2px 10px rgba(0,0,0,0.15);position:relative;z-index:101">
+<div id="env-banner"
+  style="background:linear-gradient(135deg,#816353,#606566);color:#121212;text-align:center;padding:0.8rem 1rem;font-size:0.95rem;font-weight:bold;box-shadow:0 2px 10px rgba(0,0,0,0.15);position:relative;z-index:101">
   <span id="env-banner-text">🚧 <strong>Site en phase de développement</strong> — Bienvenue sur RuralGo !</span>
-  <span id="env-badge" style="margin-left:10px;background:#ef4444;color:#ffffff;padding:2px 8px;border-radius:4px;font-size:0.75rem;">ENV</span>
+  <span id="env-badge"
+    style="margin-left:10px;background:#ef4444;color:#ffffff;padding:2px 8px;border-radius:4px;font-size:0.75rem;">ENV</span>
 </div>
 
 <!-- HEADER -->
 <header>
   <div class="nav-container">
 
-    <!-- 1. LOGO (Gauche) -->
+
+    <!-- Colonne 1: Logo (Gauche) -->
     <div class="logo" onclick="goHome()">
       <div class="logo-icon">
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
@@ -29,7 +32,8 @@
       </div>
     </div>
 
-    <!-- 2. MENUS DE NAVIGATION (Centré horizontalement) -->
+
+    <!-- Colonne 2: Navigation (Centre) -->
     <div class="nav-menus">
       <nav id="nav-client" style="display:none">
         <ul>
@@ -61,7 +65,7 @@
       </nav>
     </div>
 
-    <!-- 3. ACTIONS (Droite : Notifications + Utilisateur) -->
+    <!-- Colonne 3: Actions (Droite) -->
     <div class="header-actions">
 
       <!-- CLOCHE DE NOTIFICATION -->
@@ -128,7 +132,7 @@
       </div>
 
 
-      <!-- MENU UTILISATEUR -->
+      <!-- 👤 Section Utilisateur Connecté -->
       <div id="user-section" style="display:none;">
         <div id="user-menu-trigger" tabindex="0" onclick="toggleUserMenu(event)"
           style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 6px 12px; border-radius: 30px; background: rgba(243, 244, 246, 0.5); backdrop-filter: blur(4px); transition: background 0.2s; border: 1px solid rgba(229, 231, 235, 0.5);"
@@ -161,8 +165,19 @@
               Mon Solde</div>
             <div
               style="font-size: 1.1rem; font-weight: bold; color: #16a34a; display: flex; align-items: center; gap: 6px;">
-              💰 <span id="dropdown-wallet-balance">0.00</span> $
+
+              <!-- Wallet Widget -->
+                <div class="wallet-btn wallet-balance">
+                  💰 <span id="wallet-balance">0.00</span> $
+                </div>
+
+                <!-- 🔥 ADD MONEY BUTTON -->
+                <button class="wallet-btn wallet-deposit-btn" onclick="openDepositModal()" title="Ajouter des fonds">
+                  ➕ Recharger
+                </button>
+              
             </div>
+
           </div>
 
           <!-- Commandes (Commerces uniquement) -->
