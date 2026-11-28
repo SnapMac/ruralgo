@@ -43,7 +43,7 @@ async function showClientStores() {
 // 🏪 GÉNÉRATION DES CARTES DE COMMERCES (VERSION SÉCURISÉE)
 // ==========================================
 async function afficherCommerces(containerId, clickAction) {
-    const container = document.getElementById(containerId);
+  const container = document.getElementById(containerId);
   if (!container) return;
 
   container.innerHTML = '<p style="text-align:center; padding:2rem; color:#6b7280;">⏳ Chargement des commerces depuis la base de données...</p>';
@@ -62,6 +62,7 @@ async function afficherCommerces(containerId, clickAction) {
     
     // 🔥 STRICT ASSIGNMENT: Only use what comes from the DB
     window.stores = dbStores || [];
+    stores = window.stores; // 🔥 Sync the local variable too
     console.log("✅ [DEBUG] Real stores loaded:", window.stores.length);
 
     if (window.stores.length === 0) {
@@ -136,24 +137,20 @@ async function afficherCommerces(containerId, clickAction) {
 // 🏪 DÉTAIL D'UN COMMERCE
 // ==========================================
 async function openStoreDetail(store_id) {
-  console.log("🚀 [DEBUG] openStoreDetail called with ID:", store_id);
-  console.log("📊 [DEBUG] stores array length:", stores?.length || 0);
-  console.log("📊 [DEBUG] stores content:", stores);
-
-  if (!stores || stores.length === 0) {
-    console.error("💥 [DEBUG] stores is EMPTY! This is why openStoreDetail fails.");
-    showToast('⚠️ Aucun commerce chargé. Rechargez la page.');
-    return;
-  }
-
-  const store = stores.find(s => String(s.id) === String(store_id));
+console.log("🚀 [DEBUG] openStoreDetail called with ID:", store_id);
+  console.log("📊 [DEBUG] window.stores length:", window.stores?.length || 0);
+  
+  // 🔥 FIX: Use window.stores instead of local stores variable
+  const store = window.stores.find(s => String(s.id) === String(store_id));
+  
   if (!store) {
-    console.error("💥 [DEBUG] Store not found. Available IDs:", stores.map(s => s.id));
+    console.error("💥 [DEBUG] Store not found. Available IDs:", window.stores.map(s => s.id));
     showToast('❌ Commerce introuvable');
     return;
   }
 
   console.log("✅ [DEBUG] Store found:", store.name);
+
 
   switchView('view-client');
   document.getElementById('stores-section').style.display = 'none';
