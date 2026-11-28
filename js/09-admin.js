@@ -1142,21 +1142,77 @@ function renderAdminSettings() {
 
 async function loadPlatformSettings() {
   try {
-    const { data, error } = await supabaseClient.from('platform_settings').select('*').eq('id', 1).single();
-    if (error && error.code !== 'PGRST116') throw error;
-    
-    if (data) {
-      platformSettings.deliveryBaseFee = data.delivery_base_fee || 7.00;
-      platformSettings.deliveryPerKm = data.delivery_per_km || 1.00;
-      platformSettings.taxRate = data.tax_rate || 0.14975;
-      platformSettings.driverCommission = data.driver_commission || 0.20;
-      platformSettings.radius = data.radius || 40;
-    }
-    renderAdminSettings();
+    console.log("⚙️ [DEBUG] Loading platform settings...");
+
+    const { data, error } = await supabaseClient
+      .from('platform_settings')
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    console.log("✅ [DEBUG] Settings loaded:", data);
+    window.platformSettings = data;
+
+    // 🔒 SAFE SETTER: only fills inputs that exist in the DOM
+    const setVal = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.value = value;
+      } else {
+        console.warn(`⚠️ [SETTINGS] Input introuvable dans le HTML : #${id}`);
+      }
+    };
+
+    setVal('setting-base-fee',        data.delivery_base_fee);
+    setVal('setting-per-km',          data.delivery_per_km);
+    setVal('setting-tax-rate',        data.tax_rate);
+    setVal('setting-driver-commission', data.driver_commission);
+    setVal('setting-radius',          data.radius);
+
   } catch (err) {
-    console.error('Erreur loadPlatformSettings:', err);
+    console.error("Erreur chargement paramètres:", err);
   }
 }
+
+async function savePlatformSettings() {
+  if (!window.platformSettings) {
+    showToast('⚠️ Paramètres non chargés');
+    return;
+  }
+
+  const getVal = (id, fallback) => {
+    const el = document.getElementById(id);
+    const v = el ? parseFloat(el.value) : NaN;
+    return isNaN(v) ? fallback : v;
+  };
+
+  const payload = {
+    delivery_base_fee:   getVal('setting-base-fee',          platformSettings.delivery_base_fee),
+    delivery_per_km:     getVal('setting-per-km',            platformSettings.delivery_per_km),
+    tax_rate:            getVal('setting-tax-rate',          platformSettings.tax_rate),
+    driver_commission:   getVal('setting-driver-commission', platformSettings.driver_commission),
+    radius:              getVal('setting-radius',            platformSettings.radius),
+    updated_at:          new Date().toISOString()
+  };
+
+  const { error } = await supabaseClient
+    .from('platform_settings')
+    .update(payload)
+    .eq('id', platformSettings.id || 1);
+
+  if (error) {
+    console.error("❌ Erreur sauvegarde:", error);
+    showToast('❌ ' + error.message);
+    return;
+  }
+
+  window.platformSettings = { ...window.platformSettings, ...payload };
+  showToast('✅ Paramètres enregistrés !');
+}
+
+
+
 
 async function saveSettings() {
   platformSettings.deliveryBaseFee = parseFloat(document.getElementById('set-base-fee').value) || 7.00;
