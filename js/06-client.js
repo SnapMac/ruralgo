@@ -131,11 +131,24 @@ let html = '<div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; ga
 // 🏪 DÉTAIL D'UN COMMERCE
 // ==========================================
 async function openStoreDetail(store_id) {
+  console.log("🚀 [DEBUG] openStoreDetail called with ID:", store_id);
+  console.log("📊 [DEBUG] stores array length:", stores?.length || 0);
+  console.log("📊 [DEBUG] stores content:", stores);
+  
+  if (!stores || stores.length === 0) {
+    console.error("💥 [DEBUG] stores is EMPTY! This is why openStoreDetail fails.");
+    showToast('⚠️ Aucun commerce chargé. Rechargez la page.');
+    return;
+  }
+  
   const store = stores.find(s => String(s.id) === String(store_id));
   if (!store) {
+    console.error("💥 [DEBUG] Store not found. Available IDs:", stores.map(s => s.id));
     showToast('❌ Commerce introuvable');
     return;
   }
+  
+  console.log("✅ [DEBUG] Store found:", store.name);
 
   switchView('view-client');
   document.getElementById('stores-section').style.display = 'none';
