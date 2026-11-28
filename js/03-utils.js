@@ -130,7 +130,12 @@ function getCurrentStore() {
 function buildIconPicker(containerId, hiddenId) {
   const c = document.getElementById(containerId);
   if (!c) return;
-  c.innerHTML = allIcons.map(ic => 
+  
+  // ✅ SÉCURITÉ : Si allIcons n'est pas défini globalement, on utilise cette liste de secours
+  const iconsToUse = typeof allIcons !== 'undefined' ? allIcons : 
+    ['🏪', '🛒', '💊', '🍽️', '🏬', '📦', '🚗', '🏠', '📱', '💻', '🍔', '🍕', '🥖', '🥩', '🍎', '🥦', '🧀', '🍺', '☕', '🧁', '🎁', '🛠️', '👕', '💐', '🍰'];
+
+  c.innerHTML = iconsToUse.map(ic => 
     `<div class="icon-option" data-icon="${ic}" onclick="pickIcon('${containerId}','${hiddenId}',this)">${ic}</div>`
   ).join('');
 }

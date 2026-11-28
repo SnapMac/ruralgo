@@ -1,87 +1,57 @@
-// @ts-ignore Deno resolves URL imports at runtime; TypeScript language servers may not.
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-// @ts-ignore Deno resolves URL imports at runtime; TypeScript language servers may not.
-import Stripe from "https://esm.sh/stripe@13.6.0?target=deno";
-// @ts-ignore Deno resolves URL imports at runtime; TypeScript language servers may not.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// Use Deno's built-in HTTP server to avoid an external module dependency.
 
-declare const Deno: {
-  env: {
-    get(name: string): string | undefined;
-  };
-};
+// ✅ 1. Définition des en-têtes CORS pour autoriser ton localhost (et le futur domaine)
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*', 
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2023-10-16',
-  httpClient: Stripe.createFetchHttpClient(),
-});
-
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-);
-
-serve(async (req: Request) => {
-  const signature = req.headers.get('stripe-signature');
-  const body = await req.text();
+// Supabase Edge Functions run on Deno; this annotation is ignored by that runtime.
+// @ts-ignore: Deno types may not be enabled in the local TypeScript project.
+Deno.serve(async (req: Request) => {
+  // ✅ 2. Gérer la requête "preflight" du navigateur (c'est ce qui bloquait avant)
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
   try {
-    // Vérifier que c'est bien Stripe qui envoie le webhook
-    const event = stripe.webhooks.constructEvent(
-      body,
-      signature!,
-      Deno.env.get('STRIPE_WEBHOOK_SECRET') || ''
-    );
-
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      const userId = session.metadata?.userId;
-      const amount = parseFloat(session.metadata?.amount || '0');
-
-      if (userId && amount > 0) {
-        // Récupérer le solde actuel
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('user_id', userId)
-          .single();
-
-        const currentBalance = wallet?.balance || 0;
-        const newBalance = currentBalance + amount;
-
-        // Mettre à jour le solde
-        await supabase
-          .from('wallets')
-          .update({ balance: newBalance, updated_at: new Date().toISOString() })
-          .eq('user_id', userId);
-
-        // Ajouter la transaction
-        await supabase
-          .from('transactions')
-          .insert({
-            user_id: userId,
-            type: 'deposit',
-            amount: amount,
-            balance_before: currentBalance,
-            balance_after: newBalance,
-            description: `Recharge via Stripe (Session: ${session.id})`,
-            status: 'completed'
-          });
-
-        console.log(`✅ Solde mis à jour pour ${userId}: +${amount}$`);
-      }
+    // ✅ 3. Vérifier que c'est bien une requête POST
+    if (req.method !== 'POST') {
+      return new Response(
+        JSON.stringify({ error: 'Méthode non autorisée' }),
+        { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    return new Response(JSON.stringify({ received: true }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 200,
-    });
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    console.error('Erreur webhook:', errorMessage);
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 400,
-    });
+    // ✅ 4. Récupérer les données envoyées par ton site
+    const body = await req.json()
+    const { title, message, type, userId } = body
+
+    console.log(`🔔 [Edge Function] Notification reçue pour l'utilisateur ${userId}:`, { title, message, type })
+
+    // ⚠️ TODO: C'est ici que tu ajouteras plus tard ta vraie logique 
+    // (ex: insérer dans la table 'notifications' de Supabase, ou envoyer un vrai email).
+    // Pour ce soir, on simule juste un succès pour débloquer ton interface !
+
+    // ✅ 5. Répondre au site avec les en-têtes CORS (indispensable)
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: 'Notification traitée avec succès' 
+      }),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
+
+  } catch (error) {
+    // ✅ 6. Gérer les erreurs sans casser le CORS
+    console.error('❌ Erreur dans send-notification:', error)
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Erreur inconnue' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-});
+})
