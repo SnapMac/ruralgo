@@ -128,6 +128,14 @@
   <form onsubmit="loginUser(event)">
     <div class="form-group"><label>Courriel</label><input type="email" id="login-email" required></div>
     <div class="form-group"><label>Mot de passe</label><input type="password" id="login-pass" required></div>
+    
+    <!-- NOUVEAU : Lien de réinitialisation -->
+    <p style="text-align: right; margin-top: -10px; margin-bottom: 15px; font-size: 0.85rem;">
+      <a href="#" onclick="requestPasswordReset(); return false;" style="color: #f5a623; text-decoration: underline; cursor: pointer;">
+        Mot de passe oublié ?
+      </a>
+    </p>
+
     <div class="modal-actions">
       <button type="button" class="btn-sm btn-gray" onclick="closeModal('login-modal')">Annuler</button>
       <button type="submit" class="btn-sm btn-green">🔓 Se connecter</button>

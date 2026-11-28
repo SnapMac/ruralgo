@@ -842,4 +842,73 @@ window.openEditProfileFromView = function() {
 // ==========================================
 // ✅ FIN DU CHARGEMENT
 // ==========================================
+// ==========================================
+// 🔓 GESTION DU MOT DE PASSE OUBLIÉ (Pour tous les utilisateurs)
+// ==========================================
+
+// 1. Demander l'envoi du lien de réinitialisation
+async function requestPasswordReset() {
+  const email = prompt("Entrez votre adresse email pour recevoir un lien de réinitialisation :");
+  if (!email || !email.includes('@')) {
+    showToast('❌ Veuillez entrer une adresse email valide.');
+    return;
+  }
+  
+  try {
+    showToast('⏳ Envoi du lien en cours...');
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname // Retourne à la page actuelle
+    });
+    
+    if (error) throw error;
+    showToast('✅ Email envoyé ! Vérifiez votre boîte de réception (et les spams).');
+  } catch (err) {
+    console.error('❌ Erreur reset password:', err);
+    showToast('❌ Erreur : ' + err.message);
+  }
+}
+
+// 2. Gérer le retour de l'utilisateur après avoir cliqué sur le lien dans l'email
+async function handlePasswordRecovery() {
+  // Vérifier si l'URL contient le hash de récupération de Supabase
+  if (window.location.hash.includes('type=recovery') && window.location.hash.includes('access_token')) {
+    console.log('🔓 Mode récupération de mot de passe activé.');
+    
+    const newPassword = prompt("🔒 Lien de récupération détecté !\n\nEntrez votre NOUVEAU mot de passe (min. 6 caractères) :");
+    
+    if (!newPassword || newPassword.length < 6) {
+      showToast('❌ Le mot de passe doit contenir au moins 6 caractères.');
+      // Nettoyer l'URL pour éviter de reboucler
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    try {
+      showToast('⏳ Mise à jour du mot de passe...');
+      const { error } = await supabaseClient.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      showToast('✅ Mot de passe mis à jour avec succès ! Vous pouvez maintenant vous connecter.');
+      
+      // Nettoyer l'URL (enlever le #type=recovery&access_token=...)
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Ouvrir la modale de connexion automatiquement après 1 seconde
+      setTimeout(() => {
+        if (typeof openLoginModal === 'function') openLoginModal();
+      }, 1000);
+      
+    } catch (err) {
+      console.error('❌ Erreur mise à jour mot de passe:', err);
+      showToast('❌ Erreur lors de la mise à jour : ' + err.message);
+    }
+  }
+}
+
+// 3. Lancer la vérification au chargement de la page
+// On vérifie immédiatement si l'utilisateur revient d'un email de récupération
+handlePasswordRecovery();
 console.log("✅ [04-auth.js] Fonctions d'authentification chargées !");
