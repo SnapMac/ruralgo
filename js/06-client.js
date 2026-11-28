@@ -31,7 +31,7 @@ async function showClientStores() {
   document.getElementById('client-order-detail-section').style.display = 'none';
 
   saveViewToHistory('view-client');
-  
+
   // 2. Afficher les commerces avec le nouveau système de statut
   await afficherCommerces('stores-grid', 'openStoreDetail');
 }
@@ -43,35 +43,40 @@ async function showClientStores() {
 // 🏪 GÉNÉRATION DES CARTES DE COMMERCES (VERSION SÉCURISÉE)
 // ==========================================
 async function afficherCommerces(containerId, clickAction) {
-  const container = document.getElementById(containerId);
+    const container = document.getElementById(containerId);
   if (!container) return;
 
-  container.innerHTML = '<p style="text-align:center; padding:2rem; color:#6b7280;">⏳ Chargement des commerces...</p>';
+  container.innerHTML = '<p style="text-align:center; padding:2rem; color:#6b7280;">⏳ Chargement des commerces depuis la base de données...</p>';
 
   try {
-    // 🛡️ REQUÊTE SÉCURISÉE : On prend TOUS les commerces sans filtre de statut strict
+    console.log("📊 [DEBUG] Fetching stores from Supabase Dev...");
+    
     const { data: dbStores, error } = await supabaseClient
       .from('stores')
-      .select('*'); // On enlève le .eq('status', 'approved') qui bloquait tout
+      .select('*'); 
     
-    if (error) throw error;
+    if (error) {
+      console.error("💥 [DEBUG] Supabase Error:", error);
+      throw error;
+    }
     
-    // On met à jour la variable globale
+    // 🔥 STRICT ASSIGNMENT: Only use what comes from the DB
     window.stores = dbStores || [];
+    console.log("✅ [DEBUG] Real stores loaded:", window.stores.length);
 
     if (window.stores.length === 0) {
       container.innerHTML = `
         <div class="empty-state" style="grid-column: 1/-1; text-align:center; padding:3rem;">
           <div style="font-size:3rem; margin-bottom:1rem;">🏪</div>
-          <h3>Aucun commerce disponible pour le moment</h3>
-          <p style="color:#6b7280;">Revenez plus tard !</p>
+          <h3>Aucun commerce trouvé dans la base de données</h3>
+          <p style="color:#ef4444;">Vérifiez que la table 'stores' contient des données et que les politiques RLS autorisent la lecture.</p>
         </div>
       `;
       return;
     }
 
     // Construction du HTML avec le statut d'ouverture
-let html = '<div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:1.5rem; width:100%; max-width:1400px; margin:0 auto;">';
+    let html = '<div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:1.5rem; width:100%; max-width:1400px; margin:0 auto;">';
     window.stores.forEach(store => {
       // Appel de la fonction utilitaire (si elle existe dans 03-utils.js)
       const status = typeof getStoreStatus === 'function' ? getStoreStatus(store) : { isOpen: true, color: '#10b981', badge: '🟢 Ouvert' };
@@ -111,7 +116,7 @@ let html = '<div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; ga
         </div>
       `;
     });
-    
+
     html += '</div>';
     container.innerHTML = html;
 
@@ -134,20 +139,20 @@ async function openStoreDetail(store_id) {
   console.log("🚀 [DEBUG] openStoreDetail called with ID:", store_id);
   console.log("📊 [DEBUG] stores array length:", stores?.length || 0);
   console.log("📊 [DEBUG] stores content:", stores);
-  
+
   if (!stores || stores.length === 0) {
     console.error("💥 [DEBUG] stores is EMPTY! This is why openStoreDetail fails.");
     showToast('⚠️ Aucun commerce chargé. Rechargez la page.');
     return;
   }
-  
+
   const store = stores.find(s => String(s.id) === String(store_id));
   if (!store) {
     console.error("💥 [DEBUG] Store not found. Available IDs:", stores.map(s => s.id));
     showToast('❌ Commerce introuvable');
     return;
   }
-  
+
   console.log("✅ [DEBUG] Store found:", store.name);
 
   switchView('view-client');

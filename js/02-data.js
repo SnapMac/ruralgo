@@ -10,14 +10,7 @@ console.log("🔄 [02-data.js] Chargement des données par défaut...");
 // ==========================================
 // 🏪 COMMERCES PAR DÉFAUT
 // ==========================================
-stores = [
-  {id:1, icon:'🛒', name:'Épicerie Générale du Haut-Pays', type:'Épicerie', address:'100 rue Principale, Maniwaki, QC', phone:'(819) 449-1234', status:'active', lat:46.3770, lng:-75.9650},
-  {id:2, icon:'💊', name:'Pharmacie Maniwaki', type:'Pharmacie', address:'45 boulevard des Cascades, Maniwaki, QC', phone:'(819) 449-5678', status:'active', lat:46.3785, lng:-75.9580},
-  {id:3, icon:'🏪', name:'Dépanneur Central', type:'Dépanneur', address:'78 avenue de la Gare, Maniwaki, QC', phone:'(819) 449-9012', status:'active', lat:46.3755, lng:-75.9630},
-  {id:4, icon:'🍽️', name:'Restaurant Le Maniwaki', type:'Restaurant', address:'55 rue Principale, Maniwaki, QC', phone:'(819) 449-3456', status:'active', lat:46.3850, lng:-75.9450},
-  {id:5, icon:'🍔', name:'Casse-Croûte du Village', type:'Restaurant', address:'15 rue Saint-Joseph, Maniwaki, QC', phone:'(819) 449-7890', status:'active', lat:46.3745, lng:-75.9700},
-  {id:6, icon:'🏬', name:'Quincaillerie & Matériaux Gagné', type:'Autres', address:'88 rue Principale, Maniwaki, QC', phone:'(819) 449-2345', status:'active', lat:46.3760, lng:-75.9660}
-];
+stores = [];
 
 // ==========================================
 // 📂 CATÉGORIES PAR DÉFAUT
