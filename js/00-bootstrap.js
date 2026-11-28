@@ -6,6 +6,7 @@
 // - charger les fichiers JS dans le bon ordre,
 // - afficher les erreurs de démarrage à l'écran,
 // - éviter que le loader reste bloqué sans message.
+// - détecter automatiquement l'environnement (local vs production)
 // ==========================================
 
 (function () {
@@ -52,8 +53,21 @@
     "pages/shared/modals.html"
   ];
 
+  // 🔥 DÉTECTION AUTOMATIQUE DE L'ENVIRONNEMENT
+  // Si on est en local (Live Server), on charge local-config.js
+  // Sinon, on charge 01-config.js (généré par Netlify en production)
+  const isLocalhost = 
+    window.location.hostname === 'localhost' || 
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '[::1]';
+
+  const configFile = isLocalhost ? "js/local-config.js" : "js/01-config.js";
+
+  console.log(`🌍 [RuralGo] Source de configuration : ${isLocalhost ? 'LOCAL (Live Server)' : 'BUILD NETLIFY'}`);
+  console.log(`📄 [RuralGo] Fichier de configuration chargé : ${configFile}`);
+
   const APP_SCRIPTS = [
-    "js/01-config.js",
+    configFile, // 🔥 Remplace dynamiquement 01-config.js par local-config.js en local
     "js/02-data.js",
     "js/03-utils.js",
     "js/04-auth.js",
@@ -104,6 +118,26 @@
     status.style.color = isError ? "#ef4444" : "#6b7280";
     status.textContent = message;
   }
+
+  function applyEnvBadge() {
+    const env = window.APP_ENV || 'unknown';
+    const badge = document.getElementById('env-badge');
+    const bannerText = document.getElementById('env-banner-text');
+    const banner = document.getElementById('env-banner');
+
+    if (env === 'prod') {
+      if (badge) { badge.textContent = 'ENV: PROD'; badge.style.background = '#10b981'; }
+      if (bannerText) bannerText.innerHTML = 'Bienvenue sur RuralGo !';
+      if (banner) banner.style.background = 'linear-gradient(135deg,#0a1929,#123047)';
+    } else if (env === 'local') {
+      if (badge) { badge.textContent = 'ENV: LOCAL'; badge.style.background = '#3b82f6'; }
+      if (bannerText) bannerText.innerHTML = '🛠️ <strong>Environnement local</strong> — Bienvenue sur RuralGo !';
+    } else {
+      if (badge) { badge.textContent = 'ENV: DEV'; badge.style.background = '#ef4444'; }
+      if (bannerText) bannerText.innerHTML = '🚧 <strong>Site en phase de développement</strong> — Bienvenue sur RuralGo !';
+    }
+  }
+
 
   function showFatal(lines) {
     const errorLines = Array.isArray(lines) ? lines : [String(lines)];
@@ -356,6 +390,9 @@
       }
     }
 
+
+        applyEnvBadge();
+    console.log(`🌍 [RuralGo] Environnement applicatif : ${window.APP_ENV || 'inconnu'}`);
     // Application prête.
     window.APP_READY = true;
 
